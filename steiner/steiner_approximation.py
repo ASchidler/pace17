@@ -4,14 +4,14 @@ import steiner_graph
 
 
 class SteinerApproximation:
-    def __init__(self, graph):
-        queue = list(graph.terminals)
+    def __init__(self, steiner):
+        queue = sorted(list(steiner.terminals))
         nodes = set()
 
         self.cost = 0
         self.tree = nx.Graph()
 
-        nodes.add(queue.pop())
+        nodes.add(queue.pop(0))
 
         while len(queue) > 0:
             # Find minimal terminal
@@ -21,7 +21,7 @@ class SteinerApproximation:
 
             for t in queue:
                 for n in nodes:
-                    c = graph.get_lengths(n, t)
+                    c = steiner.get_lengths(n, t)
 
                     if c < min_val:
                         min_val = c
@@ -31,13 +31,17 @@ class SteinerApproximation:
             nodes.add(min_t)
             queue.remove(min_t)
 
-            prev_n = None
-            for current_n in nx.dijkstra_path(graph.graph, min_t, min_n):
-                if prev_n is not None:
-                    w = graph.graph[prev_n][current_n]['weight']
+            path = nx.dijkstra_path(steiner.graph, min_t, min_n)
+            prev_n = min_t
+
+            for i in range(1, len(path)):
+                current_n = path[i]
+                if current_n not in nx.nodes(self.tree):
+                    nodes.add(current_n)
+                    w = steiner.graph[prev_n][current_n]['weight']
                     self.cost = self.cost + w
                     self.tree.add_edge(prev_n, current_n, weight=w)
+
                 prev_n = current_n
 
-
-        # Improve: MST and then remove non terminal leafs
+        # TODO: Improve: MST and then remove non terminal leafs

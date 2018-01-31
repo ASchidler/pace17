@@ -17,13 +17,18 @@ class ReachabilityReduction:
 
                 for t in steiner.terminals:
                     d = steiner.get_lengths(t, n)
-                    if d <= min_val1:
-                        min_val2 = min_val1
-                        min_val1 = d
+                    if d < min_val2:
+                        if d < min_val1:
+                            min_val2 = min_val1
+                            min_val1 = d
+                        else:
+                            min_val2 = d
 
                     max_val = max(max_val, d)
-
-                if min_val1 + min_val2 + max_val > steiner.get_approximation().cost:
+                # TODO: Is this correct?
+                if min_val2 == sys.maxint:
+                    min_val2 = min_val1
+                if min_val1 != sys.maxint and min_val1 + min_val2 + max_val > steiner.get_approximation().cost:
                     reach_cnt = reach_cnt + 1
 
         print "Reachability " + str(reach_cnt)

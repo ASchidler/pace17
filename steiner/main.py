@@ -5,6 +5,7 @@ import time
 from solver import solver_2k as sv
 from reduction import *
 from preselection import *
+import networkx as nx
 
 if len(sys.argv) != 2:
     print "Usage: " + sys.argv[0] + " <file>"
@@ -19,9 +20,17 @@ def process_file(filename, solve, reduce):
     steiner = sg.SteinerGraph()
     steiner.parse_file(filename)
 
+    ts = sorted(list(steiner.terminals))
+
+    for e in steiner.get_approximation().tree.edges:
+        print e
+
+    print "Steiner tree: " + str(steiner.get_approximation().cost)
+
+
     if reduce:
         reducers = [incidence.IncidenceReduction(),
-                    short_edges.ShortEdgeReduction(),
+                    # short_edges.ShortEdgeReduction(),
                     degree.DegreeReduction(),
                     component.ComponentReduction(),
                     terminal_distance.TerminalDistanceReduction(),

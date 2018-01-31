@@ -24,7 +24,7 @@ class CutReachabilityReduction:
         cut_cnt = 0
         if self._terminal_minimums is None:
             self.find_minimums(steiner)
-            
+
         approx_nodes = nx.nodes(steiner.get_approximation().tree)
         for n in nx.nodes(steiner.graph):
             if n not in approx_nodes:
@@ -33,15 +33,24 @@ class CutReachabilityReduction:
                 n1 = None
                 n2 = None
 
-                for t in steiner.terminals:
+                for (t, s) in self._terminal_minimums.items():
                     d = steiner.get_lengths(t, n)
-                    diff = d - self._terminal_minimums[t]
+                    diff = d - s
 
-                    if diff <= min_val1:
-                        min_val2 = min_val1
-                        min_val1 = d
-                        n1 = t
-                        n2 = n
+                    if diff < min_val2:
+                        if diff < min_val1:
+                            min_val2 = min_val1
+                            n2 = n1
+                            min_val1 = diff
+                            n1 = t
+                        else:
+                            min_val2 = diff
+                            n2 = t
+
+                # TODO: Is this correct
+                if min_val2 == sys.maxint:
+                    min_val2 = min_val1
+                    n2 = n1
 
                 min_sum = min_val1 + min_val2
 
