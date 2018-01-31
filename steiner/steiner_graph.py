@@ -8,10 +8,9 @@ class SteinerGraph:
     def __init__(self):
         self.graph = nx.Graph()
         self.terminals = set()
-        self.paths = None
-        self.lengths = None
-        self.steiner_lengths = None
-        self.approximation = None
+        self._lengths = None
+        self._steiner_lengths = None
+        self._approximation = None
 
     def parse_graph(self, line):
         lst = line.split(' ')
@@ -48,33 +47,27 @@ class SteinerGraph:
 
         f.close()
 
-    def get_paths(self):
-        if self.paths is None:
-            self.paths = dict(nx.all_pairs_dijkstra_path(self.graph))
+    def get_lengths(self, n1, n2=None):
+        if self._lengths is None:
+            self._lengths = dict(nx.all_pairs_dijkstra_path_length(self.graph))
 
-        return self.paths
+        if n2 is None:
+            return self._lengths[n1]
 
-    def get_lengths(self):
-        if self.lengths is None:
-            self.lengths = dict(nx.all_pairs_dijkstra_path_length(self.graph))
-
-        return self.lengths
+        return self._lengths[n1][n2]
 
     def get_approximation(self):
-        if self.approximation is None:
-            self.approximation = sa.SteinerApproximation(self)
+        if self._approximation is None:
+            self._approximation = sa.SteinerApproximation(self)
 
-        return self.approximation
+        return self._approximation
 
-    def get_steiner_lengths(self):
-        if self.steiner_lengths is not None:
-            return self.steiner_lengths
-
+    def calculate_steiner_length(self):
         # Create 2-D dictionary
-        self.steiner_lengths = {}
+        self._steiner_lengths = {}
 
         for n in nx.nodes(self.graph):
-            self.steiner_lengths[n] = dict(self.get_lengths()[n])
+            self._steiner_lengths[n] = dict(self.get_lengths(n))
 
         for n in nx.nodes(self.graph):
             terminals = 0
@@ -91,7 +84,7 @@ class SteinerGraph:
                     # Closest terminal
                     for t in self.terminals:
                         if t not in visited:
-                            c = self.steiner_lengths[n][t]
+                            c = self._steiner_lengths[n][t]
                             if c < min_val:
                                 min_val = c
                                 min_node = t
@@ -102,16 +95,20 @@ class SteinerGraph:
                     # Calculate steiner distance to nodes
                     for s in nx.nodes(self.graph):
                         if s not in visited:
-                            old = self.steiner_lengths[s][n]
-                            alt = max(min_val, self.lengths[s][n])
+                            old = self._steiner_lengths[s][n]
+                            alt = max(min_val, self._lengths[s][n])
 
                             if alt <= old:
                                 if s not in self.terminals:
                                     visited.add(s)
 
                                 if alt < old:
-                                    self.steiner_lengths[n][s] = alt
-                                    self.steiner_lengths[s][n] = alt
+                                    self._steiner_lengths[n][s] = alt
+                                    self._steiner_lengths[s][n] = alt
 
-        return self.steiner_lengths
+    def get_steiner_lengths(self, n1, n2):
+        if self._steiner_lengths is None:
+            self.calculate_steiner_length()
+
+        return self._steiner_lengths[n1][n2]
 

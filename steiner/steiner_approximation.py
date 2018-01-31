@@ -21,7 +21,7 @@ class SteinerApproximation:
 
             for t in queue:
                 for n in nodes:
-                    c = graph.get_lengths()[n][t]
+                    c = graph.get_lengths(n, t)
 
                     if c < min_val:
                         min_val = c
