@@ -4,12 +4,6 @@ import sys
 
 
 class Solver2k:
-    root_node = None
-    graph = None
-    terminals = None
-    max_id = 0
-    costs = None
-
     def __init__(self, graph):
         self.graph = graph
         self.terminals = list(graph.terminals)

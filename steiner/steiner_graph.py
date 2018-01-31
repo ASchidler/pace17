@@ -4,12 +4,14 @@ import steiner_approximation as sa
 
 
 class SteinerGraph:
-    graph = nx.Graph()
-    terminals = set()
-    paths = None
-    lengths = None
-    steiner_lengths = None
-    approximation = None
+
+    def __init__(self):
+        self.graph = nx.Graph()
+        self.terminals = set()
+        self.paths = None
+        self.lengths = None
+        self.steiner_lengths = None
+        self.approximation = None
 
     def parse_graph(self, line):
         lst = line.split(' ')

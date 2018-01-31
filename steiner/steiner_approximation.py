@@ -4,9 +4,6 @@ import steiner_graph
 
 
 class SteinerApproximation:
-    tree = None
-    cost = 0
-
     def __init__(self, graph):
         queue = list(graph.terminals)
         nodes = set()
