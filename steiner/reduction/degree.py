@@ -36,3 +36,5 @@ class DegreeReduction:
 
         print "Degree run " + str(track - len(nx.nodes(steiner.graph)))
 
+        return track - len(nx.nodes(steiner.graph))
+

@@ -19,7 +19,7 @@ class IncidenceReduction:
                     min_node = n
                     min_val = w
 
-                if min_node in steiner.terminals or neighbors == 1:
-                    incidence = incidence + 1
+            if min_node in steiner.terminals or neighbors == 1:
+                incidence = incidence + 1
 
         print "Incidence " + str(incidence)
