@@ -51,15 +51,14 @@ class VoronoiReduction:
 
 
     def reduce(self, steiner):
-        voronoi_cnt = 0
-
         if self.voronoi_areas is None:
             self.find_areas(steiner)
 
+        track = len(nx.edges(steiner.graph))
         exit_sum = self.find_exit_sum(steiner)
 
         # Check edges
-        for (u, v, d) in steiner.graph.edges(data='weight'):
+        for (u, v, d) in list(steiner.graph.edges(data='weight')):
             # Find the distance to the closest terminals for each end of the edge
             total = 0
             cnt = 0
@@ -85,6 +84,9 @@ class VoronoiReduction:
 
             # Is the edge too long?
             if d + total + exit_sum > steiner.get_approximation().cost:
-                voronoi_cnt = voronoi_cnt + 1
+                steiner.graph.remove_edge(u, v)
 
-        print "Voronoi " + str(voronoi_cnt)
+        total = track - len(nx.edges(steiner.graph))
+        print "Voronoi " + str(total)
+
+        return total
