@@ -2,9 +2,9 @@ import sys
 import os.path
 import steiner_graph as sg
 import time
-from solver import solver_2k as sv
-from reduction import *
-from preselection import *
+import graph_costs
+import config as cfg
+
 import networkx as nx
 
 if len(sys.argv) != 2:
@@ -16,36 +16,20 @@ if not os.path.isfile(sys.argv[1]):
     sys.exit()
 
 
-def process_file(filename, solve, reduce):
+def process_file(filename, solve, apply_reductions):
     steiner = sg.SteinerGraph()
     steiner.parse_file(filename)
 
-    ts = sorted(list(steiner.terminals))
-
-    for e in steiner.get_approximation().tree.edges:
-        print e
-
-    print "Steiner tree: " + str(steiner.get_approximation().cost)
-
-
-    if reduce:
-        reducers = [incidence.IncidenceReduction(),
-                    # short_edges.ShortEdgeReduction(),
-                    degree.DegreeReduction(),
-                    component.ComponentReduction(),
-                    terminal_distance.TerminalDistanceReduction(),
-                    voronoi.VoronoiReduction(),
-                    long_edges.LongEdgeReduction(),
-                    ntdk.NtdkReduction(),
-                    reachability.ReachabilityReduction(),
-                    cut_reachability.CutReachabilityReduction(),
-                    zeroedge.ZeroEdgeReduction()]
+    if apply_reductions:
+        reducers = cfg.reducers()
 
         for r in reducers:
+            local_start = time.time()
             r.reduce(steiner)
+            print str(r.__class__) + " in " + str(time.time() - local_start)
 
     if solve:
-        solver = sv.Solver2k(steiner)
+        solver = cfg.solver(steiner)
         solver.solve()
 
     return
