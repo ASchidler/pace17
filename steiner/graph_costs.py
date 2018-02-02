@@ -3,6 +3,7 @@ import sortedcontainers as sc
 import sys
 
 
+"""Calculates the distance matrix of a graph using Dijkstra's algorithm"""
 class GraphCosts:
 
     def __init__(self):

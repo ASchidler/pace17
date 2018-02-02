@@ -1,15 +1,17 @@
 import sys
 import networkx as nx
 
-class ReachabilityReduction:
 
+class ReachabilityReduction:
+    def __init__(self):
+        self._removed = {}
 
     def reduce(self, steiner):
-        reach_cnt = 0
+        track = len(nx.nodes(steiner.graph))
 
         approx_nodes = nx.nodes(steiner.get_approximation().tree)
 
-        for n in nx.nodes(steiner.graph):
+        for n in list(nx.nodes(steiner.graph)):
             if n not in approx_nodes:
                 min_val1 = sys.maxint
                 min_val2 = sys.maxint
@@ -28,7 +30,30 @@ class ReachabilityReduction:
                 # TODO: Is this correct?
                 if min_val2 == sys.maxint:
                     min_val2 = min_val1
-                if min_val1 != sys.maxint and min_val1 + min_val2 + max_val > steiner.get_approximation().cost:
-                    reach_cnt = reach_cnt + 1
 
-        print "Reachability " + str(reach_cnt)
+                if min_val1 != sys.maxint:
+                    # Remove if this is fulfilled
+                    if min_val1 + max_val >= steiner.get_approximation().cost:
+                        steiner.graph.remove_node(n)
+                    # Otherwise introduce artificial edges
+                    elif min_val1 + min_val2 + max_val >= steiner.get_approximation().cost:
+                        nb = list(nx.neighbors(steiner.graph, n))
+                        # Introduce artificial edges
+                        # TODO: find good value. At some point (10 is known) this becomes extremely slow
+                        if len(nb) <= 4:
+                            for i in range(0, len(nb)):
+                                n1 = nb[i]
+                                c1 = steiner.graph[n][n1]['weight']
+                                for j in range(i+1, len(nb)):
+                                    n2 = nb[j]
+                                    c2 = steiner.graph[n][n2]['weight']
+
+                                    if steiner.add_edge(n1, n2, c1 + c2):
+                                        self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
+
+                        steiner.graph.remove_node(n)
+
+        total = track - len(nx.nodes(steiner.graph))
+        print "Reachability " + str(total)
+
+        return total

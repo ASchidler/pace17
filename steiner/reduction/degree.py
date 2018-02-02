@@ -6,7 +6,7 @@ import sys
 class DegreeReduction:
 
     def __init__(self):
-        self._merged = []
+        self._merged = {}
 
     def reduce(self, steiner):
         track = len(nx.nodes(steiner.graph))
@@ -31,7 +31,7 @@ class DegreeReduction:
                     if w1 + w2 < wo:
                         steiner.graph.add_edge(nb[0], nb[1], weight=w1+w2)
                         steiner.graph.remove_node(n)
-                        self._merged = ((nb[0], nb[1], w1 + w2), [(nb[0], n, w1), (nb[1], n, w2)])
+                        self._merged[(nb[0], nb[1], w1 + w2)] = [(nb[0], n, w1), (nb[1], n, w2)]
                         break
 
         print "Degree run " + str(track - len(nx.nodes(steiner.graph)))

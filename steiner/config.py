@@ -7,15 +7,16 @@ def reducers():
     return [
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
-        # short_edges.ShortEdgeReduction(),
-        degree.DegreeReduction(),
         incidence.IncidenceReduction(),
+        #short_edges.ShortEdgeReduction(),
+        degree.DegreeReduction(),
         voronoi.VoronoiReduction(),
-        terminal_distance.TerminalDistanceReduction(),
-        long_edges.LongEdgeReduction(),
         ntdk.NtdkReduction(),
         reachability.ReachabilityReduction(),
         cut_reachability.CutReachabilityReduction(),
+        long_edges.LongEdgeReduction(),
+        terminal_distance.TerminalDistanceReduction(),
+        degree.DegreeReduction(),
         terminals.TerminalReduction()
     ]
 

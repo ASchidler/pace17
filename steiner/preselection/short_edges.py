@@ -11,11 +11,11 @@ class ShortEdgeReduction:
         cnt = 0
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1
-        mst = list(nx.minimum_spanning_edges(steiner.graph))
+        mst = nx.minimum_spanning_tree(steiner.graph)
         paths = self._min_paths(steiner)
 
         # Check all edges in the spanning tree
-        for e in mst:
+        for e in mst.edges:
             u = e[0]
             v = e[1]
             rval = self._min_crossing(steiner, mst, u, v)
@@ -68,40 +68,16 @@ class ShortEdgeReduction:
 
         return paths
 
-
-    # Find the r value
-    # First the MST is cut at edge (n1,n2), then the smallest edge bridging the cut in G is found
+    """Finds the r value of an edge. 
+    Calculates the cut in the MST and then finds the smallest edge bridging the cut in G"""
     def _min_crossing(self, steiner, mst, n1, n2):
-        # Calculate cuts
-        c1 = set()
-        c2 = set()
+        # Calculate the cuts
+        mst.remove_edge(n1, n2)
+        c = list(nx.connected_components(mst))
+        mst.add_edge(n1, n2)
 
-        c1.add(n1)
-        c2.add(n2)
-
-        target = nx.number_of_nodes(steiner.graph)
-
-        # TODO: More efficient way possible?
-        edges = list(mst)
-
-        while len(c1) + len(c2) != target:
-            e = edges.pop(0)
-            u = e[0]
-            v = e[1]
-            # not the current edge
-            if u != n1 or v != n2:
-                # find the right cut
-                if u in c1:
-                    c1.add(v)
-                elif v in c1:
-                    c1.add(u)
-                elif u in c2:
-                    c2.add(v)
-                elif v in c2:
-                    c2.add(u)
-                # None of the endpoints are known yet -> next iteration
-                else:
-                    edges.append(e)
+        c1 = set(c[0])
+        c2 = set(c[1])
 
         # Now we have the two cuts, find the smallest edge bridging the cut in the graph
         min_val = sys.maxint
@@ -110,7 +86,7 @@ class ShortEdgeReduction:
             if (u in c1 and v in c2) or (u in c2 and v in c1):
                 min_val = min(min_val, d)
 
-        # Dont know what happens if none bridges the gap?
+        # TODO: Whats happens if the gap is not bridged? The edge therefore must be contracted?
         if min_val != sys.maxint:
             return min_val
 

@@ -18,8 +18,9 @@ class TerminalDistanceReduction:
             if min_val != sys.maxint:
                 max_val = max(max_val, min_val)
 
-        for (u, v, d) in steiner.graph.edges(data='weight'):
+        for (u, v, d) in list(steiner.graph.edges(data='weight')):
             if d > max_val:
+                steiner.graph.remove_edge(u, v)
                 terminal_edges = terminal_edges + 1
 
         print "terminal edge " + str(terminal_edges)

@@ -48,8 +48,6 @@ class VoronoiReduction:
 
         return exit_sum - exit_max1 - exit_max2
 
-
-
     def reduce(self, steiner):
         if self.voronoi_areas is None:
             self.find_areas(steiner)

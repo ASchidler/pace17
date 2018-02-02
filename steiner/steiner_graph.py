@@ -23,6 +23,16 @@ class SteinerGraph:
             self.graph.node[int(lst[1])]['terminal'] = True
             self.terminals.add(int(lst[1]))
 
+    def add_edge(self, n1, n2, c):
+        if self.graph.has_edge(n1, n2):
+            if self.graph[n1][n2]['weight'] > c:
+                self.graph[n1][n2]['weight'] = c
+                return True
+            else:
+                return False
+        self.graph.add_edge(n1, n2, weight=c)
+        return True
+
     def parse_file(self, filename):
         f = open(filename, "r")
         # 0 is start, 1 is graph, 2 are terminals, 3 are decompositions

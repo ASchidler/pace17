@@ -3,15 +3,18 @@ import networkx as nx
 
 # Checks for each node, if the node can be merged
 class NtdkReduction:
+    def __init__(self):
+        self._removed = {}
 
     def reduce(self, steiner):
-        ntdk_edge = 0
-        for n in nx.nodes(steiner.graph):
+        track = len(nx.nodes(steiner.graph))
+
+        for n in list(nx.nodes(steiner.graph)):
             neighbors = list(nx.all_neighbors(steiner.graph, n))
             degree = len(neighbors)
             true_for_all = True
 
-            if 2 < degree <= 4:
+            if n not in steiner.terminals and 2 < degree <= 4:
                 # Powersets
                 for power_set in range(1, 1 << degree):
                     # Create complete graph
@@ -37,6 +40,21 @@ class NtdkReduction:
                     true_for_all = true_for_all and mst_sum <= edge_sum
 
                 if true_for_all:
-                    ntdk_edge = ntdk_edge + 1
+                    nb = list(nx.neighbors(steiner.graph, n))
+                    # Introduce artificial edges
+                    for i in range(0, len(nb)):
+                        n1 = nb[i]
+                        c1 = steiner.graph[n][n1]['weight']
+                        for j in range(i+1, len(nb)):
+                            n2 = nb[j]
+                            c2 = steiner.graph[n][n2]['weight']
 
-        print "NTDK edges " + str(ntdk_edge)
+                            if steiner.add_edge(n1, n2, c1 + c2):
+                                self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
+
+                    steiner.graph.remove_node(n)
+
+        total = track - len(nx.nodes(steiner.graph))
+        print "NTDK edges " + str(total)
+
+        return total
