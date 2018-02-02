@@ -45,7 +45,7 @@ for i in range(1, 200):
         current_file = filepath.format(i)
         print current_file
         start = time.time()
-        process_file(current_file, True, True)
+        process_file(current_file, False, True)
         print "Done in " + str(time.time() - start)
         print ""
 

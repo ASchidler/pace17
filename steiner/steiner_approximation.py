@@ -36,7 +36,7 @@ class SteinerApproximation:
 
             for i in range(1, len(path)):
                 current_n = path[i]
-                if current_n not in nx.nodes(self.tree):
+                if current_n not in nx.nodes(self.tree) or prev_n not in nx.nodes(self.tree):
                     nodes.add(current_n)
                     w = steiner.graph[prev_n][current_n]['weight']
                     self.cost = self.cost + w

@@ -83,7 +83,7 @@ class CutReachabilityReduction:
                     if diff < min_val2:
                         if diff < min_val1:
                             min_val2 = min_val1
-                            mind_dist2 = min_dist1
+                            min_dist2 = min_dist1
                             n2 = n1
                             min_val1 = diff
                             n1 = t
