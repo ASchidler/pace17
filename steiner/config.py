@@ -14,6 +14,7 @@ def reducers():
         ntdk.NtdkReduction(),
         reachability.ReachabilityReduction(),
         cut_reachability.CutReachabilityReduction(),
+        cut_reachability_edge.CutReachabilityEdgeReduction(),
         long_edges.LongEdgeReduction(),
         terminal_distance.TerminalDistanceReduction(),
         degree.DegreeReduction(),

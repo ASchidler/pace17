@@ -8,4 +8,7 @@ class ZeroEdgeReduction:
             if d == 0:
                 cnt = cnt + 1
 
-        print "Zero edges " + str(cnt)
+        return cnt
+
+    def post_process(self, solution):
+        return solution

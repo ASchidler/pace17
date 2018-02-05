@@ -1,8 +1,9 @@
 import networkx as nx
 import sys
 
-# Checks the incidence of terminals, of degree one or the closest is a terminal, preselects edge
+
 class IncidenceReduction:
+    """ Checks the incidence of terminals, of degree one or the closest is a terminal, preselects edge """
 
     def reduce(self, steiner):
         # Incidence check
@@ -22,4 +23,7 @@ class IncidenceReduction:
             if min_node in steiner.terminals or neighbors == 1:
                 incidence = incidence + 1
 
-        print "Incidence " + str(incidence)
+        return incidence
+
+    def post_process(self, solution):
+        return solution

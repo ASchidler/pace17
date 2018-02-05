@@ -1,14 +1,16 @@
 import sys
 import networkx as nx
 
-# Approximates the maximum edge length using distances between voronoi areas
+
 class VoronoiReduction:
+    """Approximates the maximum edge length using distances between voronoi areas"""
 
     def __init__(self):
         self.voronoi_areas = None
 
-    # Adds each node to the right terminal's voronoi area
     def find_areas(self, steiner):
+        """ Adds each node to the right terminal's voronoi area"""
+
         self.voronoi_areas = {}
         for t in steiner.terminals:
             self.voronoi_areas[t] = set()
@@ -26,8 +28,9 @@ class VoronoiReduction:
 
                 self.voronoi_areas[min_node].add(n)
 
-    # Find exit node, i.e. those nodes closest but not in the current area and calculate the total distance
     def find_exit_sum(self, steiner):
+        """ Find exit node, i.e. those nodes closest but not in the current area and calculate the total distance """
+
         if self.voronoi_areas is None:
             self.find_areas(steiner)
 
@@ -84,7 +87,7 @@ class VoronoiReduction:
             if d + total + exit_sum > steiner.get_approximation().cost:
                 steiner.graph.remove_edge(u, v)
 
-        total = track - len(nx.edges(steiner.graph))
-        print "Voronoi " + str(total)
+        return track - len(nx.edges(steiner.graph))
 
-        return total
+    def post_process(self, solution):
+        return solution

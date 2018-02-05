@@ -2,11 +2,11 @@ import networkx as nx
 import sys
 
 
-# Removed nodes with degree 1 (non-terminal) and merges nodes with degree 2
 class DegreeReduction:
+    """ Removed nodes with degree 1 (non-terminal) and merges nodes with degree 2 """
 
     def __init__(self):
-        self._merged = {}
+        self._removed = {}
 
     def reduce(self, steiner):
         track = len(nx.nodes(steiner.graph))
@@ -24,17 +24,18 @@ class DegreeReduction:
                     w1 = steiner.graph[n][nb[0]]['weight']
                     w2 = steiner.graph[n][nb[1]]['weight']
 
-                    wo = sys.maxint
-                    if steiner.graph.has_edge(nb[0], nb[1]):
-                        wo = steiner.graph[nb[0]][nb[1]]
-
-                    if w1 + w2 < wo:
-                        steiner.graph.add_edge(nb[0], nb[1], weight=w1+w2)
+                    if steiner.add_edge(nb[0], nb[1], w1+w2):
+                        self._removed[(nb[0], nb[1], w1 + w2)] = [(nb[0], n, w1), (nb[1], n, w2)]
                         steiner.graph.remove_node(n)
-                        self._merged[(nb[0], nb[1], w1 + w2)] = [(nb[0], n, w1), (nb[1], n, w2)]
                         break
-
-        print "Degree run " + str(track - len(nx.nodes(steiner.graph)))
 
         return track - len(nx.nodes(steiner.graph))
 
+    def post_process(self, solution):
+        for (k, v) in self._removed.items():
+            if solution[0].has_edge(k[0], k[1]) and solution[0][k[0]][k[1]]['weight'] == k[2]:
+                solution[0].remove_edge(k[0], k[1])
+                solution[0].add_edge(v[0][0], v[0][1], weight=v[0][2])
+                solution[0].add_edge(v[1][0], v[1][1], weight=v[1][2])
+
+        return solution

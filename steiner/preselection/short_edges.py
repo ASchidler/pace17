@@ -92,3 +92,5 @@ class ShortEdgeReduction:
 
         return -1
 
+    def post_process(self, solution):
+        return solution

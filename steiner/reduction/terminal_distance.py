@@ -2,8 +2,8 @@ import sys
 import networkx as nx
 
 
-# Removes all edges that are longer than the maximum distance between two terminals
 class TerminalDistanceReduction:
+    """ Removes all edges that are longer than the maximum distance between two terminals """
 
     def reduce(self, steiner):
         terminal_edges = 0
@@ -23,4 +23,7 @@ class TerminalDistanceReduction:
                 steiner.graph.remove_edge(u, v)
                 terminal_edges = terminal_edges + 1
 
-        print "terminal edge " + str(terminal_edges)
+        return terminal_edges
+
+    def post_process(self, solution):
+        return solution

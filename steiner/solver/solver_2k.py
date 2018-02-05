@@ -60,7 +60,7 @@ class Solver2k:
 
         ret = nx.Graph()
         total = self.backtrack(self.key(self.root_node, self.max_id-1), b, ret)
-        print "Solution found: " + str(total)
+
         return ret, total
 
     def heuristic(self, n, set_id):

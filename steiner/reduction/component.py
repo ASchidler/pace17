@@ -1,10 +1,11 @@
 import networkx as nx
 
 
-# Removes nodes in disconnected components
 class ComponentReduction:
+    """ Checks if the graph has several components and removes unnecessary ones"""
 
     def reduce(self, steiner):
+        track = len(nx.nodes(steiner.graph))
         if not nx.is_connected(steiner.graph):
             for c in nx.connected_components(steiner.graph):
                 found = False
@@ -13,6 +14,10 @@ class ComponentReduction:
                         found = True
 
                 if not found:
-                    print "Found unconnected component of size " + str(len(c))
-        else:
-            print "Only one component found"
+                    for n in c:
+                        steiner.graph.remove_node(n)
+
+        return track - len(nx.nodes(steiner.graph))
+
+    def post_process(self, solution):
+        return solution
