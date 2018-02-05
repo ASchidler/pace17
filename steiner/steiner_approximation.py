@@ -36,7 +36,7 @@ class SteinerApproximation:
 
             for i in range(1, len(path)):
                 current_n = path[i]
-                if current_n not in nx.nodes(self.tree) or prev_n not in nx.nodes(self.tree):
+                if not self.tree.has_edge(prev_n, current_n):
                     nodes.add(current_n)
                     w = steiner.graph[prev_n][current_n]['weight']
                     self.cost = self.cost + w
@@ -44,4 +44,18 @@ class SteinerApproximation:
 
                 prev_n = current_n
 
-        # TODO: Improve: MST and then remove non terminal leafs
+        # Improve solution by creating an MST and deleting non-terminal leafs
+        self.tree = nx.minimum_spanning_tree(self.tree)
+
+        old = sys.maxint
+
+        while old != len(nx.nodes(self.tree)):
+            old = len(nx.nodes(self.tree))
+
+            for (n, d) in list(nx.degree(self.tree)):
+                if d == 1 and n not in steiner.terminals:
+                    self.tree.remove_node(n)
+
+        self.cost = 0
+        for (u, v, d) in list(self.tree.edges(data='weight')):
+            self.cost = self.cost + d
