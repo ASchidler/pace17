@@ -4,9 +4,9 @@ import sys
 
 
 class Solver2k:
-    def __init__(self, graph):
-        self.graph = graph
-        self.terminals = list(graph.terminals)
+    def __init__(self, steiner):
+        self.steiner = steiner
+        self.terminals = list(steiner.terminals)
         self.root_node = self.terminals.pop()
         self.max_id = 1 << len(self.terminals)
         self.costs = SolverCosts(self.terminals, self.max_id)
@@ -18,7 +18,7 @@ class Solver2k:
         p = set()
         b = {}
 
-        for n in nx.nodes(self.graph.graph):
+        for n in nx.nodes(self.steiner.graph):
             p.add(n * self.max_id)
 
         queue = sc.SortedSet(key=lambda q: q[2])
@@ -38,9 +38,9 @@ class Solver2k:
 
                 cn = self.costs[self.key(n[0], n[1])]
 
-                for n2 in nx.neighbors(self.graph.graph, n[0]):
+                for n2 in nx.neighbors(self.steiner.graph, n[0]):
                     cw = self.costs[self.key(n2, n[1])]
-                    total = cn + self.graph.graph[n[0]][n2]['weight']
+                    total = cn + self.steiner.graph[n[0]][n2]['weight']
 
                     if total < cw and self.key(n2, n[1]) not in p:
                         self.costs[self.key(n2, n[1])] = total
@@ -56,9 +56,10 @@ class Solver2k:
                             b[self.key(n[0], combined)] = [self.key(n[0], i), self.key(n[0], n[1])]
                             queue.add((n[0], combined, c1 + self.heuristic(n[0], combined)))
 
-        ret = []
+        ret = nx.Graph()
         total = self.backtrack(self.key(self.root_node, self.max_id-1), b, ret)
-        return ret
+        print "Solution found: " + str(total)
+        return ret, total
 
     def heuristic(self, n, set_id):
         return 0
@@ -72,15 +73,16 @@ class Solver2k:
 
         if len(entry) == 1:
             n2 = entry[0] / self.max_id
-            ret.append((n1, n2))
-            return self.graph.graph[n1][n2]['weight'] + \
-                self.backtrack(entry[0], b, ret)
+            w = self.steiner.graph[n1][n2]['weight']
+            ret.add_edge(n1, n2, weight=w)
+            return w + self.backtrack(entry[0], b, ret)
         else:
             tmp = 0
             for e in entry:
                 tmp = tmp + self.backtrack(e, b, ret)
 
             return tmp
+
 
 class SolverCosts(dict):
     costs = {}
