@@ -21,49 +21,55 @@ class Solver2k:
         return n * self.max_id + s
 
     def solve(self):
+        # Permanent labels => done set
         p = set()
+        # Backtrack information
         b = {}
 
         for n in nx.nodes(self.steiner.graph):
             p.add(n * self.max_id)
 
+        # Queue entries are tuples (node, terminal set, cost, heuristic value)
         queue = sc.SortedSet(key=lambda q: q[2])
-        for i in range(0, len(self.terminals)):
-            queue.add((self.terminals[i], 1 << i, 0, 0))
+        for other_set in range(0, len(self.terminals)):
+            h = self.heuristic(self.terminals[other_set], 1 << other_set)
+            queue.add((self.terminals[other_set], 1 << other_set, h, h))
 
         while self.key(self.root_node, self.max_id - 1) not in p:
             n = queue.pop(0)
-            new_cost = self.costs[self.key(n[0], n[1])] + n[3]
 
-            # Make sure costs didn't change since queuing time
-            if new_cost != n[2]:
-                queue.add((n[0], n[1], new_cost, n[3]))
-            elif self.key(n[0], n[1]) not in p:
-                p.add(self.key(n[0], n[1]))
-
-                cn = self.costs[self.key(n[0], n[1])]
+            # Make sure it has not yet been processed (elements may be queued multiple times)
+            if self.key(n[0], n[1]) not in p:
+                n_key = self.key(n[0], n[1])
+                p.add(n_key)
+                n_cost = self.costs[n_key]
 
                 for n2 in nx.neighbors(self.steiner.graph, n[0]):
-                    cw = self.costs[self.key(n2, n[1])]
-                    total = cn + self.steiner.graph[n[0]][n2]['weight']
+                    n2_key = self.key(n2, n[1])
+                    n2_cost = self.costs[n2_key]
 
-                    if total < cw and self.key(n2, n[1]) not in p:
-                        self.costs[self.key(n2, n[1])] = total
-                        b[self.key(n2, n[1])] = [self.key(n[0], n[1])]
+                    total = n_cost + self.steiner.graph[n[0]][n2]['weight']
+
+                    if total < n2_cost and n2_key not in p:
+                        self.costs[n2_key] = total
+                        b[n2_key] = [n_key]
                         h = self.heuristic(n2, n[1])
                         if not self.prune(n2, n[1], total, h):
                             queue.add((n2, n[1], total + h, h))
 
-                for i in range(1, self.max_id):
-                    if (i & n[1]) == 0 and self.key(n[0], i) in p:
-                        combined = n[1] | i
-                        c1 = cn + self.costs[self.key(n[0], i)]
-                        if c1 < self.costs[self.key(n[0], combined)] and self.key(n[0], combined) not in p:
-                            self.costs[self.key(n[0], combined)] = c1
-                            b[self.key(n[0], combined)] = [self.key(n[0], i), self.key(n[0], n[1])]
-                            h = self.heuristic(n[0], combined)
-                            if not self.prune(n2, n[1], c1, h, i):
-                                queue.add((n[0], combined, c1 + h, h))
+                for other_set in range(1, self.max_id):
+                    if (other_set & n[1]) == 0:
+                        set_key = self.key(n[0], other_set)
+                        if set_key in p:
+                            combined = n[1] | other_set
+                            combined_key = self.key(n[0], combined)
+                            combined_cost = n_cost + self.costs[set_key]
+                            if combined_cost < self.costs[combined_key] and combined_key not in p:
+                                self.costs[combined_key] = combined_cost
+                                b[combined_key] = [set_key, n_key]
+                                h = self.heuristic(n[0], combined)
+                                if not self.prune(n[0], n[1], combined_cost, h, other_set):
+                                    queue.add((n[0], combined, combined_cost + h, h))
 
         ret = nx.Graph()
         total = self.backtrack(self.key(self.root_node, self.max_id-1), b, ret)
@@ -75,9 +81,7 @@ class Solver2k:
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
-        # return 0
-        return self.tsp_heuristic(n, set_id, ts)
-        # return self.mst_heuristic(n, set_id, ts)
+        return max(self.tsp_heuristic(n, set_id, ts), self.mst_heuristic(n, set_id, ts))
 
     def mst_heuristic(self, n, set_id, ts):
         # Only one terminal
@@ -180,12 +184,23 @@ class Solver2k:
         if c + h > self.steiner.get_approximation().cost:
             return True
 
-        #return self.prune2(n, set_id, c, h, set_id2)
+        return self.prune2(n, set_id, c, h, set_id2)
         return False
 
     def prune2(self, n, set_id, c, h, set_id2=None):
         if set_id2 is not None:
             set_id = set_id | set_id2
+
+        # First check if there is a bound available
+        if set_id not in self.prune_bounds:
+            bound = (sys.maxint, [])
+        else:
+            bound = self.prune_bounds[set_id]
+
+        if c > bound[0]:
+            return True
+
+        # Calculate the minimum distance between the cuts set and R \ set
         ts1 = []
         ts2 = []
 
@@ -199,11 +214,8 @@ class Solver2k:
 
         min_val = sys.maxint
         if set_id not in self.prune_dist:
-            for i in range(0, len(ts1)):
-                t1 = ts1[i]
-
-                for j in range(0, len(ts2)):
-                    t2 = ts2[j]
+            for t1 in ts1:
+                for t2 in ts2:
                     min_val = min(min_val, self.steiner.get_lengths(t1, t2))
 
             self.prune_dist[set_id] = min_val
@@ -211,23 +223,18 @@ class Solver2k:
         else:
             dist_set = self.prune_dist[set_id]
 
-        if set_id not in self.prune_bounds:
-            bound = (sys.maxint, [])
-        else:
-            bound = self.prune_bounds[set_id]
-
+        # Find the minimum distance between n and R \ set
         dist_node = sys.maxint
-        for i in range(0, len(ts2)):
-            dist_node = min(dist_node, self.steiner.get_lengths(n, ts2[i]))
+        for t2 in ts2:
+            dist_node = min(dist_node, self.steiner.get_lengths(n, t2))
 
+        # Check if we can lower the bound
         w = c + min(dist_set, dist_node)
 
         if w < bound[0]:
-            self.prune_bounds[set_id] = (w, set_id)
+            self.prune_bounds[set_id] = (w, n)
 
-        if c > bound[0]:
-            return True
-
+        # In any case do not prune
         return False
 
     def backtrack(self, c, b, ret):
