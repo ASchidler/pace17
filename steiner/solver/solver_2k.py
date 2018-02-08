@@ -1,16 +1,21 @@
 import networkx as nx
 import sortedcontainers as sc
 import sys
+import math
 
 
 class Solver2k:
     def __init__(self, steiner):
         self.steiner = steiner
         self.terminals = list(steiner.terminals)
+        self.terminals.sort()
         self.root_node = self.terminals.pop()
         self.max_id = 1 << len(self.terminals)
         self.costs = SolverCosts(self.terminals, self.max_id)
         self.msts = {}
+        self.tsp = {}
+        self.prune_dist = {}
+        self.prune_bounds = {}
 
     def key(self, n, s):
         return n * self.max_id + s
@@ -46,7 +51,8 @@ class Solver2k:
                         self.costs[self.key(n2, n[1])] = total
                         b[self.key(n2, n[1])] = [self.key(n[0], n[1])]
                         h = self.heuristic(n2, n[1])
-                        queue.add((n2, n[1], total + h, h))
+                        if not self.prune(n2, n[1], total, h):
+                            queue.add((n2, n[1], total + h, h))
 
                 for i in range(1, self.max_id):
                     if (i & n[1]) == 0 and self.key(n[0], i) in p:
@@ -56,7 +62,8 @@ class Solver2k:
                             self.costs[self.key(n[0], combined)] = c1
                             b[self.key(n[0], combined)] = [self.key(n[0], i), self.key(n[0], n[1])]
                             h = self.heuristic(n[0], combined)
-                            queue.add((n[0], combined, c1 + h, h))
+                            if not self.prune(n2, n[1], c1, h, i):
+                                queue.add((n[0], combined, c1 + h, h))
 
         ret = nx.Graph()
         total = self.backtrack(self.key(self.root_node, self.max_id-1), b, ret)
@@ -64,14 +71,15 @@ class Solver2k:
         return ret, total
 
     def heuristic(self, n, set_id):
-        return 0
+        set_id = (self.max_id - 1) ^ set_id
+        ts = self.to_list(set_id)
+        ts.append(self.root_node)
 
-        ts = []
+        # return 0
+        # return self.tsp_heuristic(n, set_id, ts)
+        return self.mst_heuristic(n, set_id, ts)
 
-        for i in range(0, len(self.terminals)):
-            if ((1 << i) & set_id) > 0:
-                ts.append(self.terminals[i])
-
+    def mst_heuristic(self, n, set_id, ts):
         # Only one terminal
         if len(ts) == 1:
             return self.steiner.get_lengths(n, ts[0])
@@ -79,15 +87,16 @@ class Solver2k:
         # Calculate MST costs
         cost = self.calc_mst(ts, set_id)
 
+        # Find minimum pairwise distance
         min_val = sys.maxint
-
         for i in range(0, len(ts)):
             t1 = ts[i]
-            for j in range(i+1, len(ts)):
+            l1 = self.steiner.get_lengths(t1, n)
+            for j in range(i + 1, len(ts)):
                 t2 = ts[j]
-                min_val = min(min_val, (self.steiner.get_lengths(t1, n) + self.steiner.get_lengths(t2, n)) / 2)
+                min_val = min(min_val, l1 + self.steiner.get_lengths(t2, n))
 
-        return min_val + cost
+        return (min_val + cost) / 2
 
     def calc_mst(self, ts, set_id):
         if set_id in self.msts:
@@ -109,6 +118,114 @@ class Solver2k:
         self.msts[set_id] = cost
         return cost
 
+    def tsp_heuristic(self, n, set_id, ts):
+        results = self.get_tsp_for_set(set_id)
+
+        min_val = sys.maxint
+
+        if len(ts) == 1:
+            return self.steiner.get_lengths(ts[0], n)
+
+        for i in range(0, len(ts)):
+            t1 = ts[i]
+            d1 = self.steiner.get_lengths(t1, n)
+            for j in range(i+1, len(ts)):
+                t2 = ts[j]
+                d2 = self.steiner.get_lengths(t2, n)
+                min_val = min(min_val, d1 + d2 + results[(t1, t2)])
+
+        return int(math.ceil(min_val / 2.0))
+
+    def get_tsp_for_set(self, set_id):
+        if set_id in self.tsp:
+            return self.tsp[set_id]
+
+        nodes = self.to_list(set_id)
+        ts = list(nodes)
+        self.tsp[set_id] = {}
+
+        for i in range(0, len(ts)):
+            t1 = ts[i]
+            nodes.remove(t1)
+
+            for j in range(i+1, len(ts)):
+                t2 = ts[j]
+                self.tsp[set_id][(t1, t2)] = self.calc_tsp(t1, nodes, t2) + self.steiner.get_lengths(t1, t2)
+
+        return self.tsp[set_id]
+
+    def calc_tsp(self, s, nodes, l):
+        if len(nodes) == 1:
+            return self.steiner.get_lengths(s, l)
+
+        min_val = sys.maxint
+        nodes.remove(l)
+
+        for i in range(0, len(nodes)):
+            e = nodes[i]
+            ret = self.calc_tsp(s, nodes, e)
+            min_val = min(min_val, ret + self.steiner.get_lengths(e, l))
+
+        nodes.append(l)
+        return min_val
+
+    def prune(self, n, set_id, c, h, set_id2=None):
+        if c + h > self.steiner.get_approximation().cost:
+            return True
+
+        #return self.prune2(n, set_id, c, h, set_id2)
+        return False
+
+    def prune2(self, n, set_id, c, h, set_id2=None):
+        if set_id2 is not None:
+            set_id = set_id | set_id2
+        ts1 = []
+        ts2 = []
+
+        for i in range(0, len(self.terminals)):
+            if ((1 << i) & set_id) > 0:
+                ts1.append(self.terminals[i])
+            else:
+                ts2.append(self.terminals[i])
+
+        ts2.append(self.root_node)
+
+        min_val = sys.maxint
+        if set_id not in self.prune_dist:
+            for i in range(0, len(ts1)):
+                t1 = ts1[i]
+
+                for j in range(0, len(ts2)):
+                    t2 = ts2[j]
+                    min_val = min(min_val, self.steiner.get_lengths(t1, t2))
+
+            self.prune_dist[set_id] = min_val
+            dist_set = min_val
+        else:
+            dist_set = self.prune_dist[set_id]
+
+        if set_id not in self.prune_bounds:
+            bound = (sys.maxint, [])
+        else:
+            bound = self.prune_bounds[set_id]
+
+        dist_node = sys.maxint
+        for i in range(0, len(ts2)):
+            dist_node = min(dist_node, self.steiner.get_lengths(n, ts2[i]))
+
+        w = c + min(dist_set, dist_node)
+
+        if w < bound[0]:
+            self.prune_bounds[set_id] = (w, set_id)
+
+        if c > bound[0]:
+            return True
+
+        return False
+
+
+
+
     def backtrack(self, c, b, ret):
         if c not in b.keys():
             return 0
@@ -127,6 +244,14 @@ class Solver2k:
                 tmp = tmp + self.backtrack(e, b, ret)
 
             return tmp
+
+    def to_list(self, set_id):
+        ts = []
+        for i in range(0, len(self.terminals)):
+            if ((1 << i) & set_id) > 0:
+                ts.append(self.terminals[i])
+
+        return ts
 
 
 class SolverCosts(dict):
