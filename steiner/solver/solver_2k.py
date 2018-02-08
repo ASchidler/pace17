@@ -76,8 +76,8 @@ class Solver2k:
         ts.append(self.root_node)
 
         # return 0
-        # return self.tsp_heuristic(n, set_id, ts)
-        return self.mst_heuristic(n, set_id, ts)
+        return self.tsp_heuristic(n, set_id, ts)
+        # return self.mst_heuristic(n, set_id, ts)
 
     def mst_heuristic(self, n, set_id, ts):
         # Only one terminal
@@ -119,28 +119,30 @@ class Solver2k:
         return cost
 
     def tsp_heuristic(self, n, set_id, ts):
-        results = self.get_tsp_for_set(set_id)
-
-        min_val = sys.maxint
-
         if len(ts) == 1:
             return self.steiner.get_lengths(ts[0], n)
 
+        ts.sort()
+        cost = self.get_tsp_for_set(set_id, ts)
+
+        # Find the smallest tour, by adding the node to all possible hamiltonian paths
+        min_val = sys.maxint
         for i in range(0, len(ts)):
             t1 = ts[i]
             d1 = self.steiner.get_lengths(t1, n)
             for j in range(i+1, len(ts)):
                 t2 = ts[j]
                 d2 = self.steiner.get_lengths(t2, n)
-                min_val = min(min_val, d1 + d2 + results[(t1, t2)])
+                min_val = min(min_val, d1 + d2 + cost[(t1, t2)])
 
         return int(math.ceil(min_val / 2.0))
 
-    def get_tsp_for_set(self, set_id):
+    def get_tsp_for_set(self, set_id, ts):
+        """ Calculates the Hamiltonian paths for all possible endpoint pairs in the set"""
         if set_id in self.tsp:
             return self.tsp[set_id]
 
-        nodes = self.to_list(set_id)
+        nodes = list(ts)
         ts = list(nodes)
         self.tsp[set_id] = {}
 
@@ -150,11 +152,14 @@ class Solver2k:
 
             for j in range(i+1, len(ts)):
                 t2 = ts[j]
-                self.tsp[set_id][(t1, t2)] = self.calc_tsp(t1, nodes, t2) + self.steiner.get_lengths(t1, t2)
+                # Do not add the endpoint. This would make it a tour, but we need hamiltonian paths
+                self.tsp[set_id][(t1, t2)] = self.calc_tsp(t1, nodes, t2) #+ self.steiner.get_lengths(t1, t2)
 
+            nodes.append(t1)
         return self.tsp[set_id]
 
     def calc_tsp(self, s, nodes, l):
+        """ Calculates the shortest path from s to l visiting all nodes """
         if len(nodes) == 1:
             return self.steiner.get_lengths(s, l)
 
@@ -162,11 +167,13 @@ class Solver2k:
         nodes.remove(l)
 
         for i in range(0, len(nodes)):
-            e = nodes[i]
-            ret = self.calc_tsp(s, nodes, e)
-            min_val = min(min_val, ret + self.steiner.get_lengths(e, l))
+            new_l = nodes[i]
+            sub_tsp = self.calc_tsp(s, nodes, new_l)
+            min_val = min(min_val, sub_tsp + self.steiner.get_lengths(new_l, l))
 
         nodes.append(l)
+        nodes.sort()
+
         return min_val
 
     def prune(self, n, set_id, c, h, set_id2=None):
@@ -222,9 +229,6 @@ class Solver2k:
             return True
 
         return False
-
-
-
 
     def backtrack(self, c, b, ret):
         if c not in b.keys():
