@@ -86,7 +86,7 @@ class Solver2k:
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
-        # return self.simple_heuristic(n, set_id, ts, 2)
+        return self.simple_heuristic(n, set_id, ts, 2)
 
         return max(self.tsp_heuristic(n, set_id, ts), self.mst_heuristic(n, set_id, ts))
 
@@ -188,19 +188,23 @@ class Solver2k:
         return min_val
 
     def prune(self, n, set_id, c, h, set_id2=None):
-        if c + h > self.steiner.get_approximation().cost:
-            return True
+        #if c + h > self.steiner.get_approximation().cost:
+        #    return True
 
         return self.prune2(n, set_id, c, h, set_id2)
 
     def prune2(self, n, set_id, c, h, set_id2=None):
 
         if set_id2 is not None:
+            set_id1 = set_id
             set_id = set_id | set_id2
 
         # First check if there is a bound available
         if set_id not in self.prune_bounds:
-            bound = (sys.maxint, [])
+            #if set_id2 is not None:
+            #    bound = self.prune2_combine(set_id1, set_id2)
+           # else:
+                bound = (sys.maxint, [])
         else:
             bound = self.prune_bounds[set_id]
 
@@ -239,10 +243,47 @@ class Solver2k:
         w = c + min(dist_set, dist_node)
 
         if w < bound[0]:
-            self.prune_bounds[set_id] = (w, n)
+            self.prune_bounds[set_id] = (w, [n])
 
         # In any case do not prune
         return False
+
+    def prune2_combine(self, set_id1, set_id2):
+        if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
+            return sys.maxint, []
+
+        set1 = self.to_list(set_id1)
+        set2 = self.to_list(set_id2)
+        set1_entry = self.prune_bounds[set_id1]
+        set2_entry = self.prune_bounds[set_id2]
+
+        usable = True
+        for e in set1_entry[1]:
+            if e in set2:
+                usable = False
+
+        if not usable:
+            usable = True
+
+            for e in set2_entry[1]:
+                if e in set1:
+                    usable = False
+
+        if not usable:
+            return sys.maxint, []
+
+        val = set1_entry[0] + set2_entry[0]
+        s = list(set1_entry[1])
+        s.extend(set2_entry[1])
+        for e in set1:
+            if e in s:
+                s.remove(e)
+        for e in set2:
+            if e in s:
+                s.remove(e)
+
+        self.prune_bounds[set_id1 | set_id2] = (val, s)
+        return val, s
 
     def backtrack(self, c, b, ret):
         if c not in b.keys():
@@ -272,13 +313,13 @@ class Solver2k:
         return ts
 
     def simple_heuristic(self, n, set_id, ts, limit):
-        max_val = 0
         ts2 = list(ts)
         ts2.append(n)
+        ts2.remove(self.root_node)
 
         max_val = 0
         for i in range(1, 1 << len(ts2)):
-            if bin(i).count("1") <= limit:
+            if 2 <= bin(i).count("1") <= limit:
                 ts3 = []
                 for j in range(0, len(ts2)):
                     if (i & (1 << j)) > 0:
@@ -290,11 +331,6 @@ class Solver2k:
                 max_val = max(max_val, val)
 
         return max_val
-
-
-
-
-
 
 class SolverCosts(dict):
     costs = {}
