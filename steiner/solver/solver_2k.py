@@ -5,9 +5,9 @@ import math
 
 
 class Solver2k:
-    def __init__(self, steiner):
+    def __init__(self, steiner, terminals, use_heuristic):
         self.steiner = steiner
-        self.terminals = list(steiner.terminals)
+        self.terminals = list(terminals)
         self.terminals.sort()
         self.root_node = self.terminals.pop()
         self.max_id = 1 << len(self.terminals)
@@ -16,6 +16,8 @@ class Solver2k:
         self.tsp = {}
         self.prune_dist = {}
         self.prune_bounds = {}
+        self.prune_smt = {}
+        self.use_heuristic = use_heuristic
 
     def key(self, n, s):
         return n * self.max_id + s
@@ -77,9 +79,14 @@ class Solver2k:
         return ret, total
 
     def heuristic(self, n, set_id):
+        if not self.use_heuristic:
+            return 0
+
         set_id = (self.max_id - 1) ^ set_id
         ts = self.to_list(set_id)
         ts.append(self.root_node)
+
+        # return self.simple_heuristic(n, set_id, ts, 2)
 
         return max(self.tsp_heuristic(n, set_id, ts), self.mst_heuristic(n, set_id, ts))
 
@@ -185,9 +192,9 @@ class Solver2k:
             return True
 
         return self.prune2(n, set_id, c, h, set_id2)
-        return False
 
     def prune2(self, n, set_id, c, h, set_id2=None):
+
         if set_id2 is not None:
             set_id = set_id | set_id2
 
@@ -263,6 +270,30 @@ class Solver2k:
                 ts.append(self.terminals[i])
 
         return ts
+
+    def simple_heuristic(self, n, set_id, ts, limit):
+        max_val = 0
+        ts2 = list(ts)
+        ts2.append(n)
+
+        max_val = 0
+        for i in range(1, 1 << len(ts2)):
+            if bin(i).count("1") <= limit:
+                ts3 = []
+                for j in range(0, len(ts2)):
+                    if (i & (1 << j)) > 0:
+                        ts3.append(ts2[j])
+
+                ts3.append(self.root_node)
+                slv = Solver2k(self.steiner, ts3, False)
+                val = slv.solve()[1]
+                max_val = max(max_val, val)
+
+        return max_val
+
+
+
+
 
 
 class SolverCosts(dict):
