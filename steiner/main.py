@@ -53,9 +53,11 @@ def process_file(filename, solve, apply_reductions):
 
     return
 
-
+#37,59
+#69 slow
+#73 stop
 for i in range(1, 200):
-    filepath = "D:\steinertree\pace2017\instances\lowTerm\instance{0:03d}.gr"
+    filepath = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = filepath.format(i)
         print current_file
