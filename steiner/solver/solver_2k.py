@@ -5,7 +5,7 @@ import math
 
 
 class Solver2k:
-    def __init__(self, steiner, terminals, use_heuristic):
+    def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
         self.terminals = list(terminals)
         self.terminals.sort()
@@ -15,9 +15,10 @@ class Solver2k:
         self.prune_dist = {}
         self.prune_bounds = {}
         self.prune_smt = {}
-        self.use_heuristic = use_heuristic
+        self.heuristics = heuristics
 
     def key(self, n, s):
+        """Calculates a key from node id and set id"""
         return n * self.max_id + s
 
     def solve(self):
@@ -77,16 +78,18 @@ class Solver2k:
         return ret, total
 
     def heuristic(self, n, set_id):
-        if not self.use_heuristic:
+        if len(self.heuristics) == 0:
             return 0
 
         set_id = (self.max_id - 1) ^ set_id
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
-        #return self.simple_heuristic(n, set_id, ts, 2)
+        max_val = 0
+        for h in self.heuristics:
+            max_val = max(max_val, h.calculate(n, set_id, ts))
 
-        return max(self.tsp_heuristic(n, set_id, ts), self.mst_heuristic(n, set_id, ts))
+        return max_val
 
 
     def prune(self, n, set_id, c, h, set_id2=None):
@@ -194,12 +197,15 @@ class Solver2k:
         return val, s
 
     def backtrack(self, c, b, ret):
+        """Creates the solution upon a finished solving run"""
         if c not in b.keys():
             return 0
 
+        # Get the node and the predecessor
         n1 = c / self.max_id
         entry = b[c]
 
+        #
         if len(entry) == 1:
             n2 = entry[0] / self.max_id
             w = self.steiner.graph[n1][n2]['weight']
@@ -213,6 +219,7 @@ class Solver2k:
             return tmp
 
     def to_list(self, set_id):
+        """Converts a set identifier to the actual set of nodes"""
         ts = []
         for i in range(0, len(self.terminals)):
             if ((1 << i) & set_id) > 0:

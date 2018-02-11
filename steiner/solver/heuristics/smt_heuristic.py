@@ -32,7 +32,7 @@ class SmtHeuristic:
                 # Root node is always included
                 active_set.append(self.root_node)
                 # Solve this problem
-                slv = sv.Solver2k(self.steiner, active_set, False)
+                slv = sv.Solver2k(self.steiner, active_set, [])
                 val = slv.solve()[1]
                 max_val = max(max_val, val)
 
