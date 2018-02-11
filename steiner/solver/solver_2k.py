@@ -103,9 +103,9 @@ class Solver2k:
 
         # First check if there is a bound available
         if set_id not in self.prune_bounds:
-            #if set_id2 is not None:
-            #    bound = self.prune2_combine(set_id1, set_id2)
-           # else:
+            if set_id2 is not None:
+                bound = self.prune2_combine(set_id1, set_id2)
+            else:
                 bound = (sys.maxint, [])
         else:
             bound = self.prune_bounds[set_id]
@@ -126,26 +126,32 @@ class Solver2k:
         ts2.append(self.root_node)
 
         min_val = sys.maxint
+        min_node = None
         if set_id not in self.prune_dist:
             for t1 in ts1:
                 for t2 in ts2:
-                    min_val = min(min_val, self.steiner.get_lengths(t1, t2))
+                    l = self.steiner.get_lengths(t1, t2)
+                    if l < min_val:
+                        min_val = l
+                        min_node = t2
 
             self.prune_dist[set_id] = min_val
-            dist_set = min_val
+            dist = min_val
         else:
-            dist_set = self.prune_dist[set_id]
+            dist = self.prune_dist[set_id]
 
         # Find the minimum distance between n and R \ set
-        dist_node = sys.maxint
         for t2 in ts2:
-            dist_node = min(dist_node, self.steiner.get_lengths(n, t2))
+            l = self.steiner.get_lengths(n, t2)
+            if l < dist:
+                dist = l
+                min_node = t2
 
         # Check if we can lower the bound
-        w = c + min(dist_set, dist_node)
+        w = c + dist
 
         if w < bound[0]:
-            self.prune_bounds[set_id] = (w, [n])
+            self.prune_bounds[set_id] = (w, [min_node])
 
         # In any case do not prune
         return False
