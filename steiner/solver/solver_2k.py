@@ -216,22 +216,25 @@ class Solver2k:
 
 
 class SolverCosts(dict):
-    costs = {}
-    terminals = {}
-    max_id = None
+    """Derived dictionary that uses appropriate default values in case of missing keys"""
 
     def __init__(self, terminals, max_id):
+        self.terminals = {}
         for i in range(0, len(terminals)):
             self.terminals[terminals[i]] = 1 << i
         self.max_id = max_id
 
     def __missing__(self, key):
+        # Get node and set ID
         n = key / self.max_id
         s = key % self.max_id
 
+        # Default for empty set is 0
         if s == 0:
             return 0
+        # Default for a terminal with the set only containing the terminal is 0
         if n in self.terminals and s == self.terminals[n]:
             return 0
 
+        # Otherwise infinity
         return sys.maxint
