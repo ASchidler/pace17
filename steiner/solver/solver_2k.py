@@ -1,7 +1,6 @@
 import networkx as nx
 import sortedcontainers as sc
 import sys
-import math
 
 
 class Solver2k:
@@ -22,13 +21,9 @@ class Solver2k:
         return n * self.max_id + s
 
     def solve(self):
-        # Permanent labels => done set
+        """Solves the instance of the steiner tree problem"""
+        # Permanent labels => set of completed elements
         p = set()
-        # Backtrack information
-        b = {}
-
-        for n in nx.nodes(self.steiner.graph):
-            p.add(n * self.max_id)
 
         # Queue entries are tuples (node, terminal set, cost, heuristic value)
         queue = sc.SortedSet(key=lambda q: q[2])
@@ -43,17 +38,16 @@ class Solver2k:
             if self.key(n[0], n[1]) not in p:
                 n_key = self.key(n[0], n[1])
                 p.add(n_key)
-                n_cost = self.costs[n_key]
+                n_cost = self.costs[n_key][0]
 
                 for n2 in nx.neighbors(self.steiner.graph, n[0]):
                     n2_key = self.key(n2, n[1])
-                    n2_cost = self.costs[n2_key]
+                    n2_cost = self.costs[n2_key][0]
 
                     total = n_cost + self.steiner.graph[n[0]][n2]['weight']
 
                     if total < n2_cost and n2_key not in p:
-                        self.costs[n2_key] = total
-                        b[n2_key] = [n_key]
+                        self.costs[n2_key] = (total, [n_key])
                         h = self.heuristic(n2, n[1])
                         if not self.prune(n2, n[1], total, h):
                             queue.add((n2, n[1], total + h, h))
@@ -64,16 +58,15 @@ class Solver2k:
                         if set_key in p:
                             combined = n[1] | other_set
                             combined_key = self.key(n[0], combined)
-                            combined_cost = n_cost + self.costs[set_key]
+                            combined_cost = n_cost + self.costs[set_key][0]
                             if combined_cost < self.costs[combined_key] and combined_key not in p:
-                                self.costs[combined_key] = combined_cost
-                                b[combined_key] = [set_key, n_key]
+                                self.costs[combined_key] = (combined_cost, [set_key, n_key])
                                 h = self.heuristic(n[0], combined)
                                 if not self.prune(n[0], n[1], combined_cost, h, other_set):
                                     queue.add((n[0], combined, combined_cost + h, h))
 
         ret = nx.Graph()
-        total = self.backtrack(self.key(self.root_node, self.max_id-1), b, ret)
+        total = self.backtrack(self.key(self.root_node, self.max_id-1), ret)
 
         return ret, total
 
@@ -91,32 +84,55 @@ class Solver2k:
 
         return max_val
 
-
     def prune(self, n, set_id, c, h, set_id2=None):
-        #if c + h > self.steiner.get_approximation().cost:
-        #    return True
+        if c + h > self.steiner.get_approximation().cost:
+            return True
 
-        return self.prune2(n, set_id, c, h, set_id2)
+        return self.prune2(n, set_id, c, set_id2)
 
-    def prune2(self, n, set_id, c, h, set_id2=None):
+    def prune2(self, n, set_id, c, set_id2=None):
+        target_set = set_id
 
         if set_id2 is not None:
-            set_id1 = set_id
-            set_id = set_id | set_id2
+            target_set = set_id | set_id2
 
         # First check if there is a bound available
-        if set_id not in self.prune_bounds:
+        if target_set not in self.prune_bounds:
             if set_id2 is not None:
-                bound = self.prune2_combine(set_id1, set_id2)
+                bound = self.prune2_combine(set_id, set_id2)
             else:
                 bound = (sys.maxint, [])
         else:
-            bound = self.prune_bounds[set_id]
+            bound = self.prune_bounds[target_set]
 
+        # Check if pruning is applicable
         if c > bound[0]:
             return True
 
-        # Calculate the minimum distance between the cuts set and R \ set
+        # Otherwise check if we have a new upper bound
+        dist = self.prune2_dist(target_set)
+
+        # Find the minimum distance between n and R \ set
+        ts = self.to_list((self.max_id-1) ^ target_set)
+        ts.append(self.root_node)
+        for t in ts:
+            lt = self.steiner.get_lengths(n, t)
+            if lt < dist[0]:
+                dist = (lt, t)
+
+        # Check if we can lower the bound
+        w = c + dist[0]
+        if w < bound[0]:
+            self.prune_bounds[target_set] = (w, [dist[1]])
+
+        # In any case do not prune
+        return False
+
+    def prune2_dist(self, set_id):
+        """Calculates the minimum distance between the cut of terminals in the set and not in the set"""
+        if set_id in self.prune_dist:
+            return self.prune_dist[set_id], None
+
         ts1 = []
         ts2 = []
 
@@ -130,34 +146,16 @@ class Solver2k:
 
         min_val = sys.maxint
         min_node = None
-        if set_id not in self.prune_dist:
-            for t1 in ts1:
-                for t2 in ts2:
-                    l = self.steiner.get_lengths(t1, t2)
-                    if l < min_val:
-                        min_val = l
-                        min_node = t2
 
-            self.prune_dist[set_id] = min_val
-            dist = min_val
-        else:
-            dist = self.prune_dist[set_id]
+        for t1 in ts1:
+            for t2 in ts2:
+                ls = self.steiner.get_lengths(t1, t2)
+                if ls < min_val:
+                    min_val = ls
+                    min_node = t2
 
-        # Find the minimum distance between n and R \ set
-        for t2 in ts2:
-            l = self.steiner.get_lengths(n, t2)
-            if l < dist:
-                dist = l
-                min_node = t2
-
-        # Check if we can lower the bound
-        w = c + dist
-
-        if w < bound[0]:
-            self.prune_bounds[set_id] = (w, [min_node])
-
-        # In any case do not prune
-        return False
+        self.prune_dist[set_id] = min_val
+        return min_val, min_node
 
     def prune2_combine(self, set_id1, set_id2):
         if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
@@ -196,25 +194,27 @@ class Solver2k:
         self.prune_bounds[set_id1 | set_id2] = (val, s)
         return val, s
 
-    def backtrack(self, c, b, ret):
+    def backtrack(self, c, ret):
         """Creates the solution upon a finished solving run"""
-        if c not in b.keys():
+
+        entry = self.costs[c][1]
+
+        if len(entry) == 0:
             return 0
 
         # Get the node and the predecessor
         n1 = c / self.max_id
-        entry = b[c]
 
         #
         if len(entry) == 1:
             n2 = entry[0] / self.max_id
             w = self.steiner.graph[n1][n2]['weight']
             ret.add_edge(n1, n2, weight=w)
-            return w + self.backtrack(entry[0], b, ret)
+            return w + self.backtrack(entry[0], ret)
         else:
             tmp = 0
             for e in entry:
-                tmp = tmp + self.backtrack(e, b, ret)
+                tmp = tmp + self.backtrack(e, ret)
 
             return tmp
 
@@ -232,6 +232,7 @@ class SolverCosts(dict):
     """Derived dictionary that uses appropriate default values in case of missing keys"""
 
     def __init__(self, terminals, max_id):
+        super(SolverCosts, self).__init__()
         self.terminals = {}
         for i in range(0, len(terminals)):
             self.terminals[terminals[i]] = 1 << i
@@ -244,10 +245,10 @@ class SolverCosts(dict):
 
         # Default for empty set is 0
         if s == 0:
-            return 0
+            return 0, []
         # Default for a terminal with the set only containing the terminal is 0
         if n in self.terminals and s == self.terminals[n]:
-            return 0
+            return 0, []
 
         # Otherwise infinity
-        return sys.maxint
+        return sys.maxint, []
