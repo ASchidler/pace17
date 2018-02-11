@@ -12,8 +12,6 @@ class Solver2k:
         self.root_node = self.terminals.pop()
         self.max_id = 1 << len(self.terminals)
         self.costs = SolverCosts(self.terminals, self.max_id)
-        self.msts = {}
-        self.tsp = {}
         self.prune_dist = {}
         self.prune_bounds = {}
         self.prune_smt = {}
@@ -86,106 +84,10 @@ class Solver2k:
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
-        return self.simple_heuristic(n, set_id, ts, 2)
+        #return self.simple_heuristic(n, set_id, ts, 2)
 
         return max(self.tsp_heuristic(n, set_id, ts), self.mst_heuristic(n, set_id, ts))
 
-    def mst_heuristic(self, n, set_id, ts):
-        # Only one terminal
-        if len(ts) == 1:
-            return self.steiner.get_lengths(n, ts[0])
-
-        # Calculate MST costs
-        cost = self.calc_mst(ts, set_id)
-
-        # Find minimum pairwise distance
-        min_val = sys.maxint
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            l1 = self.steiner.get_lengths(t1, n)
-            for j in range(i + 1, len(ts)):
-                t2 = ts[j]
-                min_val = min(min_val, l1 + self.steiner.get_lengths(t2, n))
-
-        return (min_val + cost) / 2
-
-    def calc_mst(self, ts, set_id):
-        if set_id in self.msts:
-            return self.msts[set_id]
-
-        g = nx.Graph()
-
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            for j in range(i+1, len(ts)):
-                t2 = ts[j]
-                g.add_edge(t1, t2, weight=self.steiner.get_lengths(t1, t2))
-
-        cost = 0
-
-        for (u, v, d) in list(nx.minimum_spanning_edges(g)):
-            cost = cost + d['weight']
-
-        self.msts[set_id] = cost
-        return cost
-
-    def tsp_heuristic(self, n, set_id, ts):
-        if len(ts) == 1:
-            return self.steiner.get_lengths(ts[0], n)
-
-        ts.sort()
-        cost = self.get_tsp_for_set(set_id, ts)
-
-        # Find the smallest tour, by adding the node to all possible hamiltonian paths
-        min_val = sys.maxint
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            d1 = self.steiner.get_lengths(t1, n)
-            for j in range(i+1, len(ts)):
-                t2 = ts[j]
-                d2 = self.steiner.get_lengths(t2, n)
-                min_val = min(min_val, d1 + d2 + cost[(t1, t2)])
-
-        return int(math.ceil(min_val / 2.0))
-
-    def get_tsp_for_set(self, set_id, ts):
-        """ Calculates the Hamiltonian paths for all possible endpoint pairs in the set"""
-        if set_id in self.tsp:
-            return self.tsp[set_id]
-
-        nodes = list(ts)
-        ts = list(nodes)
-        self.tsp[set_id] = {}
-
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            nodes.remove(t1)
-
-            for j in range(i+1, len(ts)):
-                t2 = ts[j]
-                # Do not add the endpoint. This would make it a tour, but we need hamiltonian paths
-                self.tsp[set_id][(t1, t2)] = self.calc_tsp(t1, nodes, t2) #+ self.steiner.get_lengths(t1, t2)
-
-            nodes.append(t1)
-        return self.tsp[set_id]
-
-    def calc_tsp(self, s, nodes, l):
-        """ Calculates the shortest path from s to l visiting all nodes """
-        if len(nodes) == 1:
-            return self.steiner.get_lengths(s, l)
-
-        min_val = sys.maxint
-        nodes.remove(l)
-
-        for i in range(0, len(nodes)):
-            new_l = nodes[i]
-            sub_tsp = self.calc_tsp(s, nodes, new_l)
-            min_val = min(min_val, sub_tsp + self.steiner.get_lengths(new_l, l))
-
-        nodes.append(l)
-        nodes.sort()
-
-        return min_val
 
     def prune(self, n, set_id, c, h, set_id2=None):
         #if c + h > self.steiner.get_approximation().cost:
@@ -312,25 +214,6 @@ class Solver2k:
 
         return ts
 
-    def simple_heuristic(self, n, set_id, ts, limit):
-        ts2 = list(ts)
-        ts2.append(n)
-        ts2.remove(self.root_node)
-
-        max_val = 0
-        for i in range(1, 1 << len(ts2)):
-            if 2 <= bin(i).count("1") <= limit:
-                ts3 = []
-                for j in range(0, len(ts2)):
-                    if (i & (1 << j)) > 0:
-                        ts3.append(ts2[j])
-
-                ts3.append(self.root_node)
-                slv = Solver2k(self.steiner, ts3, False)
-                val = slv.solve()[1]
-                max_val = max(max_val, val)
-
-        return max_val
 
 class SolverCosts(dict):
     costs = {}
