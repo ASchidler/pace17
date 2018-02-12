@@ -40,29 +40,29 @@ class Solver2k:
                 p.add(n_key)
                 n_cost = self.costs[n_key][0]
 
-                for n2 in nx.neighbors(self.steiner.graph, n[0]):
-                    n2_key = self.key(n2, n[1])
-                    n2_cost = self.costs[n2_key][0]
+                for other_node in nx.neighbors(self.steiner.graph, n[0]):
+                    other_node_key = self.key(other_node, n[1])
+                    other_node_cost = self.costs[other_node_key][0]
 
-                    total = n_cost + self.steiner.graph[n[0]][n2]['weight']
+                    total = n_cost + self.steiner.graph[n[0]][other_node]['weight']
 
-                    if total < n2_cost and n2_key not in p:
-                        self.costs[n2_key] = (total, [n_key])
-                        h = self.heuristic(n2, n[1])
-                        if not self.prune(n2, n[1], total, h):
-                            queue.add((n2, n[1], total + h, h))
+                    if total < other_node_cost and other_node_key not in p:
+                        self.costs[other_node_key] = (total, [n_key])
+                        h = self.heuristic(other_node, n[1])
+                        if not self.prune(other_node, n[1], total, h):
+                            queue.add((other_node, n[1], total + h, h))
 
                 for other_set in range(1, self.max_id):
                     if (other_set & n[1]) == 0:
-                        set_key = self.key(n[0], other_set)
-                        if set_key in p:
+                        other_set_key = self.key(n[0], other_set)
+                        if other_set_key in p:
                             combined = n[1] | other_set
                             combined_key = self.key(n[0], combined)
-                            combined_cost = n_cost + self.costs[set_key][0]
-                            if combined_cost < self.costs[combined_key] and combined_key not in p:
-                                self.costs[combined_key] = (combined_cost, [set_key, n_key])
+                            combined_cost = n_cost + self.costs[other_set_key][0]
+                            if combined_cost < self.costs[combined_key][0] and combined_key not in p:
+                                self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
                                 h = self.heuristic(n[0], combined)
-                                if not self.prune(n[0], n[1], combined_cost, h, other_set):
+                                if not self.prune(n[0], combined, combined_cost, h, other_set):
                                     queue.add((n[0], combined, combined_cost + h, h))
 
         ret = nx.Graph()
