@@ -12,17 +12,6 @@ class SteinerGraph:
         self._steiner_lengths = None
         self._approximation = None
 
-    def parse_graph(self, line):
-        lst = line.split(' ')
-        if line.startswith("E "):
-            self.graph.add_edge(int(lst[1]), int(lst[2]), weight=int(lst[3]))
-
-    def parse_terminal(self, line):
-        lst = line.split(' ')
-        if line.startswith('T '):
-            self.graph.node[int(lst[1])]['terminal'] = True
-            self.terminals.add(int(lst[1]))
-
     def add_edge(self, n1, n2, c):
         if self.graph.has_edge(n1, n2):
             if self.graph[n1][n2]['weight'] > c:
@@ -32,30 +21,6 @@ class SteinerGraph:
                 return False
         self.graph.add_edge(n1, n2, weight=c)
         return True
-
-    def parse_file(self, filename):
-        f = open(filename, "r")
-        # 0 is start, 1 is graph, 2 are terminals, 3 are decompositions
-        parse_mode = 0
-
-        for line in f:
-            line = line.strip()
-            if line.startswith("END"):
-                parse_mode = 0
-            elif line.startswith("SECTION Graph"):
-                parse_mode = 1
-            elif line.startswith("SECTION Terminals"):
-                parse_mode = 2
-            elif line.startswith("SECTION Tree Decomposition"):
-                parse_mode = 3
-            elif parse_mode == 1:
-                self.parse_graph(line)
-            elif parse_mode == 2:
-                self.parse_terminal(line)
-
-        # Otherwise ignore
-
-        f.close()
 
     def get_lengths(self, n1, n2=None):
         if self._lengths is None:
