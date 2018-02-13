@@ -3,9 +3,10 @@ import os
 import config as cfg
 import steiner.parser.pace_parser as pp
 import thread
+import threading as th
 
 terminal_limit = 50
-time_limit = 60
+time_limit = 120
 
 filepath = "..\\testInstances\\"
 optimums = {}
@@ -21,40 +22,44 @@ for filename in os.listdir(filepath):
         start = time.time()
         steiner = pp.parse_file(filepath + filename)
 
-        reducers = cfg.reducers()
-
-        for r in reducers:
-            r.reduce(steiner)
-
-        solver = cfg.solver(steiner)
-
         if len(steiner.terminals) > terminal_limit:
             print "{}: Too many terminals {}".format(instance_name, len(steiner.terminals))
             continue
 
+        # Used to watch running time
         thread_start = time.time()
+
+        # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
+        reducers = cfg.reducers()
+        for r in reducers:
+            if (time.time() - thread_start) <= time_limit:
+                thr = th.Thread(target=r.reduce, args=(steiner,))
+                thr.start()
+                while thr.is_alive() and (time.time() - thread_start) <= time_limit:
+                    time.sleep(0.1)
+
+        # Wait for solving to complete
+        solver = cfg.solver(steiner)
         thread.start_new_thread(solver.solve, ())
-
-        failed = False
-        while solver.result is None:
+        while solver.result is None and (time.time() - thread_start) <= time_limit:
             time.sleep(1)
-            if (time.time() - thread_start) > time_limit:
-                solver.stop = True
-                print "{}: Timeout".format(instance_name)
-                failed = True
-                break
 
-        if not failed:
-            solution = solver.result
-            reducers.reverse()
+        # Check for a result
+        if solver.result is None:
+            solver.stop = True
+            print "{}: Timeout".format(instance_name)
+            continue
 
-            for r in reducers:
-                solution = r.post_process(solution)
+        solution = solver.result
+        reducers.reverse()
 
-            if instance_name not in optimums:
-                print "*** {}: Unknown instance".format(instance_name)
-            elif solution[1] == optimums[instance_name]:
-                print "{}: Completed in {}".format(instance_name, str(time.time() - start))
-            else:
-                print "*** {}: Wrong result, expected {} actual {}"\
-                    .format(instance_name, optimums[instance_name], solution[1])
+        for r in reducers:
+            solution = r.post_process(solution)
+
+        if instance_name not in optimums:
+            print "*** {}: Unknown instance".format(instance_name)
+        elif solution[1] == optimums[instance_name]:
+            print "{}: Completed in {}".format(instance_name, str(time.time() - start))
+        else:
+            print "*** {}: Wrong result, expected {} actual {}"\
+                .format(instance_name, optimums[instance_name], solution[1])
