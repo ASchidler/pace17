@@ -16,6 +16,8 @@ class Solver2k:
         self.prune_smt = {}
         self.heuristics = heuristics
         self.labels = {}
+        self.result = None
+        self.stop = False
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -32,7 +34,7 @@ class Solver2k:
             queue.add((self.terminals[terminal_set], 1 << terminal_set, h, h))
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while (self.root_node, self.max_id - 1) not in p:
+        while (self.root_node, self.max_id - 1) not in p and not self.stop:
             n = queue.pop(0)
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
@@ -49,6 +51,7 @@ class Solver2k:
         ret = nx.Graph()
         total = self.backtrack((self.root_node, self.max_id-1), ret)
 
+        self.result = ret, total
         return ret, total
 
     def process_neighbors(self, n, n_cost, n_key, n_set, p, queue):
