@@ -2,21 +2,21 @@ import sys
 import networkx as nx
 
 
-class TerminalDistanceReduction:
+class CostVsTerminalDistanceReduction:
     """ Removes all edges that are longer than the maximum distance between two terminals """
 
     def reduce(self, steiner):
         terminal_edges = 0
         max_val = 0
-        for t1 in steiner.terminals:
-            min_val = sys.maxint
-            for t2 in steiner.terminals:
-                if t1 != t2:
-                    dist = steiner.get_lengths(t1, t2)
-                    min_val = min(min_val, dist)
+        ts = list(steiner.terminals)
+        for i in range(0, len(ts)):
+            t1 = ts[i]
 
-            if min_val != sys.maxint:
-                max_val = max(max_val, min_val)
+            for j in range(i+1, len(ts)):
+                t2 = ts[j]
+
+                dist = steiner.get_lengths(t1, t2)
+                max_val = max(max_val, dist)
 
         for (u, v, d) in list(steiner.graph.edges(data='weight')):
             if d > max_val:
