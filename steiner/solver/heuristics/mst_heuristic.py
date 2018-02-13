@@ -14,24 +14,36 @@ class MstHeuristic:
             return self.steiner.get_lengths(n, ts[0])
 
         # Calculate MST costs
-        cost = self.calc_mst(ts, set_id)
+        if set_id in self.mst:
+            cost = self.mst[set_id]
+        else:
+            cost = self.calc_mst(ts, set_id)
 
         # Find minimum pairwise distance
         min_val = sys.maxint
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            l1 = self.steiner.get_lengths(t1, n)
-            for j in range(i + 1, len(ts)):
-                t2 = ts[j]
-                min_val = min(min_val, l1 + self.steiner.get_lengths(t2, n))
+        min_val2 = sys.maxint
 
-        return (min_val + cost) / 2
+        for t in ts:
+            lg = self.steiner.get_lengths(t, n)
+            if lg < min_val:
+                min_val2 = min_val
+                min_val = lg
+            elif lg < min_val2:
+                min_val2 = lg
+
+        return (min_val + min_val2 + cost) / 2
+
+        # for i in range(0, len(ts)):
+        #     t1 = ts[i]
+        #     l1 = self.steiner.get_lengths(t1, n)
+        #     for j in range(i + 1, len(ts)):
+        #         t2 = ts[j]
+        #         min_val = min(min_val, l1 + self.steiner.get_lengths(t2, n))
+        #
+        # return (min_val + cost) / 2
 
     def calc_mst(self, ts, set_id):
         """Calculate the costs of an MST using networkx"""
-        if set_id in self.mst:
-            return self.mst[set_id]
-
         g = nx.Graph()
 
         for i in range(0, len(ts)):
