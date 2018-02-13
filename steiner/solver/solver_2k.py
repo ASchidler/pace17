@@ -10,65 +10,75 @@ class Solver2k:
         self.terminals.sort()
         self.root_node = self.terminals.pop()
         self.max_id = 1 << len(self.terminals)
-        self.costs = SolverCosts(self.terminals, self.max_id)
+        self.costs = SolverCosts(self.terminals)
         self.prune_dist = {}
         self.prune_bounds = {}
         self.prune_smt = {}
         self.heuristics = heuristics
-
-    def key(self, n, s):
-        """Calculates a key from node id and set id"""
-        return n * self.max_id + s
+        self.labels = {}
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
         # Permanent labels => set of completed elements
         p = set()
 
+        for n in nx.nodes(self.steiner.graph):
+            self.labels[n] = []
+
         # Queue entries are tuples (node, terminal set, cost, heuristic value)
         queue = sc.SortedSet(key=lambda q: q[2])
-        for other_set in range(0, len(self.terminals)):
-            h = self.heuristic(self.terminals[other_set], 1 << other_set)
-            queue.add((self.terminals[other_set], 1 << other_set, h, h))
+        for terminal_set in range(0, len(self.terminals)):
+            h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
+            queue.add((self.terminals[terminal_set], 1 << terminal_set, h, h))
 
-        while self.key(self.root_node, self.max_id - 1) not in p:
+        # Start algorithm, finish if the root node is added to the tree with all terminals
+        while (self.root_node, self.max_id - 1) not in p:
             n = queue.pop(0)
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
-            if self.key(n[0], n[1]) not in p:
-                n_key = self.key(n[0], n[1])
-                p.add(n_key)
+            if (n[0], n[1]) not in p:
+                n_key = (n[0], n[1])
                 n_cost = self.costs[n_key][0]
+                p.add((n[0], n[1]))
+                self.labels[n[0]].append(n[1])
 
-                for other_node in nx.neighbors(self.steiner.graph, n[0]):
-                    other_node_key = self.key(other_node, n[1])
-                    other_node_cost = self.costs[other_node_key][0]
+                self.process_neighbors(n[0], n_cost, n_key, n[1], p, queue)
+                self.process_labels(n[0], n_cost, n_key, n[1], p, queue)
 
-                    total = n_cost + self.steiner.graph[n[0]][other_node]['weight']
-
-                    if total < other_node_cost and other_node_key not in p:
-                        self.costs[other_node_key] = (total, [n_key])
-                        h = self.heuristic(other_node, n[1])
-                        if not self.prune(other_node, n[1], total, h):
-                            queue.add((other_node, n[1], total + h, h))
-
-                for other_set in range(1, self.max_id):
-                    if (other_set & n[1]) == 0:
-                        other_set_key = self.key(n[0], other_set)
-                        if other_set_key in p:
-                            combined = n[1] | other_set
-                            combined_key = self.key(n[0], combined)
-                            combined_cost = n_cost + self.costs[other_set_key][0]
-                            if combined_cost < self.costs[combined_key][0] and combined_key not in p:
-                                self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
-                                h = self.heuristic(n[0], combined)
-                                if not self.prune(n[0], combined, combined_cost, h, other_set):
-                                    queue.add((n[0], combined, combined_cost + h, h))
-
+        # Process result
         ret = nx.Graph()
-        total = self.backtrack(self.key(self.root_node, self.max_id-1), ret)
+        total = self.backtrack((self.root_node, self.max_id-1), ret)
 
         return ret, total
+
+    def process_neighbors(self, n, n_cost, n_key, n_set, p, queue):
+        for other_node in nx.neighbors(self.steiner.graph, n):
+            other_node_key = (other_node, n_set)
+            other_node_cost = self.costs[other_node_key][0]
+
+            total = n_cost + self.steiner.graph[n][other_node]['weight']
+
+            if total < other_node_cost and other_node_key not in p:
+                self.costs[other_node_key] = (total, [n_key])
+                h = self.heuristic(other_node, n_set)
+                if not self.prune(other_node, n_set, total, h):
+                    queue.add((other_node, n_set, total + h, h))
+
+    def process_labels(self, n, n_cost, n_key, n_set, p, queue):
+        for other_set in self.labels[n]:
+            if (other_set & n_set) == 0:
+                combined = n_set | other_set
+                combined_key = (n, combined)
+
+                if combined_key not in p:
+                    other_set_key = (n, other_set)
+                    combined_cost = n_cost + self.costs[other_set_key][0]
+
+                    if combined_cost < self.costs[combined_key][0]:
+                        self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
+                        h = self.heuristic(n, combined)
+                        if not self.prune(n, combined, combined_cost, h, other_set):
+                            queue.add((n, combined, combined_cost + h, h))
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -85,12 +95,11 @@ class Solver2k:
         return max_val
 
     def prune(self, n, set_id, c, h, set_id2=None):
+        # Simple prune
         if c + h > self.steiner.get_approximation().cost:
             return True
 
-        return self.prune2(n, set_id, c, set_id2)
-
-    def prune2(self, n, set_id, c, set_id2=None):
+        # Complex prune
         target_set = set_id
 
         if set_id2 is not None:
@@ -203,11 +212,10 @@ class Solver2k:
             return 0
 
         # Get the node and the predecessor
-        n1 = c / self.max_id
+        n1 = c[0]
 
-        #
         if len(entry) == 1:
-            n2 = entry[0] / self.max_id
+            n2 = entry[0][0]
             w = self.steiner.graph[n1][n2]['weight']
             ret.add_edge(n1, n2, weight=w)
             return w + self.backtrack(entry[0], ret)
@@ -231,17 +239,16 @@ class Solver2k:
 class SolverCosts(dict):
     """Derived dictionary that uses appropriate default values in case of missing keys"""
 
-    def __init__(self, terminals, max_id):
+    def __init__(self, terminals):
         super(SolverCosts, self).__init__()
         self.terminals = {}
         for i in range(0, len(terminals)):
             self.terminals[terminals[i]] = 1 << i
-        self.max_id = max_id
 
     def __missing__(self, key):
         # Get node and set ID
-        n = key / self.max_id
-        s = key % self.max_id
+        n = key[0]
+        s = key[1]
 
         # Default for empty set is 0
         if s == 0:
