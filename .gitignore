@@ -52,3 +52,5 @@ fabric.properties
 venv/
 
 *.pyc
+
+testInstances/*.stp
