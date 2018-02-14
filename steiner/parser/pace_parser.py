@@ -5,33 +5,32 @@ import steiner.steiner_graph as st
 
 def parse_graph(line, steiner):
     lst = line.split(' ')
-    if line.startswith("E "):
+    if line.startswith("e "):
         steiner.graph.add_edge(int(lst[1]), int(lst[2]), weight=int(lst[3]))
 
 
 def parse_terminal(line, steiner):
     lst = line.split(' ')
-    if line.startswith('T '):
+    if line.startswith('t '):
         steiner.graph.node[int(lst[1])]['terminal'] = True
         steiner.terminals.add(int(lst[1]))
 
 
-def parse_file(filename):
-    f = open(filename, "r")
+def parse_file(f):
     # 0 is start, 1 is graph, 2 are terminals, 3 are decompositions
     parse_mode = 0
 
     steiner = st.SteinerGraph()
 
     for line in f:
-        line = line.strip()
-        if line.startswith("END"):
+        line = line.strip().lower()
+        if line.startswith("end"):
             parse_mode = 0
-        elif line.startswith("SECTION Graph"):
+        elif line.startswith("section graph"):
             parse_mode = 1
-        elif line.startswith("SECTION Terminals"):
+        elif line.startswith("section terminals"):
             parse_mode = 2
-        elif line.startswith("SECTION Tree Decomposition"):
+        elif line.startswith("section tree decomposition"):
             parse_mode = 3
         elif parse_mode == 1:
             parse_graph(line, steiner)
