@@ -1,7 +1,7 @@
 import time
 import os
 import config as cfg
-import steiner.parser.pace_parser as pp
+import steiner_tu.parser.pace_parser as pp
 import thread
 import threading as th
 
@@ -20,7 +20,8 @@ for filename in os.listdir(filepath):
     if filename.endswith(".stp"):
         instance_name = filename.split(".")[0]
         start = time.time()
-        steiner = pp.parse_file(filepath + filename)
+        f = open(filepath + filename, "r")
+        steiner = pp.parse_file(f)
 
         if len(steiner.terminals) > terminal_limit:
             print "{}: Too many terminals {}".format(instance_name, len(steiner.terminals))
