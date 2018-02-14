@@ -1,18 +1,18 @@
 import time
 
 import networkx as nx
-import steiner.parser.pace_parser as pp
+import iparser as pp
 
 import config as cfg
 
-""" This runner runs all the public instances with debug output """
+""" This runner runs all the public instances with debug oparser """
 
 
 def process_file(filename, solve, apply_reductions):
-    """ Processes a file. Parses, reduces and solves it. Includes verbose output"""
+    """ Processes a file. Parses, reduces and solves it. Includes verbose oparser"""
 
     f = open(filename, "r")
-    steiner = pp.parse_file(f)
+    steiner = pp.parse_pace_file(f)
     reducers = cfg.reducers()
 
     if apply_reductions:
@@ -53,7 +53,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(125, 200):
+for i in range(1, 200):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = file_path.format(i)

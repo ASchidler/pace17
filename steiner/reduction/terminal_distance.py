@@ -1,7 +1,3 @@
-import sys
-import networkx as nx
-
-
 class CostVsTerminalDistanceReduction:
     """ Removes all edges that are longer than the maximum distance between two terminals """
 

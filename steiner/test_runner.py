@@ -1,27 +1,28 @@
 import time
 import os
 import config as cfg
-import steiner_tu.parser.pace_parser as pp
+import iparser as pp
 import thread
 import threading as th
+import steiner_graph as st
 
 terminal_limit = 50
 time_limit = 120
 
-filepath = "..\\testInstances\\"
+file_path = "..\\testInstances\\"
 optimums = {}
 
-optimum_file = open(filepath + "optimums.csv", "r")
+optimum_file = open(file_path + "optimums.csv", "r")
 for line in optimum_file:
     fields = line.strip(' \xa0\n').split(";")
     optimums[fields[0].strip()] = int(fields[1])
 
-for filename in os.listdir(filepath):
+for filename in os.listdir(file_path):
     if filename.endswith(".stp"):
         instance_name = filename.split(".")[0]
         start = time.time()
-        f = open(filepath + filename, "r")
-        steiner = pp.parse_file(f)
+        f = open(file_path + filename, "r")
+        steiner = pp.pace.parse_file(f)
 
         if len(steiner.terminals) > terminal_limit:
             print "{}: Too many terminals {}".format(instance_name, len(steiner.terminals))

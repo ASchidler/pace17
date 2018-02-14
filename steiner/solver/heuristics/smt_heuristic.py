@@ -1,4 +1,4 @@
-import steiner.solver.solver_2k as sv
+import solver.solver_2k as sv
 
 
 class SmtHeuristic:
