@@ -2,7 +2,6 @@ import sys
 import os.path
 import steiner_graph as sg
 import time
-import graph_costs
 import config as cfg
 
 import networkx as nx
