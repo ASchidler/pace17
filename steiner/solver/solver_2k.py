@@ -1,7 +1,6 @@
 import networkx as nx
-import sortedcontainers as sc
 import sys
-
+import heapq
 
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
@@ -28,14 +27,15 @@ class Solver2k:
             self.labels[n] = []
 
         # Queue entries are tuples (node, terminal set, cost, heuristic value)
-        queue = sc.SortedSet(key=lambda q: q[2])
+        queue = []
+
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
-            queue.add((self.terminals[terminal_set], 1 << terminal_set, h, h))
+            heapq.heappush(queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], 1 << terminal_set)])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while (self.root_node, self.max_id - 1) not in p and not self.stop:
-            n = queue.pop(0)
+            n = heapq.heappop(queue)[2]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             if (n[0], n[1]) not in p:
@@ -65,7 +65,7 @@ class Solver2k:
                 self.costs[other_node_key] = (total, [n_key])
                 h = self.heuristic(other_node, n_set)
                 if not self.prune(other_node, n_set, total, h):
-                    queue.add((other_node, n_set, total + h, h))
+                    heapq.heappush(queue, [total + h, other_node, (other_node, n_set)])
 
     def process_labels(self, n, n_cost, n_key, n_set, p, queue):
         for other_set in self.labels[n]:
@@ -81,7 +81,7 @@ class Solver2k:
                         self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
                         h = self.heuristic(n, combined)
                         if not self.prune(n, combined, combined_cost, h, other_set):
-                            queue.add((n, combined, combined_cost + h, h))
+                            heapq.heappush(queue, [combined_cost + h, n, (n, combined)])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
