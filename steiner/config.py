@@ -20,14 +20,13 @@ def reducers():
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
-        #degree.DegreeReduction(),
+        degree.DegreeReduction(),
         #terminals.TerminalReduction()
     ]
 
 
 def solver(steiner):
     """Creates a solver"""
-
     heuristics = [
             mst_heuristic.MstHeuristic(steiner),
             #tsp_heuristic.TspHeuristic(steiner)
