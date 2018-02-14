@@ -1,6 +1,5 @@
 import sys
 import networkx as nx
-import steiner_graph
 
 
 class SteinerApproximation:

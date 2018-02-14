@@ -86,4 +86,3 @@ class SteinerGraph:
             self.calculate_steiner_length()
 
         return self._steiner_lengths[n1][n2]
-
