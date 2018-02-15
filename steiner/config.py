@@ -8,17 +8,18 @@ from solver.heuristics import *
 def reducers():
     """Creates the set of active reductions/preprocessing"""
     return [
-        #component.ComponentReduction(),
-        #zeroedge.ZeroEdgeReduction(),
+        component.ComponentReduction(),
+        zeroedge.ZeroEdgeReduction(),
         #incidence.IncidenceReduction(),
         #short_edges.ShortEdgeReduction(),
         degree.DegreeReduction(),
         voronoi.VoronoiReduction(),
+        cut_reachability.CutReachabilityReduction(),
+        cut_reachability_edge.CutReachabilityEdgeReduction(),
         long_edges.LongEdgeReduction(),
         ntdk.NtdkReduction(),
         reachability.ReachabilityReduction(),
-        cut_reachability.CutReachabilityReduction(),
-        cut_reachability_edge.CutReachabilityEdgeReduction(),
+        long_edges.LongEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         #terminals.TerminalReduction()
