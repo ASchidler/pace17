@@ -33,15 +33,6 @@ class MstHeuristic:
 
         return (min_val + min_val2 + cost) / 2
 
-        # for i in range(0, len(ts)):
-        #     t1 = ts[i]
-        #     l1 = self.steiner.get_lengths(t1, n)
-        #     for j in range(i + 1, len(ts)):
-        #         t2 = ts[j]
-        #         min_val = min(min_val, l1 + self.steiner.get_lengths(t2, n))
-        #
-        # return (min_val + cost) / 2
-
     def calc_mst(self, ts, set_id):
         """Calculate the costs of an MST using networkx"""
         g = nx.Graph()

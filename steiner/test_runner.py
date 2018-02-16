@@ -5,6 +5,8 @@ import iparser as pp
 import thread
 import threading as th
 import steiner_graph as st
+import networkx as nx
+import reduction.terminals as terminals
 
 terminal_limit = 50
 time_limit = 120
@@ -31,14 +33,25 @@ for filename in os.listdir(file_path):
         # Used to watch running time
         thread_start = time.time()
 
+        tr = terminals.TerminalReduction()
         # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
         reducers = cfg.reducers()
-        for r in reducers:
-            if (time.time() - thread_start) <= time_limit:
-                thr = th.Thread(target=r.reduce, args=(steiner,))
-                thr.start()
-                while thr.is_alive() and (time.time() - thread_start) <= time_limit:
-                    time.sleep(0.1)
+        while True:
+            cnt = len(nx.nodes(steiner.graph)) + len(nx.edge_betweenness(steiner.graph))
+            for r in reducers:
+                if (time.time() - thread_start) <= time_limit:
+                    thr = th.Thread(target=r.reduce, args=(steiner,))
+                    thr.start()
+                    while thr.is_alive() and (time.time() - thread_start) <= time_limit:
+                        time.sleep(0.1)
+                cnt = cnt + r.reduce(steiner)
+
+            cnt2 = len(nx.nodes(steiner.graph)) + len(nx.edge_betweenness(steiner.graph))
+            if cnt == cnt2:
+                break
+            cnt = cnt2
+
+        tr.reduce(steiner)
 
         # Wait for solving to complete
         solver = cfg.solver(steiner)
@@ -55,8 +68,18 @@ for filename in os.listdir(file_path):
         solution = solver.result
         reducers.reverse()
 
-        for r in reducers:
-            solution = r.post_process(solution)
+        while True:
+            change = False
+            for r in reducers:
+                ret = r.post_process(solution)
+                solution = ret[0]
+                change = change or ret[1]
+
+            ret = tr.post_process(solution)
+            solution = ret[0]
+            change = change or ret[1]
+            if not change:
+                break
 
         if instance_name not in optimums:
             print "*** {}: Unknown instance".format(instance_name)

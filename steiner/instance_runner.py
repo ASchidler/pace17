@@ -4,6 +4,7 @@ import networkx as nx
 import iparser as pp
 
 import config as cfg
+import reduction.terminals as terminals
 
 """ This runner runs all the public instances with debug oparser """
 
@@ -14,6 +15,8 @@ def process_file(filename, solve, apply_reductions):
     f = open(filename, "r")
     steiner = pp.parse_pace_file(f)
     reducers = cfg.reducers()
+
+    tr = terminals.TerminalReduction()
 
     if apply_reductions:
         cnt_edge = len(nx.edges(steiner.graph))
@@ -26,10 +29,13 @@ def process_file(filename, solve, apply_reductions):
                 reduced = r.reduce(steiner)
                 print "Reduced {} needing {} in {}"\
                     .format(reduced, str(time.time() - local_start), str(r.__class__))
-                cnt_changes = reduced + cnt_changes
-
             if cnt_changes == 0:
                 break
+
+        local_start = time.time()
+        reduced = tr.reduce(steiner)
+        print "Reduced {} needing {} in {}" \
+            .format(reduced, str(time.time() - local_start), str(tr.__class__))
 
         print "{} nodes and {} edges removed "\
             .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)))
@@ -48,6 +54,7 @@ def process_file(filename, solve, apply_reductions):
 
     # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
     if apply_reductions and solve:
+        reducers.append(tr)
         reducers.reverse()
         solution = solver.result
 
