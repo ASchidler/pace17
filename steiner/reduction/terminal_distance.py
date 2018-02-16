@@ -22,4 +22,4 @@ class CostVsTerminalDistanceReduction:
         return terminal_edges
 
     def post_process(self, solution):
-        return solution
+        return solution, False

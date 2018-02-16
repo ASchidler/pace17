@@ -69,10 +69,13 @@ class Solver2k:
 
     def process_labels(self, n, n_cost, n_key, n_set, p, queue):
         for other_set in self.labels[n]:
+            # Disjoint?
             if (other_set & n_set) == 0:
+                # Set union
                 combined = n_set | other_set
                 combined_key = (n, combined)
 
+                # Check of not already permanent
                 if combined_key not in p:
                     other_set_key = (n, other_set)
                     combined_cost = n_cost + self.costs[other_set_key][0]

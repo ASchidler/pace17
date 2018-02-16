@@ -52,10 +52,12 @@ class ReachabilityReduction:
         return track - len(nx.nodes(steiner.graph))
 
     def post_process(self, solution):
+        change = False
         for (k, v) in self._removed.items():
             if solution[0].has_edge(k[0], k[1]) and solution[0][k[0]][k[1]]['weight'] == k[2]:
                 solution[0].remove_edge(k[0], k[1])
                 solution[0].add_edge(v[0][0], v[0][1], weight=v[0][2])
                 solution[0].add_edge(v[1][0], v[1][1], weight=v[1][2])
+                change = True
 
-        return solution
+        return solution, change

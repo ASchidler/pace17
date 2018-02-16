@@ -12,8 +12,14 @@ solver = cfg.solver(steiner)
 
 # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
 reducers = cfg.reducers()
-for r in reducers:
-    r.reduce(steiner)
+
+while True:
+    cnt = 0
+    for r in reducers:
+        cnt = cnt + r.reduce(steiner)
+
+    if cnt == 0:
+        break
 
 # Solve
 solver.solve()
@@ -21,9 +27,14 @@ solver.solve()
 solution = solver.result
 reducers.reverse()
 
-
-for r in reducers:
-    solution = r.post_process(solution)
+while True:
+    change = False
+    for r in reducers:
+        ret = r.post_process(solution)
+        solution = ret[0]
+        change = change or ret[1]
+    if not change:
+        break
 
 po.parse_pace_output(solution)
 
