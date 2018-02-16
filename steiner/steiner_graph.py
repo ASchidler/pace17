@@ -24,7 +24,10 @@ class SteinerGraph:
 
     def get_lengths(self, n1, n2=None):
         if n1 not in self._lengths:
-            self._lengths[n1] = nx.single_source_dijkstra_path_length(self.graph, n1)
+            if n2 is not None and n2 in self._lengths:
+                return self._lengths[n2][n1]
+            else:
+                self._lengths[n1] = nx.single_source_dijkstra_path_length(self.graph, n1)
 
         if n2 is None:
             return self._lengths[n1]
