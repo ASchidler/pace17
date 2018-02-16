@@ -20,4 +20,4 @@ class ComponentReduction:
         return track - len(nx.nodes(steiner.graph))
 
     def post_process(self, solution):
-        return solution
+        return solution, False

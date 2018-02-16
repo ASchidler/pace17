@@ -73,6 +73,6 @@ class CutReachabilityReduction:
         return cut_cnt
 
     def post_process(self, solution):
-        return solution
+        return solution, False
 
 

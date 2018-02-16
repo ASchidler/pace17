@@ -51,11 +51,18 @@ def process_file(filename, solve, apply_reductions):
         reducers.reverse()
         solution = solver.result
 
-        for r in reducers:
-            solution = r.post_process(solution)
+        while True:
+            change = False
+            for r in reducers:
+                ret = r.post_process(solution)
+                solution = ret[0]
+                change = change or ret[1]
+            if not change:
+                break
 
     if solve:
         print "Solution found: " + str(solution[1])
+        return solution[1]
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
@@ -65,6 +72,9 @@ for i in range(1, 200):
         current_file = file_path.format(i)
         print current_file
         start = time.time()
-        process_file(current_file, True, True)
+        # e1 = process_file(current_file, True, False)
+        e2 = process_file(current_file, True, True)
+        # if e1 != e2:
+        #     print "*************** Difference in instance "+ str(i)
         print "Done in " + str(time.time() - start)
         print ""

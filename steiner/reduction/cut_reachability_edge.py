@@ -43,6 +43,6 @@ class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
         return cnt
 
     def post_process(self, solution):
-        return solution
+        return solution, False
 
 

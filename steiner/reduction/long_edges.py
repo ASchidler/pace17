@@ -14,4 +14,4 @@ class LongEdgeReduction:
         return track - len(nx.edges(steiner.graph))
 
     def post_process(self, solution):
-        return solution
+        return solution, False

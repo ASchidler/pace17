@@ -18,17 +18,20 @@ class ShortEdgeReduction:
         for e in mst.edges:
             u = e[0]
             v = e[1]
-            rval = self._min_crossing(steiner, mst, u, v)
+            r_val = self._min_crossing(steiner, mst, u, v)
 
-            if rval > 0:
-                for k, p in paths.items():
-                    # Check if edge is part of any shortest path between terminals
-                    if (u, v) in p or (v, u) in p:
-                        ts = self._unkey(k)
-                        d = steiner.get_lengths(ts[0], ts[1])
+            if r_val > 0:
+                # Check if edge is part of any shortest path between terminals
+                k = self._key(u, v)
+                if k in paths:
+                    ts = paths[k]
 
-                        if rval >= d:
+                    for t in ts:
+                        d = steiner.get_lengths(t[0], t[1])
+
+                        if r_val >= d:
                             cnt = cnt + 1
+                            break
 
         print "Short edges " + str(cnt)
 
@@ -38,10 +41,6 @@ class ShortEdgeReduction:
             return n2 * self.max_terminal + n1
         else:
             return n1 * self.max_terminal + n2
-
-    # Unpacks the single key
-    def _unkey(self, k):
-        return int(k / self.max_terminal), k % self.max_terminal
 
     # Finds the smallest path between terminals
     def _min_paths(self, steiner):
@@ -53,24 +52,28 @@ class ShortEdgeReduction:
             for j in range(i + 1, len(self.terminals)):
                 # Find path
                 t2 = self.terminals[j]
-                path = nx.dijkstra_path(steiner.graph, t1, t2)
+
+                l, path = nx.bidirectional_dijkstra(steiner.graph, t1, t2)
 
                 # Convert to edges
                 prev = path[0]
-                set_path = set()
+
                 for pi in range(1, len(path)):
                     n = path[pi]
-                    set_path.add((prev, n))
-                    prev = n
+                    k = self._key(prev, n)
+                    if k in paths:
+                        paths[k].append((t1, t2))
+                    else:
+                        paths[k] = [(t1, t2)]
 
-                # store
-                paths[self._key(t1, t2)] = set_path
+                    prev = n
 
         return paths
 
-    """Finds the r value of an edge. 
-    Calculates the cut in the MST and then finds the smallest edge bridging the cut in G"""
     def _min_crossing(self, steiner, mst, n1, n2):
+        """Finds the r value of an edge.
+            Calculates the cut in the MST and then finds the smallest edge bridging the cut in G"""
+
         # Calculate the cuts
         mst.remove_edge(n1, n2)
         c = list(nx.connected_components(mst))
@@ -86,11 +89,8 @@ class ShortEdgeReduction:
             if (u in c1 and v in c2) or (u in c2 and v in c1):
                 min_val = min(min_val, d)
 
-        # TODO: Whats happens if the gap is not bridged? The edge therefore must be contracted?
-        if min_val != sys.maxint:
-            return min_val
-
-        return -1
+        # If the gap is not bridged, the r value is infinite!
+        return min_val
 
     def post_process(self, solution):
-        return solution
+        return solution, False
