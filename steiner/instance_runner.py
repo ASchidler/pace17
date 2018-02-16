@@ -19,11 +19,17 @@ def process_file(filename, solve, apply_reductions):
         cnt_edge = len(nx.edges(steiner.graph))
         cnt_nodes = len(nx.nodes(steiner.graph))
 
-        for r in reducers:
-            local_start = time.time()
-            reduced = r.reduce(steiner)
-            print "Reduced {} needing {} in {}"\
-                .format(reduced, str(time.time() - local_start), str(r.__class__))
+        while True:
+            cnt_changes = 0
+            for r in reducers:
+                local_start = time.time()
+                reduced = r.reduce(steiner)
+                print "Reduced {} needing {} in {}"\
+                    .format(reduced, str(time.time() - local_start), str(r.__class__))
+                cnt_changes = reduced + cnt_changes
+
+            if cnt_changes == 0:
+                break
 
         print "{} nodes and {} edges removed "\
             .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)))
