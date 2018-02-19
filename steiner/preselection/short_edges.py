@@ -3,37 +3,65 @@ import sys
 
 
 class ShortEdgeReduction:
+    """Also called Nearest Special Vertex (NSV) test. """
     def __init__(self):
         self.terminals = None
         self.max_terminal = None
+        self.deleted = []
+        self.merged = []
+        self._done = False
 
     def reduce(self, steiner):
-        cnt = 0
+        track = len(nx.nodes(steiner.graph))
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1
+
+        sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
+
         mst = nx.minimum_spanning_tree(steiner.graph)
         paths = self._min_paths(steiner)
 
         # Check all edges in the spanning tree
-        for e in mst.edges:
-            u = e[0]
-            v = e[1]
-            r_val = self._min_crossing(steiner, mst, u, v)
+        for (u, v, c) in mst.edges(data='weight'):
+            k = self._key(u, v)
+            if k in paths:
+                ts = paths[k]
 
-            if r_val > 0:
-                # Check if edge is part of any shortest path between terminals
-                k = self._key(u, v)
-                if k in paths:
-                    ts = paths[k]
+                for t in ts:
+                    if t[0] not in steiner.terminals or t[1] not in steiner.terminals:
+                        continue
 
-                    for t in ts:
-                        d = steiner.get_lengths(t[0], t[1])
+                    d = steiner.get_lengths(t[0], t[1])
 
-                        if r_val >= d:
-                            cnt = cnt + 1
-                            break
+                    if d <= self._min_crossing(mst, u, v, d, sorted_edges):
+                        # Merge edges
+                        # First decide how to contract
+                        if u in steiner.terminals:
+                            n1 = u
+                            n2 = v
+                        else:
+                            n1 = v
+                            n2 = u
 
-        print "Short edges " + str(cnt)
+                        self.deleted.append((n1, n2, c))
+
+                        for ng in nx.neighbors(steiner.graph, n2):
+                            if ng != n1:
+                                d = steiner.graph[n2][ng]['weight']
+                                if steiner.add_edge(n1, ng, d):
+                                    self.merged.append(((n1, ng, d), (n2, ng, d)))
+
+                        if n2 in steiner.terminals:
+                            steiner.terminals.remove(n2)
+
+                        steiner.terminals.add(n1)
+                        steiner.graph.remove_node(n2)
+
+                        break
+
+        # TODO: Another method to find out, if an edge is part of the shortest path, is
+        # to check if d(t1,u) + c(u,v) + d(v, t2) == d(t1,t2) (or reverse u and v). May catch more edges
+        return track - len(nx.nodes(steiner.graph))
 
     # Creates a single key for a combination of nodes, avoid nesting of dictionaries
     def _key(self, n1, n2):
@@ -70,27 +98,47 @@ class ShortEdgeReduction:
 
         return paths
 
-    def _min_crossing(self, steiner, mst, n1, n2):
-        """Finds the r value of an edge.
-            Calculates the cut in the MST and then finds the smallest edge bridging the cut in G"""
+    def _min_crossing(self, mst, n1, n2, cutoff, sorted_edges):
+        """Finds the r value of an edge. I.e. the smallest edge bridging the mst cut by (n1, n2) in G
+        Since we need a value > than d, we use a cutoff value to shorten calculation"""
+        queue = [n1]
+        nodes = set()
 
-        # Calculate the cuts
-        mst.remove_edge(n1, n2)
-        c = list(nx.connected_components(mst))
-        mst.add_edge(n1, n2)
+        # Calculate the cut
+        while len(queue) > 0:
+            n = queue.pop()
+            nodes.add(n)
 
-        c1 = set(c[0])
-        c2 = set(c[1])
+            for b in nx.neighbors(mst, n):
+                if b != n2 and b not in nodes:
+                    queue.append(b)
 
-        # Now we have the two cuts, find the smallest edge bridging the cut in the graph
-        min_val = sys.maxint
-        for (u, v, d) in steiner.graph.edges(data='weight'):
-            # Bridges the cut?
-            if (u in c1 and v in c2) or (u in c2 and v in c1):
-                min_val = min(min_val, d)
+        # Find minimum edge bridging the cut
+        for (u, v, d) in sorted_edges:
+            if d >= cutoff:
+                return sys.maxint
 
-        # If the gap is not bridged, the r value is infinite!
-        return min_val
+            if (u in nodes and v not in nodes) or (v in nodes and u not in nodes):
+                return d
+
+        return sys.maxint
 
     def post_process(self, solution):
-        return solution, False
+        change = False
+        cost = solution[1]
+
+        if not self._done:
+            for (n1, n2, w) in self.deleted:
+                solution[0].add_edge(n1, n2, weight=w)
+                cost = cost + w
+                change = True
+            self._done = True
+
+        for (e1, e2) in self.merged:
+            if solution[0].has_edge(e1[0], e1[1]):
+                if solution[0][e1[0]][e1[1]] == e1[2]:
+                    solution[0].remove_edge(e1[0], e1[1])
+                    solution[0].add_edge(e2[0], e2[1], weight=e2[2])
+                    change = True
+
+        return (solution[0], cost), change
