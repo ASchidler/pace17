@@ -44,15 +44,10 @@ class TerminalReduction:
                         change = True
                     # The closest node is a terminal? The edge is viable in any optimal solution, therefore merge the nodes
                     elif min_node in steiner.terminals and min_single:
-                        self._selected_merge.append((t, min_node, min_val))
-                        for ng in neighbors:
-                            if ng != min_node:
-                                d = steiner.graph[t][ng]['weight']
-                                if steiner.add_edge(min_node, ng, d):
-                                    self._selected.append(((min_node, ng, d), (t, ng, d)))
+                        self._removed.append((t, min_node, min_val))
+                        for e in steiner.contract_edge(min_node, t, min_val):
+                            self._selected.append(e)
 
-                        steiner.terminals.remove(t)
-                        steiner.graph.remove_node(t)
                         change = True
 
         return track - len(steiner.terminals)
@@ -74,14 +69,5 @@ class TerminalReduction:
                     solution[0].remove_edge(e1[0], e1[1])
                     solution[0].add_edge(e2[0], e2[1], weight=e2[2])
                     change = True
-
-        for (u, v, d) in self._selected_merge:
-            if solution[0].has_node(u) and solution[0].has_node(v):
-                if not nx.is_connected(solution[0]):
-                    solution[0].add_edge(u, v, weight=d)
-                    cost = cost + d
-            else:
-                solution[0].add_edge(u, v, weight=d)
-                cost = cost + d
 
         return (solution[0], cost), change

@@ -89,3 +89,51 @@ class SteinerGraph:
             self.calculate_steiner_length()
 
         return self._steiner_lengths[n1][n2]
+
+    def path_contains(self, n1, n2, u, v, c):
+        path_dist = self.get_lengths(n1, n2)
+        dist1 = self.get_lengths(n2, v) + c + self.get_lengths(u, n1)
+        dist2 = self.get_lengths(n1, v) + c + self.get_lengths(u, n2)
+
+        dist = min(dist1, dist2)
+
+        if path_dist == dist:
+            return True
+
+        # This is an effect that may occur when using contractions, it happens if a shortest path uses not the
+        # contracted edge itself, but if one of the edges shifted from one node to the other occurs on the other node
+        if path_dist > dist:
+            self._lengths[n1][n2] = dist
+            return True
+
+        return False
+
+    def contract_edge(self, u, v, c):
+        ret = []
+        # Contract
+        for ng in nx.neighbors(self.graph, v):
+            if ng != u:
+                d = self.graph[v][ng]['weight']
+                if self.add_edge(u, ng, d):
+                    ret.append(((u, ng, d), (v, ng, d)))
+
+        # Refresh distance matrix
+        for (n1, p) in self._lengths.items():
+            for (n2, d) in p.items():
+                # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
+                if self.graph.has_node(n2) and self.path_contains(n1, n2, u, v, c):
+                    p[n2] = d - c
+
+        self.remove_node(v)
+        self.terminals.add(u)
+
+        return ret
+
+    def remove_node(self, n):
+        if self.graph.has_node(n):
+            self.graph.remove_node(n)
+
+        self._lengths.pop(n, None)
+
+        if n in self.terminals:
+            self.terminals.remove(n)
