@@ -18,13 +18,14 @@ class ShortEdgeReduction:
 
         sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
 
+        # TODO: Calculate once and update...
         mst = nx.minimum_spanning_tree(steiner.graph)
         paths = self._min_paths(steiner)
 
         # Check all edges in the spanning tree
         for (u, v, c) in mst.edges(data='weight'):
             k = self._key(u, v)
-            if k in paths:
+            if steiner.graph.has_edge(u, v) and steiner.graph.has_node(v) and k in paths:
                 ts = paths[k]
 
                 for t in ts:
@@ -43,19 +44,12 @@ class ShortEdgeReduction:
                             n1 = v
                             n2 = u
 
+                        # Store
                         self.deleted.append((n1, n2, c))
 
-                        for ng in nx.neighbors(steiner.graph, n2):
-                            if ng != n1:
-                                d = steiner.graph[n2][ng]['weight']
-                                if steiner.add_edge(n1, ng, d):
-                                    self.merged.append(((n1, ng, d), (n2, ng, d)))
-
-                        if n2 in steiner.terminals:
-                            steiner.terminals.remove(n2)
-
-                        steiner.terminals.add(n1)
-                        steiner.graph.remove_node(n2)
+                        # Contract
+                        for e in steiner.contract_edge(u, v, c):
+                            self.merged.append(e)
 
                         break
 

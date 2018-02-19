@@ -1,1 +1,1 @@
-__all__ = ["incidence", "zeroedge", "short_edges"]
+__all__ = ["zeroedge", "short_edges"]
