@@ -37,7 +37,7 @@ class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
                         total = total + s
 
                 if total >= steiner.get_approximation().cost:
-                    steiner.graph.remove_edge(u, v)
+                    steiner.remove_edge(u, v)
                     cnt = cnt + 1
 
         return cnt

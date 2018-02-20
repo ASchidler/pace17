@@ -68,7 +68,7 @@ class CutReachabilityReduction:
                         min_sum = min_sum + self._terminal_minimums[t]
 
                 if min_sum >= steiner.get_approximation().cost:
-                    steiner.graph.remove_node(n)
+                    steiner.remove_node(n)
                     cut_cnt = cut_cnt + 1
 
         return cut_cnt

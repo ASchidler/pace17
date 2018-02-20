@@ -44,12 +44,23 @@ for filename in os.listdir(file_path):
                     while thr.is_alive() and (time.time() - thread_start) <= time_limit:
                         time.sleep(0.1)
 
+                if len(list(nx.connected_components(steiner.graph))) > 1:
+                    pass
+
+                for t in steiner.terminals:
+                    for (k, v) in steiner.get_voronoi().items():
+                        if t in v:
+                            pass
+                    if t not in nx.nodes(steiner.graph):
+                        pass
+
             cnt2 = len(nx.nodes(steiner.graph)) + len(nx.edges(steiner.graph))
 
             if cnt == cnt2:
                 break
             cnt = cnt2
-
+        steiner._lengths = {}
+        steiner._approximation = None
         # Wait for solving to complete
         solver = cfg.solver(steiner)
         thread.start_new_thread(solver.solve, ())

@@ -8,7 +8,6 @@ import signal
 """ The real solver script that reads from stdin and outputs the solution """
 
 steiner = pp.parse_pace_file(sys.stdin)
-solver = cfg.solver(steiner)
 
 # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
 reducers = cfg.reducers()
@@ -22,6 +21,10 @@ while True:
         break
 
 # Solve
+# Distance matrix may be incorrect due to preprocessing, restore
+steiner._lengths = {}
+steiner._approximation = None
+solver = cfg.solver(steiner)
 solver.solve()
 
 solution = solver.result

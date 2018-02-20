@@ -12,15 +12,20 @@ class VoronoiReduction:
         exit_max2 = 0
 
         for (t, r) in steiner.get_voronoi().items():
+
             min_val = sys.maxint
             for n in nx.nodes(steiner.graph):
                 if n not in r:
                     min_val = min(min_val, steiner.get_lengths(t, n))
 
             exit_sum = exit_sum + min_val
-            if min_val >= exit_max1:
-                exit_max2 = exit_max1
-                exit_max1 = min_val
+
+            if min_val > exit_max2:
+                if min_val > exit_max1:
+                    exit_max2 = exit_max1
+                    exit_max1 = min_val
+                else:
+                    exit_max2 = min_val
 
         return exit_sum - exit_max1 - exit_max2
 
@@ -42,11 +47,11 @@ class VoronoiReduction:
             # Search for closest terminal
             for (t, r) in steiner.get_voronoi().items():
                 if u in r:
-                    total = total + steiner.get_lengths(u, t)
+                    total = total + steiner.get_lengths(t, u)
                     cnt = cnt + 1
 
                 if v in r:
-                    total = total + steiner.get_lengths(v, t)
+                    total = total + steiner.get_lengths(t, u)
                     cnt = cnt + 1
 
                 # Found terminal for both nodes in edge
@@ -55,7 +60,7 @@ class VoronoiReduction:
 
             # Is the edge too long?
             if d + total + exit_sum > steiner.get_approximation().cost:
-                steiner.graph.remove_edge(u, v)
+                steiner.remove_edge(u, v)
 
         return track - len(nx.edges(steiner.graph))
 

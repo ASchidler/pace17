@@ -30,6 +30,13 @@ class SteinerGraph:
         self.graph.add_edge(n1, n2, weight=c)
         return True
 
+    def remove_edge(self, u, v):
+        self.graph.remove_edge(u, v)
+        if self.graph.degree[u] == 0:
+            self.remove_node(u)
+        if self.graph.degree[v] == 0:
+            self.remove_node(v)
+
     def get_lengths(self, n1, n2=None):
         """Retrieve the length of the shortest path between n1 and n2. If n2 is empty all paths from n1 are returned"""
         if n1 not in self._lengths:
@@ -53,12 +60,15 @@ class SteinerGraph:
         return self._approximation
 
     def calculate_steiner_length(self):
-        """ Calculates the steiner distances"""
         # Create 2-D dictionary
         self._steiner_lengths = {}
-
         for n in nx.nodes(self.graph):
             self._steiner_lengths[n] = dict(self.get_lengths(n))
+
+        self.refresh_steiner_lengths()
+
+    def refresh_steiner_lengths(self):
+        """ Calculates the steiner distances"""
 
         for n in nx.nodes(self.graph):
             terminals = 0
@@ -158,6 +168,8 @@ class SteinerGraph:
             self.graph.remove_node(n)
 
         self._lengths.pop(n, None)
+        if self._voronoi_areas is not None:
+            self._voronoi_areas.pop(n, None)
 
         if n in self.terminals:
             self.terminals.remove(n)
@@ -175,6 +187,10 @@ class SteinerGraph:
             for n in self._voronoi_areas[tsource]:
                 self._voronoi_areas[ttarget].add(n)
             self._voronoi_areas.pop(tsource, None)
+
+            for (k, v) in self._voronoi_areas.items():
+                if ttarget in v:
+                    v.remove(ttarget)
 
     def get_voronoi(self):
         if self._voronoi_areas is None:

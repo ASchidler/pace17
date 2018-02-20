@@ -19,6 +19,10 @@ class TerminalReduction:
         while change:
             change = False
             for t in list(steiner.terminals):
+                # May change during the loop
+                if t not in steiner.terminals:
+                    continue
+
                 min_val = sys.maxint
                 min_node = None
                 min_single = False
@@ -39,6 +43,7 @@ class TerminalReduction:
                     if len(neighbors) == 1:
                         self._removed.append((t, min_node, w))
                         steiner.move_terminal(t, min_node)
+                        steiner.remove_node(t)
                         change = True
                     # The closest node is a terminal? The edge is viable in any optimal solution -> contract edge
                     elif min_node in steiner.terminals and min_single:
