@@ -19,6 +19,13 @@ class Solver2k:
         self.stop = False
 
     def solve(self):
+        # Edge case, may also happen in case of a very efficient preprocessing
+        if len(self.steiner.terminals) == 1:
+            ret = nx.Graph()
+            ret.add_node(list(self.steiner.terminals)[0])
+            self.result = ret, 0
+            return ret, 0
+
         """Solves the instance of the steiner tree problem"""
         # Permanent labels => set of completed elements
         p = set()

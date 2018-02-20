@@ -17,7 +17,7 @@ class DegreeReduction:
             old = len(nx.nodes(steiner.graph))
             for n, degree in nx.degree(steiner.graph):
                 if degree == 1 and n not in steiner.terminals:
-                    steiner.graph.remove_node(n)
+                    steiner.remove_node(n)
                     break
                 elif degree == 2 and n not in steiner.terminals:
                     nb = list(nx.neighbors(steiner.graph, n))
@@ -26,7 +26,7 @@ class DegreeReduction:
 
                     if steiner.add_edge(nb[0], nb[1], w1+w2):
                         self._removed[(nb[0], nb[1], w1 + w2)] = [(nb[0], n, w1), (nb[1], n, w2)]
-                        steiner.graph.remove_node(n)
+                        steiner.remove_node(n)
                         break
 
         return track - len(nx.nodes(steiner.graph))

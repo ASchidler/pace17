@@ -15,7 +15,7 @@ class ComponentReduction:
 
                 if not found:
                     for n in c:
-                        steiner.graph.remove_node(n)
+                        steiner.remove_node(n)
 
         return track - len(nx.nodes(steiner.graph))
 

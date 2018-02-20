@@ -38,7 +38,6 @@ def process_file(filename, solve, apply_reductions):
 
     if solve:
         # Reset lengths as they may not reflect reality after the reductions
-        steiner._lengths = {}
         solver = cfg.solver(steiner)
         solution = solver.solve()
 

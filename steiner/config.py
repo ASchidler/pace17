@@ -6,25 +6,27 @@ from solver.heuristics import *
 """Used as a configuration for the whole steiner solving suite"""
 
 def reducers():
-    """Creates the set of active reductions/preprocessing"""
+    """Creates the set of reducing preprocessing tests"""
     return [
-        component.ComponentReduction(),
-        zeroedge.ZeroEdgeReduction(),
-        #incidence.IncidenceReduction(),
-        #short_edges.ShortEdgeReduction(),
+        terminal_distance.CostVsTerminalDistanceReduction(),
+        long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
         voronoi.VoronoiReduction(),
+        ntdk.NtdkReduction(),
+        terminals.TerminalReduction(),
+        short_edges.ShortEdgeReduction(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
-        long_edges.LongEdgeReduction(),
-        ntdk.NtdkReduction(),
         reachability.ReachabilityReduction(),
-        long_edges.LongEdgeReduction(),
-        terminal_distance.CostVsTerminalDistanceReduction(),
-        degree.DegreeReduction(),
-        #terminals.TerminalReduction()
     ]
 
+
+def once_reducers():
+    """Creates the set of reductions/inclusions that should/need not be run more than once"""
+    return [
+        component.ComponentReduction(),
+        zeroedge.ZeroEdgeReduction()
+    ]
 
 def solver(steiner):
     """Creates a solver"""

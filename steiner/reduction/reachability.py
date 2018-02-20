@@ -47,7 +47,7 @@ class ReachabilityReduction:
                                 if steiner.add_edge(n1, n2, c1 + c2):
                                     self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
 
-                        steiner.graph.remove_node(n)
+                        steiner.remove_node(n)
 
         return track - len(nx.nodes(steiner.graph))
 
