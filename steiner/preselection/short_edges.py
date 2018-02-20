@@ -48,7 +48,7 @@ class ShortEdgeReduction:
                         self.deleted.append((n1, n2, c))
 
                         # Contract
-                        for e in steiner.contract_edge(u, v, c):
+                        for e in steiner.contract_edge(u, v):
                             self.merged.append(e)
 
                         break

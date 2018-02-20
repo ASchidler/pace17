@@ -13,7 +13,7 @@ class TerminalReduction:
         self._done = False
 
     def reduce(self, steiner):
-        track = len(steiner.terminals)
+        track = len(nx.nodes(steiner.graph))
         change = True
 
         while change:
@@ -38,19 +38,18 @@ class TerminalReduction:
                     # Only one neighbor? The edge has to be selected, so we can treat the neighbor as a terminal
                     if len(neighbors) == 1:
                         self._removed.append((t, min_node, w))
-                        steiner.graph.remove_node(t)
+                        steiner.remove_node(t)
                         steiner.terminals.add(min_node)
-                        steiner.terminals.remove(t)
                         change = True
-                    # The closest node is a terminal? The edge is viable in any optimal solution, therefore merge the nodes
+                    # The closest node is a terminal? The edge is viable in any optimal solution -> contract edge
                     elif min_node in steiner.terminals and min_single:
                         self._removed.append((t, min_node, min_val))
-                        for e in steiner.contract_edge(min_node, t, min_val):
+                        for e in steiner.contract_edge(min_node, t):
                             self._selected.append(e)
 
                         change = True
 
-        return track - len(steiner.terminals)
+        return track - len(nx.nodes(steiner.graph))
 
     def post_process(self, solution):
         cost = solution[1]

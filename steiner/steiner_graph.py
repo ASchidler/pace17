@@ -13,34 +13,46 @@ class SteinerGraph:
         self._approximation = None
 
     def add_edge(self, n1, n2, c):
+        """Adds an edge to the graph. Distances are updated in case it replaces the same edge with higher costs."""
         if self.graph.has_edge(n1, n2):
-            if self.graph[n1][n2]['weight'] > c:
+            orig = self.graph[n1][n2]['weight']
+            # Exists, but existing is more expensive
+            if orig > c:
                 self.graph[n1][n2]['weight'] = c
+                self.refresh_distance_matrix(n1, n2, c)
                 return True
+            # Cheaper edge exists
             else:
                 return False
+
+        # Non-existing, simply add. This method
         self.graph.add_edge(n1, n2, weight=c)
         return True
 
     def get_lengths(self, n1, n2=None):
+        """Retrieve the length of the shortest path between n1 and n2. If n2 is empty all paths from n1 are returned"""
         if n1 not in self._lengths:
+            # If non-existing try the other way round. If still not existing calculate
             if n2 is not None and n2 in self._lengths:
                 return self._lengths[n2][n1]
             else:
                 self._lengths[n1] = nx.single_source_dijkstra_path_length(self.graph, n1)
 
+        # If n2 is empty return the distances to all other nodes
         if n2 is None:
             return self._lengths[n1]
 
         return self._lengths[n1][n2]
 
     def get_approximation(self):
+        """ Returns an approximation that can be used as an upper bound"""
         if self._approximation is None:
             self._approximation = sa.SteinerApproximation(self)
 
         return self._approximation
 
     def calculate_steiner_length(self):
+        """ Calculates the steiner distances"""
         # Create 2-D dictionary
         self._steiner_lengths = {}
 
@@ -100,15 +112,9 @@ class SteinerGraph:
         if path_dist == dist:
             return True
 
-        # This is an effect that may occur when using contractions, it happens if a shortest path uses not the
-        # contracted edge itself, but if one of the edges shifted from one node to the other occurs on the other node
-        if path_dist > dist:
-            self._lengths[n1][n2] = dist
-            return True
-
         return False
 
-    def contract_edge(self, u, v, c):
+    def contract_edge(self, u, v):
         ret = []
         # Contract
         for ng in nx.neighbors(self.graph, v):
@@ -116,18 +122,32 @@ class SteinerGraph:
                 d = self.graph[v][ng]['weight']
                 if self.add_edge(u, ng, d):
                     ret.append(((u, ng, d), (v, ng, d)))
+                else:
+                    # There exists an edge to u of equal or cheaper cost
+                    alt_c = self.graph[u][ng]['weight']
+                    if alt_c < d:
+                        self.refresh_distance_matrix(v, ng, alt_c)
 
         # Refresh distance matrix
-        for (n1, p) in self._lengths.items():
-            for (n2, d) in p.items():
-                # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
-                if self.graph.has_node(n2) and self.path_contains(n1, n2, u, v, c):
-                    p[n2] = d - c
-
+        self.refresh_distance_matrix(u, v, 0)
         self.remove_node(v)
         self.terminals.add(u)
 
         return ret
+
+    def refresh_distance_matrix(self, u, v, c):
+        """ Refreshes the distance matrix under the assumption that u/v has been contracted and has cost c"""
+        for (n1, p) in self._lengths.items():
+            for (n2, d) in p.items():
+                # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
+                if self.graph.has_node(n2):
+                    # The length of the path under the assumption it is over u, v
+                    dist1 = self.get_lengths(n2, v) + self.get_lengths(u, n1) + c
+                    dist2 = self.get_lengths(n1, v) + self.get_lengths(u, n2) + c
+                    dist = min(dist1, dist2)
+
+                    if d > dist:
+                        p[n2] = dist
 
     def remove_node(self, n):
         if self.graph.has_node(n):
