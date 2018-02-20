@@ -38,8 +38,7 @@ class TerminalReduction:
                     # Only one neighbor? The edge has to be selected, so we can treat the neighbor as a terminal
                     if len(neighbors) == 1:
                         self._removed.append((t, min_node, w))
-                        steiner.remove_node(t)
-                        steiner.terminals.add(min_node)
+                        steiner.move_terminal(t, min_node)
                         change = True
                     # The closest node is a terminal? The edge is viable in any optimal solution -> contract edge
                     elif min_node in steiner.terminals and min_single:

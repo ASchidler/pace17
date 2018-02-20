@@ -24,8 +24,9 @@ class CutReachabilityReduction:
 
     def reduce(self, steiner):
         cut_cnt = 0
-        if self._terminal_minimums is None:
-            self.find_minimums(steiner)
+
+        # Always recalculate so that it adapts to changing terminal set
+        self.find_minimums(steiner)
 
         approx_nodes = nx.nodes(steiner.get_approximation().tree)
         for n in list(nx.nodes(steiner.graph)):

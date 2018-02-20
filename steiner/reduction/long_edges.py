@@ -2,7 +2,7 @@ import networkx as nx
 
 
 class LongEdgeReduction:
-    """Removes all edges that are longer than the distance to the closest terminal"""
+    """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
     def reduce(self, steiner):
         track = len(nx.edges(steiner.graph))
