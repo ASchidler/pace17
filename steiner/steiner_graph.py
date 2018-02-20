@@ -11,6 +11,7 @@ class SteinerGraph:
         self._lengths = {}
         self._steiner_lengths = None
         self._approximation = None
+        self._voronoi_areas = None
 
     def add_edge(self, n1, n2, c):
         """Adds an edge to the graph. Distances are updated in case it replaces the same edge with higher costs."""
@@ -130,8 +131,11 @@ class SteinerGraph:
 
         # Refresh distance matrix
         self.refresh_distance_matrix(u, v, 0)
+
+        if v in self.terminals:
+            self.move_terminal(v, u)
+
         self.remove_node(v)
-        self.terminals.add(u)
 
         return ret
 
@@ -157,3 +161,39 @@ class SteinerGraph:
 
         if n in self.terminals:
             self.terminals.remove(n)
+
+    def move_terminal(self, tsource, ttarget):
+        self.terminals.remove(tsource)
+
+        if ttarget not in self.terminals:
+            self.terminals.add(ttarget)
+
+            if self._voronoi_areas is not None:
+                self._voronoi_areas[ttarget] = set()
+
+        if self._voronoi_areas is not None:
+            for n in self._voronoi_areas[tsource]:
+                self._voronoi_areas[ttarget].add(n)
+            self._voronoi_areas.pop(tsource, None)
+
+    def get_voronoi(self):
+        if self._voronoi_areas is None:
+            self._voronoi_areas = {}
+
+            for t in self.terminals:
+                self._voronoi_areas[t] = set()
+
+            for n in nx.nodes(self.graph):
+                if n not in self.terminals:
+                    min_val = sys.maxint
+                    min_node = None
+
+                    for t in self.terminals:
+                        c = self.get_lengths(n, t)
+                        if c < min_val:
+                            min_val = c
+                            min_node = t
+
+                    self._voronoi_areas[min_node].add(n)
+
+        return self._voronoi_areas
