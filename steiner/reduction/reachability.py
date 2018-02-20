@@ -35,8 +35,8 @@ class ReachabilityReduction:
                 elif min_val1 + min_val2 + max_val >= steiner.get_approximation().cost:
                     nb = list(nx.neighbors(steiner.graph, n))
                     # Introduce artificial edges
-                    # TODO: find good value. At some point (10 is known) this becomes extremely slow
-                    if len(nb) <= 6:
+                    # TODO: find good value. At some point (10 is known, 6 is also too high) this becomes extremely slow
+                    if len(nb) <= 5:
                         for i in range(0, len(nb)):
                             n1 = nb[i]
                             c1 = steiner.graph[n][n1]['weight']

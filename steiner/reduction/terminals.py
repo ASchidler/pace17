@@ -68,7 +68,7 @@ class TerminalReduction:
 
         for (e1, e2) in self._selected:
             if solution[0].has_edge(e1[0], e1[1]):
-                if solution[0][e1[0]][e1[1]] == e1[2]:
+                if solution[0][e1[0]][e1[1]]['weight'] == e1[2]:
                     solution[0].remove_edge(e1[0], e1[1])
                     solution[0].add_edge(e2[0], e2[1], weight=e2[2])
                     change = True

@@ -54,7 +54,8 @@ class ShortEdgeReduction:
                         break
 
         # TODO: Another method to find out, if an edge is part of the shortest path, is
-        # to check if d(t1,u) + c(u,v) + d(v, t2) == d(t1,t2) (or reverse u and v). May catch more edges
+        # to check if d(t1,u) + c(u,v) + d(v, t2) == d(t1,t2) (or reverse u and v). May catch more edges, but may
+        # take longer
         return track - len(nx.nodes(steiner.graph))
 
     # Creates a single key for a combination of nodes, avoid nesting of dictionaries
@@ -130,7 +131,7 @@ class ShortEdgeReduction:
 
         for (e1, e2) in self.merged:
             if solution[0].has_edge(e1[0], e1[1]):
-                if solution[0][e1[0]][e1[1]] == e1[2]:
+                if solution[0][e1[0]][e1[1]]['weight'] == e1[2]:
                     solution[0].remove_edge(e1[0], e1[1])
                     solution[0].add_edge(e2[0], e2[1], weight=e2[2])
                     change = True
