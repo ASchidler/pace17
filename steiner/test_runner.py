@@ -33,25 +33,22 @@ for filename in os.listdir(file_path):
         # Used to watch running time
         thread_start = time.time()
 
-        tr = terminals.TerminalReduction()
         # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
         reducers = cfg.reducers()
         while True:
-            cnt = len(nx.nodes(steiner.graph)) + len(nx.edge_betweenness(steiner.graph))
+            cnt = len(nx.nodes(steiner.graph)) + len(nx.edges(steiner.graph))
             for r in reducers:
                 if (time.time() - thread_start) <= time_limit:
                     thr = th.Thread(target=r.reduce, args=(steiner,))
                     thr.start()
                     while thr.is_alive() and (time.time() - thread_start) <= time_limit:
                         time.sleep(0.1)
-                cnt = cnt + r.reduce(steiner)
 
-            cnt2 = len(nx.nodes(steiner.graph)) + len(nx.edge_betweenness(steiner.graph))
+            cnt2 = len(nx.nodes(steiner.graph)) + len(nx.edges(steiner.graph))
+
             if cnt == cnt2:
                 break
             cnt = cnt2
-
-        tr.reduce(steiner)
 
         # Wait for solving to complete
         solver = cfg.solver(steiner)
@@ -75,9 +72,6 @@ for filename in os.listdir(file_path):
                 solution = ret[0]
                 change = change or ret[1]
 
-            ret = tr.post_process(solution)
-            solution = ret[0]
-            change = change or ret[1]
             if not change:
                 break
 

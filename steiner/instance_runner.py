@@ -16,31 +16,29 @@ def process_file(filename, solve, apply_reductions):
     steiner = pp.parse_pace_file(f)
     reducers = cfg.reducers()
 
-    tr = terminals.TerminalReduction()
-
     if apply_reductions:
         cnt_edge = len(nx.edges(steiner.graph))
         cnt_nodes = len(nx.nodes(steiner.graph))
+        cnt_terminals = len(steiner.terminals)
 
         while True:
             cnt_changes = 0
             for r in reducers:
                 local_start = time.time()
                 reduced = r.reduce(steiner)
+                cnt_changes = cnt_changes + reduced
                 print "Reduced {} needing {} in {}"\
                     .format(reduced, str(time.time() - local_start), str(r.__class__))
             if cnt_changes == 0:
                 break
 
-        local_start = time.time()
-        reduced = tr.reduce(steiner)
-        print "Reduced {} needing {} in {}" \
-            .format(reduced, str(time.time() - local_start), str(tr.__class__))
-
-        print "{} nodes and {} edges removed "\
-            .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)))
+        print "{} nodes, {} edges and {} terminals removed "\
+            .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)),
+                    cnt_terminals - len(steiner.terminals))
 
     if solve:
+        # Reset lengths as they may not reflect reality after the reductions
+        steiner._lengths = {}
         solver = cfg.solver(steiner)
         solution = solver.solve()
 
@@ -54,7 +52,6 @@ def process_file(filename, solve, apply_reductions):
 
     # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
     if apply_reductions and solve:
-        reducers.append(tr)
         reducers.reverse()
         solution = solver.result
 
