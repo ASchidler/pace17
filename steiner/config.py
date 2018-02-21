@@ -13,6 +13,7 @@ def reducers():
         terminal_distance.CostVsTerminalDistanceReduction(),
         long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
+        voronoi_nodes.VoronoiNodeReduction(),
         voronoi.VoronoiReduction(),
         ntdk.NtdkReduction(),
         terminals.TerminalReduction(),
@@ -20,7 +21,7 @@ def reducers():
         short_links.ShortLinkPreselection(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
-        reachability.ReachabilityReduction(),
+        reachability.ReachabilityReduction()
     ]
 
 
