@@ -62,16 +62,17 @@ class ShortLinkPreselection:
                     for e in steiner.contract_edge(n1, n2):
                         self.merged.append(e)
 
-                    # Fix voronoi
-                    for n in list(vor[t]):
-                        if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
-                            vor[t].remove(n)
-                            vor[other_t].add(n)
+                    # Fix voronoi if terminals are not merged
+                    if t != n1 and t != n2 and other_t != n1 and other_t != n2:
+                        for n in list(vor[t]):
+                            if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
+                                vor[t].remove(n)
+                                vor[other_t].add(n)
 
-                    for n in list(vor[other_t]):
-                        if steiner.get_lengths(other_t, n) > steiner.get_lengths(t, n):
-                            vor[other_t].remove(n)
-                            vor[t].add(n)
+                        for n in list(vor[other_t]):
+                            if steiner.get_lengths(other_t, n) > steiner.get_lengths(t, n):
+                                vor[other_t].remove(n)
+                                vor[t].add(n)
 
         return track
 
