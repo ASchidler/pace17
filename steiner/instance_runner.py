@@ -37,6 +37,8 @@ def process_file(filename, solve, apply_reductions):
                     cnt_terminals - len(steiner.terminals))
 
     if solve:
+        steiner._lengths = {}
+        steiner._approximation = None
         # Reset lengths as they may not reflect reality after the reductions
         solver = cfg.solver(steiner)
         solution = solver.solve()
@@ -88,7 +90,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(33, 200):
+for i in range(1, 200):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = file_path.format(i)

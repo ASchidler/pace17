@@ -8,6 +8,8 @@ from solver.heuristics import *
 def reducers():
     """Creates the set of reducing preprocessing tests"""
     return [
+        component.ComponentReduction(),
+        zeroedge.ZeroEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
@@ -15,18 +17,12 @@ def reducers():
         ntdk.NtdkReduction(),
         terminals.TerminalReduction(),
         short_edges.ShortEdgeReduction(),
+        short_links.ShortLinkPreselection(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
         reachability.ReachabilityReduction(),
     ]
 
-
-def once_reducers():
-    """Creates the set of reductions/inclusions that should/need not be run more than once"""
-    return [
-        component.ComponentReduction(),
-        zeroedge.ZeroEdgeReduction()
-    ]
 
 def solver(steiner):
     """Creates a solver"""
