@@ -78,7 +78,7 @@ def process_file(filename, solve, apply_reductions):
                 print "*** Unknown edge {}-{} in solution after unreduce".format(u, v)
 
         if total_sum != solution[1]:
-            print "*** Total sum does not match after unreduce"
+            print "*** Total sum {} does not match expected {} after unreduce".format(total_sum, solution[1])
 
         for t in steiner2.terminals:
             if not solution[0].has_node(t):
@@ -90,7 +90,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(1, 200):
+for i in range(9, 200):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = file_path.format(i)
