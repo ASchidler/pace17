@@ -90,7 +90,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(9, 200):
+for i in range(1, 200):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = file_path.format(i)
