@@ -6,6 +6,7 @@ import heapq
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
+        self.max_node = max(nx.nodes(steiner.graph))
         self.terminals = list(terminals)
         self.terminals.sort()
         self.root_node = self.terminals.pop()
@@ -14,7 +15,7 @@ class Solver2k:
         self.prune_bounds = {}
         self.prune_smt = {}
         self.heuristics = heuristics
-        self.labels = {}
+        self.labels = list([None] * (self.max_node + 1))
         self.result = None
         self.stop = False
         self.queue = []
@@ -51,7 +52,6 @@ class Solver2k:
             if n[1] not in self.labels[n[0]]:
                 n_key = (n[0], n[1])
                 n_cost = self.costs[n_key][0]
-                self.labels[n[0]].append(n[1])
                 self.labels[n[0]].add(n[1])
 
                 self.process_neighbors(n[0], n_cost, n_key, n[1])
