@@ -37,7 +37,7 @@ class Solver2k:
             return ret, 0
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = []
+            self.labels[n] = set()
 
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
@@ -52,6 +52,7 @@ class Solver2k:
                 n_key = (n[0], n[1])
                 n_cost = self.costs[n_key][0]
                 self.labels[n[0]].append(n[1])
+                self.labels[n[0]].add(n[1])
 
                 self.process_neighbors(n[0], n_cost, n_key, n[1])
                 self.process_labels(n[0], n_cost, n_key, n[1])
