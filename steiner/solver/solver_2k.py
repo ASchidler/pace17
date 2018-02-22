@@ -1,6 +1,7 @@
 import networkx as nx
 import sys
 import heapq
+import numpy as np
 
 
 class Solver2k:
@@ -10,7 +11,7 @@ class Solver2k:
         self.terminals = list(terminals)
         self.terminals.sort()
         self.root_node = self.terminals.pop()
-        self.max_id = (1 << len(self.terminals)) - 1
+        self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
         self.prune_smt = {}
@@ -50,7 +51,7 @@ class Solver2k:
             heapq.heappush(self.queue, [h, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while self.max_id not in self.labels[self.root_node]:
+        while self.max_set not in self.labels[self.root_node]:
             el = heapq.heappop(self.queue)
             n = el[1]
             s = el[2]
@@ -65,7 +66,7 @@ class Solver2k:
 
         # Process result
         ret = nx.Graph()
-        total = self.backtrack((self.root_node, self.max_id), ret)
+        total = self.backtrack(self.root_node, self.max_set, ret)
 
         self.result = ret, total
         return ret, total
@@ -76,7 +77,8 @@ class Solver2k:
             total = n_cost + self.steiner.graph[n][other_node]['weight']
 
             if total < other_node_cost and n_set not in self.labels[other_node]:
-                self.costs[other_node][n_set] = (total, [(n, n_set)])
+                # Store costs. The second part of the tuple is backtracking info. Optimize size using numpy datatypes
+                self.costs[other_node][n_set] = (total, [n])
                 h = self.heuristic(other_node, n_set)
                 if not self.prune(other_node, n_set, total, h):
                     heapq.heappush(self.queue, [total + h, other_node, n_set])
@@ -95,7 +97,7 @@ class Solver2k:
                     combined_cost = n_cost + cst[other_set][0]
 
                     if combined_cost < cst[combined][0]:
-                        cst[combined] = (combined_cost, [(n, other_set), (n, n_set)])
+                        cst[combined] = (combined_cost, [other_set, n_set])
                         h = self.heuristic(n, combined)
                         if not self.prune(n, combined, combined_cost, h, other_set):
                             heapq.heappush(self.queue, [combined_cost + h, n, combined])
@@ -104,7 +106,7 @@ class Solver2k:
         if len(self.heuristics) == 0:
             return 0
 
-        set_id = self.max_id ^ set_id
+        set_id = self.max_set ^ set_id
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
@@ -142,7 +144,7 @@ class Solver2k:
         dist = self.prune2_dist(target_set)
 
         # Find the minimum distance between n and R \ set
-        ts = self.to_list(self.max_id ^ target_set)
+        ts = self.to_list(self.max_set ^ target_set)
         ts.append(self.root_node)
         for t in ts:
             lt = self.steiner.get_lengths(n, t)
@@ -223,27 +225,24 @@ class Solver2k:
         self.prune_bounds[set_id1 | set_id2] = (val, s)
         return val, s
 
-    def backtrack(self, c, ret):
+    def backtrack(self, n, s, ret):
         """Creates the solution upon a finished solving run"""
 
-        entry = self.costs[c[0]][c[1]][1]
+        # To minimize backtracking info stored, the entry contains either the previous node (share the same set)
+        # or the previous to sets (share the same node). Or nothing if it is a leaf
+        entry = self.costs[n][s][1]
 
         if len(entry) == 0:
             return 0
 
-        # Get the node and the predecessor
-        n1 = c[0]
-
         if len(entry) == 1:
-            n2 = entry[0][0]
-            w = self.steiner.graph[n1][n2]['weight']
-            ret.add_edge(n1, n2, weight=w)
-            return w + self.backtrack(entry[0], ret)
+            n2 = entry[0]
+            w = self.steiner.graph[n][n2]['weight']
+            ret.add_edge(n, n2, weight=w)
+            return w + self.backtrack(entry[0], s, ret)
         else:
-            tmp = 0
-            for e in entry:
-                tmp = tmp + self.backtrack(e, ret)
-
+            tmp = self.backtrack(n, entry[0], ret)
+            tmp = tmp + self.backtrack(n, entry[1], ret)
             return tmp
 
     def to_list(self, set_id):
