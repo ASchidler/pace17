@@ -1,7 +1,6 @@
 import networkx as nx
 import sys
 import heapq
-import numpy as np
 
 
 class Solver2k:
@@ -20,33 +19,12 @@ class Solver2k:
         self.stop = False
         self.queue = []
 
-        self.max_node = max(nx.nodes(steiner.graph))
-        self.type_node = self.find_type(self.max_node)
-        self.type_set = self.find_type(self.max_id)
-        self.type_cost = self.find_type(steiner.get_approximation().cost)
-        self.max_cost = np.iinfo(self.type_cost).max
-
-        self.max_id = self.type_set(self.max_id)
-        self.root_node = self.type_node(self.root_node)
-
         self.terminal_ids = {}
         for i in range(0, len(self.terminals)):
-            self.terminals[i] = self.type_node(self.terminals[i])
-            self.terminal_ids[self.type_set(1 << i)] = self.terminals[i]
+            self.terminal_ids[1 << i] = self.terminals[i]
 
-        self.costs = SolverCosts(self.terminal_ids, self.max_cost)
-
-    def find_type(self, max_val):
-        if max_val < (1 << 8):
-            return np.uint8
-        elif max_val < (1 << 16):
-            return np.uint16
-        elif max_val < (1 << 32):
-            return np.uint32
-        elif max_val < (1 << 64):
-            return np.uint64
-
-        return np.uint128
+        # Use the approximation + 1 (otherwise solving will fail if the approximation is correct) as an upper cost bound
+        self.costs = SolverCosts(self.terminal_ids, steiner.get_approximation().cost + 1)
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -59,11 +37,11 @@ class Solver2k:
             return ret, 0
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[self.type_node(n)] = []
+            self.labels[n] = []
 
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
-            heapq.heappush(self.queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], self.type_set(1 << terminal_set))])
+            heapq.heappush(self.queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], 1 << terminal_set)])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while self.max_id not in self.labels[self.root_node] and not self.stop:
@@ -86,8 +64,7 @@ class Solver2k:
         return ret, total
 
     def process_neighbors(self, n, n_cost, n_key, n_set):
-        for other_nodex in nx.neighbors(self.steiner.graph, n):
-            other_node = self.type_node(other_nodex)
+        for other_node in nx.neighbors(self.steiner.graph, n):
             other_node_key = (other_node, n_set)
             other_node_cost = self.costs[other_node_key][0]
 
