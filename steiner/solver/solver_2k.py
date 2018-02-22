@@ -1,6 +1,8 @@
 import networkx as nx
 import sys
 import heapq
+import numpy as np
+
 
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
@@ -8,8 +10,7 @@ class Solver2k:
         self.terminals = list(terminals)
         self.terminals.sort()
         self.root_node = self.terminals.pop()
-        self.max_id = 1 << len(self.terminals)
-        self.costs = SolverCosts(self.terminals)
+        self.max_id = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
         self.prune_smt = {}
@@ -18,6 +19,34 @@ class Solver2k:
         self.result = None
         self.stop = False
         self.queue = []
+
+        self.max_node = max(nx.nodes(steiner.graph))
+        self.type_node = self.find_type(self.max_node)
+        self.type_set = self.find_type(self.max_id)
+        self.type_cost = self.find_type(steiner.get_approximation().cost)
+        self.max_cost = np.iinfo(self.type_cost).max
+
+        self.max_id = self.type_set(self.max_id)
+        self.root_node = self.type_node(self.root_node)
+
+        self.terminal_ids = {}
+        for i in range(0, len(self.terminals)):
+            self.terminals[i] = self.type_node(self.terminals[i])
+            self.terminal_ids[self.type_set(1 << i)] = self.terminals[i]
+
+        self.costs = SolverCosts(self.terminal_ids, self.max_cost)
+
+    def find_type(self, max_val):
+        if max_val < (1 << 8):
+            return np.uint8
+        elif max_val < (1 << 16):
+            return np.uint16
+        elif max_val < (1 << 32):
+            return np.uint32
+        elif max_val < (1 << 64):
+            return np.uint64
+
+        return np.uint128
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -30,14 +59,14 @@ class Solver2k:
             return ret, 0
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = []
+            self.labels[self.type_node(n)] = []
 
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
-            heapq.heappush(self.queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], 1 << terminal_set)])
+            heapq.heappush(self.queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], self.type_set(1 << terminal_set))])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while self.max_id - 1 not in self.labels[self.root_node] and not self.stop:
+        while self.max_id not in self.labels[self.root_node] and not self.stop:
             n = heapq.heappop(self.queue)[2]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
@@ -51,13 +80,14 @@ class Solver2k:
 
         # Process result
         ret = nx.Graph()
-        total = self.backtrack((self.root_node, self.max_id-1), ret)
+        total = self.backtrack((self.root_node, self.max_id), ret)
 
         self.result = ret, total
         return ret, total
 
     def process_neighbors(self, n, n_cost, n_key, n_set):
-        for other_node in nx.neighbors(self.steiner.graph, n):
+        for other_nodex in nx.neighbors(self.steiner.graph, n):
+            other_node = self.type_node(other_nodex)
             other_node_key = (other_node, n_set)
             other_node_cost = self.costs[other_node_key][0]
 
@@ -93,7 +123,7 @@ class Solver2k:
         if len(self.heuristics) == 0:
             return 0
 
-        set_id = (self.max_id - 1) ^ set_id
+        set_id = self.max_id ^ set_id
         ts = self.to_list(set_id)
         ts.append(self.root_node)
 
@@ -131,7 +161,7 @@ class Solver2k:
         dist = self.prune2_dist(target_set)
 
         # Find the minimum distance between n and R \ set
-        ts = self.to_list((self.max_id-1) ^ target_set)
+        ts = self.to_list(self.max_id ^ target_set)
         ts.append(self.root_node)
         for t in ts:
             lt = self.steiner.get_lengths(n, t)
@@ -154,11 +184,11 @@ class Solver2k:
         ts1 = []
         ts2 = []
 
-        for i in range(0, len(self.terminals)):
-            if ((1 << i) & set_id) > 0:
-                ts1.append(self.terminals[i])
+        for (s, t) in self.terminal_ids.items():
+            if (s & set_id) > 0:
+                ts1.append(t)
             else:
-                ts2.append(self.terminals[i])
+                ts2.append(t)
 
         ts2.append(self.root_node)
 
@@ -238,9 +268,9 @@ class Solver2k:
     def to_list(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
         ts = []
-        for i in range(0, len(self.terminals)):
-            if ((1 << i) & set_id) > 0:
-                ts.append(self.terminals[i])
+        for (s, t) in self.terminal_ids.items():
+            if (s & set_id) > 0:
+                ts.append(t)
 
         return ts
 
@@ -248,11 +278,10 @@ class Solver2k:
 class SolverCosts(dict):
     """Derived dictionary that uses appropriate default values in case of missing keys"""
 
-    def __init__(self, terminals):
+    def __init__(self, terminals, maximum):
         super(SolverCosts, self).__init__()
-        self.terminals = {}
-        for i in range(0, len(terminals)):
-            self.terminals[terminals[i]] = 1 << i
+        self.terminal_ids = terminals
+        self.max_val = maximum
 
     def __missing__(self, key):
         # Get node and set ID
@@ -263,8 +292,8 @@ class SolverCosts(dict):
         if s == 0:
             return 0, []
         # Default for a terminal with the set only containing the terminal is 0
-        if n in self.terminals and s == self.terminals[n]:
+        if s in self.terminal_ids and n == self.terminal_ids[s]:
             return 0, []
 
         # Otherwise infinity
-        return sys.maxint, []
+        return self.max_val, []
