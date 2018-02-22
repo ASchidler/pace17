@@ -10,34 +10,34 @@ import signal
 steiner = pp.parse_pace_file(sys.stdin)
 
 # Reduce, in case of a timeout let the reduction finish in the background. One cannot kill a thread
-reducers = cfg.reducers()
-
-while True:
-    cnt = 0
-    for r in reducers:
-        cnt = cnt + r.reduce(steiner)
-
-    if cnt == 0:
-        break
+# reducers = cfg.reducers()
+#
+# while True:
+#     cnt = 0
+#     for r in reducers:
+#         cnt = cnt + r.reduce(steiner)
+#
+#     if cnt == 0:
+#         break
 
 # Solve
 # Distance matrix may be incorrect due to preprocessing, restore
-steiner._lengths = {}
-steiner._approximation = None
+# steiner._lengths = {}
+# steiner._approximation = None
 solver = cfg.solver(steiner)
 solver.solve()
 
 solution = solver.result
-reducers.reverse()
-
-while True:
-    change = False
-    for r in reducers:
-        ret = r.post_process(solution)
-        solution = ret[0]
-        change = change or ret[1]
-    if not change:
-        break
+# reducers.reverse()
+#
+# while True:
+#     change = False
+#     for r in reducers:
+#         ret = r.post_process(solution)
+#         solution = ret[0]
+#         change = change or ret[1]
+#     if not change:
+#         break
 
 po.parse_pace_output(solution)
 
