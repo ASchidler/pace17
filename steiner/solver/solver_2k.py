@@ -17,8 +17,11 @@ class Solver2k:
         self.labels = {}
         self.result = None
         self.stop = False
+        self.queue = []
 
     def solve(self):
+        """Solves the instance of the steiner tree problem"""
+
         # Edge case, may also happen in case of a very efficient preprocessing
         if len(self.steiner.terminals) == 1:
             ret = nx.Graph()
@@ -26,33 +29,25 @@ class Solver2k:
             self.result = ret, 0
             return ret, 0
 
-        """Solves the instance of the steiner tree problem"""
-        # Permanent labels => set of completed elements
-        p = set()
-
         for n in nx.nodes(self.steiner.graph):
             self.labels[n] = []
 
-        # Queue entries are tuples (node, terminal set, cost, heuristic value)
-        queue = []
-
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
-            heapq.heappush(queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], 1 << terminal_set)])
+            heapq.heappush(self.queue, [h, self.terminals[terminal_set], (self.terminals[terminal_set], 1 << terminal_set)])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while (self.root_node, self.max_id - 1) not in p and not self.stop:
-            n = heapq.heappop(queue)[2]
+        while self.max_id - 1 not in self.labels[self.root_node] and not self.stop:
+            n = heapq.heappop(self.queue)[2]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
-            if (n[0], n[1]) not in p:
+            if n[1] not in self.labels[n[0]]:
                 n_key = (n[0], n[1])
                 n_cost = self.costs[n_key][0]
-                p.add((n[0], n[1]))
                 self.labels[n[0]].append(n[1])
 
-                self.process_neighbors(n[0], n_cost, n_key, n[1], p, queue)
-                self.process_labels(n[0], n_cost, n_key, n[1], p, queue)
+                self.process_neighbors(n[0], n_cost, n_key, n[1])
+                self.process_labels(n[0], n_cost, n_key, n[1])
 
         # Process result
         ret = nx.Graph()
@@ -61,21 +56,22 @@ class Solver2k:
         self.result = ret, total
         return ret, total
 
-    def process_neighbors(self, n, n_cost, n_key, n_set, p, queue):
+    def process_neighbors(self, n, n_cost, n_key, n_set):
         for other_node in nx.neighbors(self.steiner.graph, n):
             other_node_key = (other_node, n_set)
             other_node_cost = self.costs[other_node_key][0]
 
             total = n_cost + self.steiner.graph[n][other_node]['weight']
 
-            if total < other_node_cost and other_node_key not in p:
+            if total < other_node_cost and n_set not in self.labels[other_node]:
                 self.costs[other_node_key] = (total, [n_key])
                 h = self.heuristic(other_node, n_set)
                 if not self.prune(other_node, n_set, total, h):
-                    heapq.heappush(queue, [total + h, other_node, (other_node, n_set)])
+                    heapq.heappush(self.queue, [total + h, other_node, (other_node, n_set)])
 
-    def process_labels(self, n, n_cost, n_key, n_set, p, queue):
-        for other_set in self.labels[n]:
+    def process_labels(self, n, n_cost, n_key, n_set):
+        lbl = self.labels[n]
+        for other_set in lbl:
             # Disjoint?
             if (other_set & n_set) == 0:
                 # Set union
@@ -83,7 +79,7 @@ class Solver2k:
                 combined_key = (n, combined)
 
                 # Check of not already permanent
-                if combined_key not in p:
+                if combined not in lbl:
                     other_set_key = (n, other_set)
                     combined_cost = n_cost + self.costs[other_set_key][0]
 
@@ -91,7 +87,7 @@ class Solver2k:
                         self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
                         h = self.heuristic(n, combined)
                         if not self.prune(n, combined, combined_cost, h, other_set):
-                            heapq.heappush(queue, [combined_cost + h, n, (n, combined)])
+                            heapq.heappush(self.queue, [combined_cost + h, n, (n, combined)])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
