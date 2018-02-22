@@ -20,12 +20,20 @@ class Solver2k:
         self.stop = False
         self.queue = []
 
+        # Pre calculate the IDs of the sets with just the terminal
         self.terminal_ids = {}
         for i in range(0, len(self.terminals)):
             self.terminal_ids[1 << i] = self.terminals[i]
 
         # Use the approximation + 1 (otherwise solving will fail if the approximation is correct) as an upper cost bound
-        self.costs = SolverCosts(self.terminal_ids, steiner.get_approximation().cost + 1)
+        self.costs = list([None] * (self.max_node + 1))
+
+        for n in nx.nodes(self.steiner.graph):
+            self.labels[n] = set()
+            s_id = 0
+            if n in self.terminals:
+                s_id = 1 << (self.terminals.index(n))
+            self.costs[n] = SolverCosts(s_id, steiner.get_approximation().cost + 1)
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -36,9 +44,6 @@ class Solver2k:
             ret.add_node(list(self.steiner.terminals)[0])
             self.result = ret, 0
             return ret, 0
-
-        for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = set()
 
         for terminal_set in range(0, len(self.terminals)):
             h = self.heuristic(self.terminals[terminal_set], 1 << terminal_set)
@@ -51,7 +56,7 @@ class Solver2k:
             # Make sure it has not yet been processed (elements may be queued multiple times)
             if n[1] not in self.labels[n[0]]:
                 n_key = (n[0], n[1])
-                n_cost = self.costs[n_key][0]
+                n_cost = self.costs[n[0]][n[1]][0]
                 self.labels[n[0]].add(n[1])
 
                 self.process_neighbors(n[0], n_cost, n_key, n[1])
@@ -66,33 +71,30 @@ class Solver2k:
 
     def process_neighbors(self, n, n_cost, n_key, n_set):
         for other_node in nx.neighbors(self.steiner.graph, n):
-            other_node_key = (other_node, n_set)
-            other_node_cost = self.costs[other_node_key][0]
-
+            other_node_cost = self.costs[other_node][n_set][0]
             total = n_cost + self.steiner.graph[n][other_node]['weight']
 
             if total < other_node_cost and n_set not in self.labels[other_node]:
-                self.costs[other_node_key] = (total, [n_key])
+                self.costs[other_node][n_set] = (total, [n_key])
                 h = self.heuristic(other_node, n_set)
                 if not self.prune(other_node, n_set, total, h):
                     heapq.heappush(self.queue, [total + h, other_node, (other_node, n_set)])
 
     def process_labels(self, n, n_cost, n_key, n_set):
         lbl = self.labels[n]
+        cst = self.costs[n]
         for other_set in lbl:
             # Disjoint?
             if (other_set & n_set) == 0:
                 # Set union
                 combined = n_set | other_set
-                combined_key = (n, combined)
 
                 # Check of not already permanent
                 if combined not in lbl:
-                    other_set_key = (n, other_set)
-                    combined_cost = n_cost + self.costs[other_set_key][0]
+                    combined_cost = n_cost + cst[other_set][0]
 
-                    if combined_cost < self.costs[combined_key][0]:
-                        self.costs[combined_key] = (combined_cost, [other_set_key, n_key])
+                    if combined_cost < cst[combined][0]:
+                        cst[combined] = (combined_cost, [(n, other_set), n_key])
                         h = self.heuristic(n, combined)
                         if not self.prune(n, combined, combined_cost, h, other_set):
                             heapq.heappush(self.queue, [combined_cost + h, n, (n, combined)])
@@ -223,7 +225,7 @@ class Solver2k:
     def backtrack(self, c, ret):
         """Creates the solution upon a finished solving run"""
 
-        entry = self.costs[c][1]
+        entry = self.costs[c[0]][c[1]][1]
 
         if len(entry) == 0:
             return 0
@@ -256,21 +258,13 @@ class Solver2k:
 class SolverCosts(dict):
     """Derived dictionary that uses appropriate default values in case of missing keys"""
 
-    def __init__(self, terminals, maximum):
+    def __init__(self, terminal_id, maximum):
         super(SolverCosts, self).__init__()
-        self.terminal_ids = terminals
+        self.terminal_id = terminal_id
         self.max_val = maximum
 
     def __missing__(self, key):
-        # Get node and set ID
-        n = key[0]
-        s = key[1]
-
-        # Default for empty set is 0
-        if s == 0:
-            return 0, []
-        # Default for a terminal with the set only containing the terminal is 0
-        if s in self.terminal_ids and n == self.terminal_ids[s]:
+        if key == self.terminal_id:
             return 0, []
 
         # Otherwise infinity
