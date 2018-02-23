@@ -147,7 +147,7 @@ class Solver2k:
         ts = self.to_list(self.max_set ^ target_set)
         ts.append(self.root_node)
         for t in ts:
-            lt = self.steiner.get_lengths(n, t)
+            lt = self.steiner.get_lengths(t, n)
             if lt < dist[0]:
                 dist = (lt, t)
 

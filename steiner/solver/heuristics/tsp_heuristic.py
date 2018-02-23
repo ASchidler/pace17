@@ -5,6 +5,7 @@ import sys
 class TspHeuristic:
     """This is a heuristic that calculates the tour (TSP) of the terminals in the distance graph as lower bound"""
 
+    # Tests found it really slow for more complex instances
     def __init__(self, steiner):
         self.tsp = {}
         self.steiner = steiner

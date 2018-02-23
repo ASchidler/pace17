@@ -11,7 +11,7 @@ class MstHeuristic:
     def calculate(self, n, set_id, ts):
         # Only one terminal
         if len(ts) == 1:
-            return self.steiner.get_lengths(n, ts[0])
+            return self.steiner.get_lengths(ts[0], n)
 
         # Calculate MST costs
         if set_id in self.mst:
