@@ -1,7 +1,6 @@
 import networkx as nx
 import sys
 import heapq
-import numpy as np
 
 
 class Solver2k:
@@ -29,7 +28,7 @@ class Solver2k:
         self.costs = list([None] * (self.max_node + 1))
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = set()
+            self.labels[n] = []
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
@@ -57,12 +56,14 @@ class Solver2k:
             s = el[2]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
-            if s not in self.labels[n]:
-                n_cost = self.costs[n][s][0]
-                self.labels[n].add(s)
+            n_cost = self.costs[n][s]
+            if not n_cost[1]:
+                # Mark permanent
+                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
+                self.labels[n].append(s)
 
-                self.process_neighbors(n, s, n_cost)
-                self.process_labels(n, s, n_cost)
+                self.process_neighbors(n, s, n_cost[0])
+                self.process_labels(n, s, n_cost[0])
 
         # Process result
         ret = nx.Graph()
@@ -73,15 +74,17 @@ class Solver2k:
 
     def process_neighbors(self, n, n_set, n_cost):
         for other_node in nx.neighbors(self.steiner.graph, n):
-            other_node_cost = self.costs[other_node][n_set][0]
-            total = n_cost + self.steiner.graph[n][other_node]['weight']
+            other_node_cost = self.costs[other_node][n_set]
 
-            if total < other_node_cost and n_set not in self.labels[other_node]:
-                # Store costs. The second part of the tuple is backtracking info. Optimize size using numpy datatypes
-                self.costs[other_node][n_set] = (total, [n])
-                h = self.heuristic(other_node, n_set)
-                if not self.prune(other_node, n_set, total, h):
-                    heapq.heappush(self.queue, [total + h, other_node, n_set])
+            # Not permanent
+            if not other_node_cost[1]:
+                total = n_cost + self.steiner.graph[n][other_node]['weight']
+                if total < other_node_cost[0]:
+                    # Store costs. The second part of the tuple is backtracking info.
+                    self.costs[other_node][n_set] = (total, False, n, False)
+                    h = self.heuristic(other_node, n_set)
+                    if not self.prune(other_node, n_set, total, h):
+                        heapq.heappush(self.queue, [total + h, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
         lbl = self.labels[n]
@@ -93,14 +96,15 @@ class Solver2k:
                 combined = n_set | other_set
 
                 # Check of not already permanent
-                if combined not in lbl:
-                    combined_cost = n_cost + cst[other_set][0]
+                combined_cost = cst[combined]
+                if not combined_cost[1]:
+                    total = n_cost + cst[other_set][0]
 
-                    if combined_cost < cst[combined][0]:
-                        cst[combined] = (combined_cost, [other_set, n_set])
+                    if total < combined_cost[0]:
+                        cst[combined] = (total, False, other_set, True)
                         h = self.heuristic(n, combined)
-                        if not self.prune(n, combined, combined_cost, h, other_set):
-                            heapq.heappush(self.queue, [combined_cost + h, n, combined])
+                        if not self.prune(n, combined, total, h, other_set):
+                            heapq.heappush(self.queue, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -230,19 +234,19 @@ class Solver2k:
 
         # To minimize backtracking info stored, the entry contains either the previous node (share the same set)
         # or the previous to sets (share the same node). Or nothing if it is a leaf
-        entry = self.costs[n][s][1]
+        entry = self.costs[n][s]
 
-        if len(entry) == 0:
+        if entry[2] is None:
             return 0
 
-        if len(entry) == 1:
-            n2 = entry[0]
+        if not entry[3]:
+            n2 = entry[2]
             w = self.steiner.graph[n][n2]['weight']
             ret.add_edge(n, n2, weight=w)
-            return w + self.backtrack(entry[0], s, ret)
+            return w + self.backtrack(n2, s, ret)
         else:
-            tmp = self.backtrack(n, entry[0], ret)
-            tmp = tmp + self.backtrack(n, entry[1], ret)
+            tmp = self.backtrack(n, entry[2], ret)
+            tmp = tmp + self.backtrack(n, s ^ entry[2], ret)
             return tmp
 
     def to_list(self, set_id):
@@ -265,7 +269,7 @@ class SolverCosts(dict):
 
     def __missing__(self, key):
         if key == self.terminal_id:
-            return 0, []
+            return 0, [], None, False
 
         # Otherwise infinity
-        return self.max_val, []
+        return self.max_val, [], None, False
