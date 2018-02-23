@@ -1,5 +1,7 @@
 import solver.solver_2k as sv
 
+#TODO: Last time tested this did not work. May work after some changes but untested. Also takes really long
+
 
 class SmtHeuristic:
     """A heuristic that uses steiner maximum trees of smaller termin subets as a lower bound """

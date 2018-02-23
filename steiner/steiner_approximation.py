@@ -35,7 +35,7 @@ class SteinerApproximation:
 
             for t in queue:
                 for n in nodes:
-                    c = steiner.get_lengths(n, t)
+                    c = steiner.get_lengths(t, n)
 
                     if c < min_val:
                         min_val = c
