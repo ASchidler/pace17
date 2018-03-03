@@ -46,14 +46,13 @@ class Solver2k:
         # Initialize queue with partial solutions, containing only the terminals themselves
         # Queue format is: (estimated_costs, node, set_id)
         for terminal_id in range(0, len(self.terminals)):
-            h = self.heuristic(self.terminals[terminal_id], 1 << terminal_id)
-            heapq.heappush(self.queue, [h, self.terminals[terminal_id], 1 << terminal_id])
+            heapq.heappush(self.queue, [0, 1, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while self.max_set not in self.labels[self.root_node]:
             el = heapq.heappop(self.queue)
-            n = el[1]
-            s = el[2]
+            n = el[2]
+            s = el[3]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
@@ -73,6 +72,7 @@ class Solver2k:
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
+        inv_set_size = len(self.terminals) - bin(n_set).count("1")
         for other_node in nx.neighbors(self.steiner.graph, n):
             other_node_cost = self.costs[other_node][n_set]
 
@@ -84,7 +84,7 @@ class Solver2k:
                     self.costs[other_node][n_set] = (total, False, n, False)
                     h = self.heuristic(other_node, n_set)
                     if not self.prune(other_node, n_set, total, h):
-                        heapq.heappush(self.queue, [total + h, other_node, n_set])
+                        heapq.heappush(self.queue, [total + h, inv_set_size, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
         lbl = self.labels[n]
@@ -104,7 +104,8 @@ class Solver2k:
                         cst[combined] = (total, False, other_set, True)
                         h = self.heuristic(n, combined)
                         if not self.prune(n, combined, total, h, other_set):
-                            heapq.heappush(self.queue, [total + h, n, combined])
+                            inv_set_size = len(self.terminals) - bin(combined).count("1")
+                            heapq.heappush(self.queue, [total + h, inv_set_size, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
