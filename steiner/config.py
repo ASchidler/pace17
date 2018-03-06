@@ -17,8 +17,9 @@ def reducers():
         voronoi.VoronoiReduction(),
         ntdk.NtdkReduction(),
         terminals.TerminalReduction(),
-        short_edges.ShortEdgeReduction(),
-        short_links.ShortLinkPreselection(),
+        #short_edges.ShortEdgeReduction(),
+        #length_transform.LengthTransformReduction(),
+        #short_links.ShortLinkPreselection(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
         reachability.ReachabilityReduction()
@@ -29,6 +30,7 @@ def solver(steiner):
     """Creates a solver"""
     heuristics = [
             mst_heuristic.MstHeuristic(steiner),
+            #smt_heuristic.SmtHeuristic(steiner, 3),
             #tsp_heuristic.TspHeuristic(steiner)
     ]
     return sv.Solver2k(steiner, steiner.terminals, heuristics)

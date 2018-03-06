@@ -49,7 +49,7 @@ class Solver2k:
             heapq.heappush(self.queue, [0, 1, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while self.max_set not in self.labels[self.root_node]:
+        while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
             el = heapq.heappop(self.queue)
             n = el[2]
             s = el[3]

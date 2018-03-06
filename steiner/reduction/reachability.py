@@ -7,6 +7,9 @@ class ReachabilityReduction:
         self._removed = {}
 
     def reduce(self, steiner):
+        if len(steiner.graph.nodes) == 1:
+            return 0
+
         track = len(nx.nodes(steiner.graph))
 
         approx_nodes = nx.nodes(steiner.get_approximation().tree)
