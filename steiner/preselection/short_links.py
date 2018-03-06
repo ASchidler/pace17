@@ -1,6 +1,7 @@
 import sys
 import networkx as nx
 
+
 class ShortLinkPreselection:
 
     def __init__(self):
@@ -18,10 +19,9 @@ class ShortLinkPreselection:
             min2 = (0, 0, sys.maxint)
 
             for (u, v, d) in steiner.graph.edges(data='weight'):
+                # Flip to have the inside node guaranteed at u
                 if v == t or v in r:
-                    tmp = u
-                    u = v
-                    v = tmp
+                    u, v = v, u
 
                 # Bridges region
                 if (u == t or u in r) and v not in r and v != t:
@@ -32,6 +32,7 @@ class ShortLinkPreselection:
                         else:
                             min2 = (u, v, d)
 
+            # TODO: If there is no min2, contract?
             if min1[2] < sys.maxint and min2[2] < sys.maxint:
                 other_t = None
 
@@ -85,6 +86,7 @@ class ShortLinkPreselection:
                 solution[0].add_edge(n1, n2, weight=w)
                 cost = cost + w
                 change = True
+                print w
             self._done = True
 
         for (e1, e2) in self.merged:

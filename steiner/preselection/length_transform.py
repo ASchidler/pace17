@@ -49,30 +49,6 @@ class LengthTransformReduction:
 
         return 0
 
-    def _min_crossing(self, mst, n1, n2, cutoff, sorted_edges):
-        """Finds the r value of an edge. I.e. the smallest edge bridging the mst cut by (n1, n2) in G
-        Since we need a value > than d, we use a cutoff value to shorten calculation"""
-        queue = [n1]
-        nodes = set()
-
-        # Calculate the cut
-        while len(queue) > 0:
-            n = queue.pop()
-            nodes.add(n)
-
-            for b in nx.neighbors(mst, n):
-                if b != n2 and b not in nodes:
-                    queue.append(b)
-
-        # Find minimum edge bridging the cut
-        for (u, v, d) in sorted_edges:
-            if d >= cutoff:
-                return sys.maxint
-
-            if (u in nodes and v not in nodes) or (v in nodes and u not in nodes):
-                return d
-
-        return sys.maxint
 
     def post_process(self, solution):
         change = False

@@ -23,6 +23,9 @@ class CutReachabilityReduction:
                 self._terminal_sum = self._terminal_sum + min_val
 
     def reduce(self, steiner):
+        if len(steiner.graph.nodes) == 1:
+            return 0
+
         cut_cnt = 0
 
         # Always recalculate so that it adapts to changing terminal set

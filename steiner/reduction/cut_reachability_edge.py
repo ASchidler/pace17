@@ -5,6 +5,9 @@ import sys
 class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
 
     def reduce_edge(self, steiner):
+        if len(steiner.graph.nodes) == 1:
+            return 0
+
         cnt = 0
 
         for (u, v, d) in list(steiner.graph.edges(data='weight')):
