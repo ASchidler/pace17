@@ -2,45 +2,50 @@ import networkx as nx
 import sys
 import steiner_graph as sg
 
-# https://www.geeksforgeeks.org/bridge-in-a-graph/
-
 
 class ComponentFinder:
     def __init__(self):
         self.edges = []
 
     def _find_bridges(self, steiner):
-        visited = set()
-        low = CmDictionary(sys.maxint)
-        disc = CmDictionary(sys.maxint)
-        parent = CmDictionary(-1)
-        edges = []
-        stack = []
+        """Finds all bridges in the graph."""
+        # This was originally a recursive algorithm found at https://www.geeksforgeeks.org/bridge-in-a-graph/
+        # Since with larger instances the maximum recursion became a problem, this is now iterative
+
+        visited = set()  # Do not visit a node twice
+        low = CmDictionary(sys.maxint)  # Minimum discovered time among the subnodes
+        discovered = CmDictionary(sys.maxint)  # "Time" a node has been expanded
+        parent = CmDictionary(-1)  # Order of processing
+        edges = []  # Bridges
+        stack = []  # Call stack for DFS
 
         for n in nx.nodes(steiner.graph):
             if n not in visited:
                 stack.append(([n], None))
 
+                # Here the DFS begins
                 while len(stack) > 0:
                     us, p = stack.pop()
 
+                    # In this case, all subnodes have been processed. In the recursive case, this is the return
                     if len(us) == 0:
                         ux = parent[p]
                         vx = p
                         low[ux] = min(low[ux], low[vx])
 
-                        if low[vx] > disc[ux]:
+                        # Is a bridge?
+                        if low[vx] > discovered[ux]:
                             edges.append((ux, vx))
                     else:
                         u = us.pop()
                         stack.append((us, p))
                         if u in visited:
                             if u != parent[p]:
-                                low[p] = min(low[p], disc[u])
+                                low[p] = min(low[p], discovered[u])
                         else:
                             parent[u] = p
                             low[u] = len(visited)
-                            disc[u] = low[u]
+                            discovered[u] = low[u]
                             visited.add(u)
                             stack.append((list(nx.neighbors(steiner.graph, u)), u))
         return edges
@@ -54,8 +59,6 @@ class ComponentFinder:
             if len(bridges) == 0:
                 result.append(steiner)
                 continue
-
-            print "{} bridges found".format(len(bridges))
 
             components = [(steiner.graph, steiner.terminals)]
 

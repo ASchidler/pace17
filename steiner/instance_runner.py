@@ -8,6 +8,7 @@ import reduction.terminals as terminals
 import solver.label_store as ls
 import steiner_graph as sg
 import component_finder as cf
+import reduction.degree as dg
 
 """ This runner runs all the public instances with debug oparser """
 
@@ -17,46 +18,43 @@ def process_file(filename, solve, apply_reductions):
 
     f = open(filename, "r")
     steinerx = pp.parse_pace_file(f)
+    dr = dg.DegreeReduction()
+    dr.reduce(steinerx)
 
     c_finder = cf.ComponentFinder()
-    # Count mismatches the real count to kickstart the loop
-    component_cnt = 0
+
     components = [steinerx]
     results = []
 
-    while component_cnt != len(components):
-        component_cnt = len(components)
-        components = c_finder.decompose(components)
+    components = c_finder.decompose(components)
+    print "Split into {} components".format(len(components))
+    for c in components:
+        print "{} nodes".format(len(nx.nodes(c.graph)))
 
-        for steiner in components:
-            reducers = cfg.reducers()
+    for steiner in components:
+        reducers = cfg.reducers()
 
-            if apply_reductions:
-                cnt_edge = len(nx.edges(steiner.graph))
-                cnt_nodes = len(nx.nodes(steiner.graph))
-                cnt_terminals = len(steiner.terminals)
+        if apply_reductions:
+            cnt_edge = len(nx.edges(steiner.graph))
+            cnt_nodes = len(nx.nodes(steiner.graph))
+            cnt_terminals = len(steiner.terminals)
 
-                while True:
-                    cnt_changes = 0
-                    for r in reducers:
-                        local_start = time.time()
-                        reduced = r.reduce(steiner)
-                        cnt_changes = cnt_changes + reduced
-                        print "Reduced {} needing {} in {}" \
-                            .format(reduced, str(time.time() - local_start), str(r.__class__))
-                    if cnt_changes == 0:
-                        break
+            while True:
+                cnt_changes = 0
+                for r in reducers:
+                    local_start = time.time()
+                    reduced = r.reduce(steiner)
+                    cnt_changes = cnt_changes + reduced
+                    print "Reduced {} needing {} in {}" \
+                        .format(reduced, str(time.time() - local_start), str(r.__class__))
+                if cnt_changes == 0:
+                    break
 
-                print "{} nodes, {} edges and {} terminals removed " \
-                    .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)),
-                            cnt_terminals - len(steiner.terminals))
+            print "{} nodes, {} edges and {} terminals removed " \
+                .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)),
+                        cnt_terminals - len(steiner.terminals))
 
-        # No use to retry decomposing if no reductions are performed
-        if not apply_reductions:
-            break
-
-    if solve:
-        for steiner in components:
+        if solve:
             steiner._lengths = {}
             steiner._approximation = None
             # Reset lengths as they may not reflect reality after the reductions
@@ -89,6 +87,12 @@ def process_file(filename, solve, apply_reductions):
             print "Solution found: " + str(solution[1])
 
     total_solution = c_finder.build_solutions(results)
+
+    change = True
+    while change:
+        ret = dr.post_process(total_solution)
+        total_solution = ret[0]
+        change = ret[1]
 
     # Verify
     f = open(filename, "r")
