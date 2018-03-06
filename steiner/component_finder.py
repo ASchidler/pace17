@@ -19,53 +19,30 @@ class ComponentFinder:
 
         for n in nx.nodes(steiner.graph):
             if n not in visited:
-                stack.append(([n], None, True))
+                stack.append(([n], None))
 
                 while len(stack) > 0:
-                    us, p, t = stack.pop()
+                    us, p = stack.pop()
 
-                    cnt = 0
+                    if len(us) == 0:
+                        ux = parent[p]
+                        vx = p
+                        low[ux] = min(low[ux], low[vx])
 
-                    while len(us) > 0:
+                        if low[vx] > disc[ux]:
+                            edges.append((ux, vx))
+                    else:
                         u = us.pop()
+                        stack.append((us, p))
                         if u in visited:
                             if u != parent[p]:
                                 low[p] = min(low[p], disc[u])
-                            continue
-
-                        cnt += 1
-                        parent[u] = p
-                        low[u] = len(visited)
-                        disc[u] = low[u]
-                        visited.add(u)
-
-                        if len(us) > 0:
-                            stack.append((us, p, True))
-
-                        new_n = []
-                        for v in nx.neighbors(steiner.graph, u):
-                            new_n.append(v)
-                        stack.append((new_n, u, False))
-                        break
-
-                    if cnt == 0 and not t:
-                        if len(stack) == 0:
-                            target = n
                         else:
-                            peek = stack.pop()
-                            stack.append(peek)
-                            target = peek[1]
-                        c_node = p
-                        while c_node != target and c_node != n:
-                            ux = parent[c_node]
-                            vx = c_node
-                            low[ux] = min(low[ux], low[vx])
-
-                            if low[vx] > disc[ux]:
-                                edges.append((ux, vx))
-
-                            c_node = ux
-
+                            parent[u] = p
+                            low[u] = len(visited)
+                            disc[u] = low[u]
+                            visited.add(u)
+                            stack.append((list(nx.neighbors(steiner.graph, u)), u))
         return edges
 
     def decompose(self, steiners):
