@@ -33,6 +33,7 @@ def process_file(filename, solve, apply_reductions):
 
     for steiner in components:
         reducers = cfg.reducers()
+        contractors = cfg.contractors()
 
         if apply_reductions:
             cnt_edge = len(nx.edges(steiner.graph))
@@ -47,6 +48,15 @@ def process_file(filename, solve, apply_reductions):
                     cnt_changes = cnt_changes + reduced
                     print "Reduced {} needing {} in {}" \
                         .format(reduced, str(time.time() - local_start), str(r.__class__))
+
+                steiner._lengths = {}
+                for c in contractors:
+                    local_start = time.time()
+                    reduced = c.reduce(steiner)
+                    cnt_changes = cnt_changes + reduced
+                    print "Contracted {} needing {} in {}" \
+                        .format(reduced, str(time.time() - local_start), str(c.__class__))
+                steiner._lengths = {}
                 if cnt_changes == 0:
                     break
 
@@ -78,6 +88,10 @@ def process_file(filename, solve, apply_reductions):
                     change = False
                     for r in reducers:
                         ret = r.post_process(solution)
+                        solution = ret[0]
+                        change = change or ret[1]
+                    for c in contractors:
+                        ret = c.post_process(solution)
                         solution = ret[0]
                         change = change or ret[1]
                     if not change:
@@ -118,7 +132,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(125, 126):
+for i in range(53, 54):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         current_file = file_path.format(i)

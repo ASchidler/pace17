@@ -4,10 +4,12 @@ import sys
 
 
 class VoronoiNodeReduction(voronoi.VoronoiReduction):
+
     def find_mst(self, steiner):
         vor = steiner.get_voronoi()
         g = nx.Graph()
 
+        # Get the minimum connecting edges between regions
         for (u, v, d) in steiner.graph.edges(data='weight'):
             t1 = None
             t2 = None
@@ -29,13 +31,8 @@ class VoronoiNodeReduction(voronoi.VoronoiReduction):
                 else:
                     g.add_edge(t1, t2, weight=cost)
 
-        max_edge = 0
-        for (u, v, d) in g.edges(data='weight'):
-            max_edge = max(max_edge, d)
-
-        mst_cost = 0
-        for (u, v, d) in nx.minimum_spanning_tree(g).edges(data='weight'):
-            mst_cost = mst_cost + d
+        max_edge = max(d for u, v, d in g.edges(data='weight'))
+        mst_cost = sum(d['weight'] for u, v, d in nx.minimum_spanning_edges(g))
 
         return mst_cost - max_edge
 

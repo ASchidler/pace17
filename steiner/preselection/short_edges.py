@@ -20,42 +20,33 @@ class ShortEdgeReduction:
 
         # TODO: Calculate once and update...
         mst = nx.minimum_spanning_tree(steiner.graph)
-        paths = self._min_paths(steiner)
+        paths = self._min_paths(mst)
 
         # Check all edges in the spanning tree
         for (u, v, c) in mst.edges(data='weight'):
             k = self._key(u, v)
             if steiner.graph.has_edge(u, v) and steiner.graph.has_node(v) and k in paths:
-                ts = paths[k]
+                min_ts = min(paths[k], key=lambda x: x[0])
+                t1, t2, d = min_ts[1], min_ts[2], min_ts[0]
 
-                for t in ts:
-                    if t[0] not in steiner.terminals or t[1] not in steiner.terminals:
-                        continue
+                if t1 not in steiner.terminals or t2 not in steiner.terminals:
+                    continue
 
-                    d = steiner.get_lengths(t[0], t[1])
+                if d <= self._min_crossing(mst, u, v, d, sorted_edges):
+                    # Merge edges
+                    # First decide how to contract
+                    if v in steiner.terminals:
+                        u, v = v, u
 
-                    if d <= self._min_crossing(mst, u, v, d, sorted_edges):
-                        # Merge edges
-                        # First decide how to contract
-                        if u in steiner.terminals:
-                            n1 = u
-                            n2 = v
-                        else:
-                            n1 = v
-                            n2 = u
+                    # Store
+                    self.deleted.append((u, v, c))
 
-                        # Store
-                        self.deleted.append((n1, n2, c))
+                    # Contract
+                    for e in steiner.contract_edge(u, v):
+                        self.merged.append(e)
 
-                        # Contract
-                        for e in steiner.contract_edge(n1, n2):
-                            self.merged.append(e)
+                    break
 
-                        break
-
-        # TODO: Another method to find out, if an edge is part of the shortest path, is
-        # to check if d(t1,u) + c(u,v) + d(v, t2) == d(t1,t2) (or reverse u and v). May catch more edges, but may
-        # take longer
         return track - len(nx.nodes(steiner.graph))
 
     # Creates a single key for a combination of nodes, avoid nesting of dictionaries
@@ -66,17 +57,12 @@ class ShortEdgeReduction:
             return n1 * self.max_terminal + n2
 
     # Finds the smallest path between terminals
-    def _min_paths(self, steiner):
+    def _min_paths(self, mst):
         paths = {}
 
         # Find shortest paths between terminals
-        for i in range(0, len(self.terminals)):
-            t1 = self.terminals[i]
-            for j in range(i + 1, len(self.terminals)):
-                # Find path
-                t2 = self.terminals[j]
-
-                l, path = nx.bidirectional_dijkstra(steiner.graph, t1, t2)
+        for t1, t2 in ((x, y) for x in self.terminals for y in self.terminals if y > x):
+                l, path = nx.bidirectional_dijkstra(mst, t1, t2)
 
                 # Convert to edges
                 prev = path[0]
@@ -84,11 +70,7 @@ class ShortEdgeReduction:
                 for pi in range(1, len(path)):
                     n = path[pi]
                     k = self._key(prev, n)
-                    if k in paths:
-                        paths[k].append((t1, t2))
-                    else:
-                        paths[k] = [(t1, t2)]
-
+                    paths.setdefault(k, []).append((l, t1, t2))
                     prev = n
 
         return paths
