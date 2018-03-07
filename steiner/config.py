@@ -17,9 +17,9 @@ def reducers():
         voronoi.VoronoiReduction(),
         ntdk.NtdkReduction(),
         terminals.TerminalReduction(),
-        #short_edges.ShortEdgeReduction(),
-        #length_transform.LengthTransformReduction(),
-        #short_links.ShortLinkPreselection(),
+        # short_edges.ShortEdgeReduction(),
+        # length_transform.LengthTransformReduction(),
+        # short_links.ShortLinkPreselection(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
         reachability.ReachabilityReduction()

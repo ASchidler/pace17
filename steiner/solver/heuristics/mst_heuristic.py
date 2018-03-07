@@ -14,39 +14,26 @@ class MstHeuristic:
             return self.steiner.get_lengths(ts[0], n)
 
         # Calculate MST costs
-        if set_id in self.mst:
-            cost = self.mst[set_id]
-        else:
-            cost = self.calc_mst(ts, set_id)
+        cost = self.mst.setdefault(set_id, self.calc_mst(ts))
 
         # Find minimum pairwise distance
-        min_val = sys.maxint
-        min_val2 = sys.maxint
+        min_val = min_val2 = sys.maxint
 
         for t in ts:
             lg = self.steiner.get_lengths(t, n)
             if lg < min_val:
-                min_val2 = min_val
-                min_val = lg
+                min_val2, min_val = min_val, lg
             elif lg < min_val2:
                 min_val2 = lg
 
         return (min_val + min_val2 + cost) / 2
 
-    def calc_mst(self, ts, set_id):
+    def calc_mst(self, ts):
         """Calculate the costs of an MST using networkx"""
         g = nx.Graph()
 
-        for i in range(0, len(ts)):
-            t1 = ts[i]
-            for j in range(i + 1, len(ts)):
-                t2 = ts[j]
-                g.add_edge(t1, t2, weight=self.steiner.get_lengths(t1, t2))
+        # Cartesian product
+        for (t1, t2) in ((x, y) for x in ts for y in ts if y > x):
+            g.add_edge(t1, t2, weight=self.steiner.get_lengths(t1, t2))
 
-        cost = 0
-
-        for (u, v, d) in list(nx.minimum_spanning_edges(g)):
-            cost = cost + d['weight']
-
-        self.mst[set_id] = cost
-        return cost
+        return nx.minimum_spanning_tree(g).size(weight='weight')
