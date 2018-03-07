@@ -20,11 +20,16 @@ results = []
 
 for steiner in components:
     reducers = cfg.reducers()
+    contractors = cfg.contractors()
 
     while True:
         cnt = 0
         for r in reducers:
             cnt = cnt + r.reduce(steiner)
+            steiner._lengths = {}
+            steiner._approximation = None
+        for c in contractors:
+            cnt = cnt + c.reduce(steiner)
 
         if cnt == 0:
             break
@@ -46,6 +51,11 @@ for steiner in components:
             ret = r.post_process(solution)
             solution = ret[0]
             change = change or ret[1]
+        for c in contractors:
+            ret = c.post_process(solution)
+            solution = ret[0]
+            change = change or ret[1]
+
         if not change:
             break
 

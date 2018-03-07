@@ -42,7 +42,7 @@ class VoronoiReduction:
             if u in steiner.terminals:
                 cnt = cnt + 1
             if v in steiner.terminals:
-                cnt = cnt + 2
+                cnt = cnt + 1
 
             # Search for closest terminal
             for (t, r) in steiner.get_voronoi().items():

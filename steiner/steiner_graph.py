@@ -151,17 +151,20 @@ class SteinerGraph:
 
     def refresh_distance_matrix(self, u, v, c):
         """ Refreshes the distance matrix under the assumption that u/v has been contracted and has cost c"""
-        for (n1, p) in self._lengths.items():
-            for (n2, d) in p.items():
-                # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
-                if self.graph.has_node(n2):
-                    # The length of the path under the assumption it is over u, v
-                    dist1 = self.get_lengths(n2, v) + self.get_lengths(u, n1) + c
-                    dist2 = self.get_lengths(n1, v) + self.get_lengths(u, n2) + c
-                    dist = min(dist1, dist2)
-
-                    if d > dist:
-                        p[n2] = dist
+        invalid = []
+        # This code really refreshes the distance matrix, but since it may be incomplete, a complete recalc
+        # might be necessary
+        # for (n1, p) in self._lengths.items():
+        #     for (n2, d) in p.items():
+        #         # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
+        #         if self.graph.has_node(n2):
+        #             # The length of the path under the assumption it is over u, v
+        #             dist1 = self.get_lengths(n2, v) + self.get_lengths(u, n1) + c
+        #             dist2 = self.get_lengths(n1, v) + self.get_lengths(u, n2) + c
+        #             dist = min(dist1, dist2)
+        #
+        #             if d > dist:
+        #                 p[n2] = dist
 
     def remove_node(self, n):
         if self.graph.has_node(n):
@@ -205,7 +208,7 @@ class SteinerGraph:
                     min_node = None
 
                     for t in self.terminals:
-                        c = self.get_lengths(n, t)
+                        c = self.get_lengths(t, n)
                         if c < min_val:
                             min_val = c
                             min_node = t
