@@ -46,13 +46,13 @@ class Solver2k:
         # Initialize queue with partial solutions, containing only the terminals themselves
         # Queue format is: (estimated_costs, node, set_id)
         for terminal_id in range(0, len(self.terminals)):
-            heapq.heappush(self.queue, [0, 1, self.terminals[terminal_id], 1 << terminal_id])
+            heapq.heappush(self.queue, [0, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
             el = heapq.heappop(self.queue)
-            n = el[2]
-            s = el[3]
+            n = el[1]
+            s = el[2]
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
@@ -72,7 +72,6 @@ class Solver2k:
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
-        inv_set_size = len(self.terminals) - bin(n_set).count("1")
         for other_node in nx.neighbors(self.steiner.graph, n):
             other_node_cost = self.costs[other_node][n_set]
 
@@ -82,15 +81,19 @@ class Solver2k:
                 if total < other_node_cost[0]:
                     # Store costs. The second part of the tuple is backtracking info.
                     self.costs[other_node][n_set] = (total, False, n, False)
-                    h = self.heuristic(other_node, n_set)
-                    if not self.prune(other_node, n_set, total, h):
-                        heapq.heappush(self.queue, [total + h, inv_set_size, other_node, n_set])
+                    if not self.prune(other_node, n_set, total):
+                        h = self.heuristic(other_node, n_set)
+                        if total + h <= self.steiner.get_approximation().cost:
+                            heapq.heappush(self.queue, [total + h, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
         lbl = self.labels[n]
         cst = self.costs[n]
+        heuristic = self.heuristic
+        prune = self.prune
+
+        # Disjoint?
         for other_set in lbl:
-            # Disjoint?
             if (other_set & n_set) == 0:
                 # Set union
                 combined = n_set | other_set
@@ -102,10 +105,10 @@ class Solver2k:
 
                     if total < combined_cost[0]:
                         cst[combined] = (total, False, other_set, True)
-                        h = self.heuristic(n, combined)
-                        if not self.prune(n, combined, total, h, other_set):
-                            inv_set_size = len(self.terminals) - bin(combined).count("1")
-                            heapq.heappush(self.queue, [total + h, inv_set_size, n, combined])
+                        if not prune(n, combined, total, other_set):
+                            h = heuristic(n, combined)
+                            if total + h <= self.steiner.get_approximation().cost:
+                                heapq.heappush(self.queue, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -121,10 +124,9 @@ class Solver2k:
 
         return max_val
 
-    def prune(self, n, set_id, c, h, set_id2=None):
+    def prune(self, n, set_id, c, set_id2=None):
         # Simple prune
-        if c + h > self.steiner.get_approximation().cost:
-            return True
+
 
         # Complex prune
         target_set = set_id
@@ -183,12 +185,11 @@ class Solver2k:
         min_val = sys.maxint
         min_node = None
 
-        for t1 in ts1:
-            for t2 in ts2:
-                ls = self.steiner.get_lengths(t1, t2)
-                if ls < min_val:
-                    min_val = ls
-                    min_node = t2
+        for (t1, t2) in ((x, y) for x in ts1 for y in ts2):
+            ls = self.steiner.get_lengths(t1, t2)
+            if ls < min_val:
+                min_val = ls
+                min_node = t2
 
         self.prune_dist[set_id] = min_val
         return min_val, min_node
@@ -252,12 +253,8 @@ class Solver2k:
 
     def to_list(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
-        ts = []
-        for (s, t) in self.terminal_ids.items():
-            if (s & set_id) > 0:
-                ts.append(t)
 
-        return ts
+        return [t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0]
 
 
 class SolverCosts(dict):

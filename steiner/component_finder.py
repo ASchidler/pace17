@@ -62,15 +62,21 @@ class ComponentFinder:
 
             components = [(steiner.graph, steiner.terminals)]
 
+            # For each bridge - Split the graph at the bridge, discard components without terminals
+            # Add the bridge nodes as terminals, where no component has been discarded
             for (u, v) in bridges:
                 for (c, ts) in components:
                     if c.has_edge(u, v):
+                        # Split graph
                         d = c[u][v]['weight']
                         c.remove_edge(u, v)
                         new_c = list(nx.connected_component_subgraphs(c))
+
+                        # Make sure that u is in the first component and v in the second
                         if new_c[0].has_node(v):
                             u, v = v, u
 
+                        # 
                         ts_0 = set()
                         ts_1 = set()
                         for t in ts:
