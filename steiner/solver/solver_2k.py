@@ -81,10 +81,9 @@ class Solver2k:
                 if total < other_node_cost[0]:
                     # Store costs. The second part of the tuple is backtracking info.
                     self.costs[other_node][n_set] = (total, False, n, False)
-                    if not self.prune(other_node, n_set, total):
-                        h = self.heuristic(other_node, n_set)
-                        if total + h <= self.steiner.get_approximation().cost:
-                            heapq.heappush(self.queue, [total + h, other_node, n_set])
+                    h = self.heuristic(other_node, n_set)
+                    if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
+                        heapq.heappush(self.queue, [total + h, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
         lbl = self.labels[n]
@@ -105,10 +104,10 @@ class Solver2k:
 
                     if total < combined_cost[0]:
                         cst[combined] = (total, False, other_set, True)
-                        if not prune(n, combined, total, other_set):
-                            h = heuristic(n, combined)
-                            if total + h <= self.steiner.get_approximation().cost:
-                                heapq.heappush(self.queue, [total + h, n, combined])
+
+                        h = heuristic(n, combined)
+                        if total + h <= self.steiner.get_approximation().cost and not prune(n, combined, total, other_set):
+                            heapq.heappush(self.queue, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -125,10 +124,6 @@ class Solver2k:
         return max_val
 
     def prune(self, n, set_id, c, set_id2=None):
-        # Simple prune
-
-
-        # Complex prune
         target_set = set_id
 
         if set_id2 is not None:
