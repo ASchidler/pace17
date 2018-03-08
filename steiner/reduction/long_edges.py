@@ -8,6 +8,10 @@ class LongEdgeReduction:
         self.runs = 0
 
     def reduce(self, steiner):
+        # Do not use if the graph is too big -> Memory constraints
+        if len(steiner.graph.nodes) > 400:
+            return 0
+
         track = len(nx.edges(steiner.graph))
 
         if self.runs > 0:

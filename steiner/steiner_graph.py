@@ -85,7 +85,7 @@ class SteinerGraph:
                     # Closest terminal
                     for t in self.terminals:
                         if t not in visited:
-                            c = self._steiner_lengths[n][t]
+                            c = self.get_lengths(t, n)
                             if c < min_val:
                                 min_val = c
                                 min_node = t
@@ -96,8 +96,8 @@ class SteinerGraph:
                     # Calculate steiner distance to nodes
                     for s in nx.nodes(self.graph):
                         if s not in visited:
-                            old = self._steiner_lengths[s][n]
-                            alt = max(min_val, self._lengths[s][n])
+                            old = self.get_lengths(n, s)
+                            alt = max(min_val, self.get_lengths(n, s))
 
                             if alt <= old:
                                 if s not in self.terminals:
