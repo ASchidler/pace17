@@ -2,12 +2,26 @@ class SetStorage:
     def __init__(self):
         self.root = _SetNode(1, 0)
         self.initialized = False
+        self.check = []
 
     def add(self, set_id):
         self.initialized = True
         self.root.add(set_id)
+        self.check.append(set_id)
 
-        
+    def _health_check(self, n, bit_set):
+        if n is None:
+            return
+
+        if n.level > 0:
+            result = n.val & (1 << (n.level - 1))
+            if result > 0 and not bit_set:
+                print "!!! Set where 0"
+            elif result == 0 and bit_set:
+                print "!!! Unset where 1"
+
+        self._health_check(n.zer, False)
+        self._health_check(n.on, True)
 
     def getIterator(self, set_id):
         return _SetStorageIterator(self, set_id)
@@ -22,9 +36,6 @@ class SetStorage:
         current_node = (self.root, (set_id & 1) > 0)
 
         # Special case for root node, since no information from the previous node is available
-        if current_node[1] and (set_id & current_node[0].val) == 0:
-            ret.append(current_node[0].val)
-
         while current_node[0] is not None or len(queue) > 0:
             if current_node[0] is None:
                 current_node = queue.pop()
@@ -33,10 +44,10 @@ class SetStorage:
 
             next_level_set = (set_id & (1 << (current_node[0].level + 1)))
 
-            if not current_node[1]:
-                if current_node[0].fixed or (current_node[0].val & set_id) == 0:
-                    ret.append(current_node[0].val)
+            if (not current_node[1] and current_node[0].fixed) or (current_node[0].val & set_id) == 0:
+                ret.append(current_node[0].val)
 
+            if not current_node[1]:
                 queue.append((current_node[0].on, next_level_set))
 
             current_node = (current_node[0].zer, next_level_set)
@@ -47,14 +58,22 @@ class SetStorage:
         if not self.initialized:
             return
 
+        ref = self.findAll(set_id)
+        ref2 = set([x for x in self.check if (set_id & x) == 0])
+        if len(ref) != len(ref2):
+            print "*** Length Error {} to {}".format(len(ref), len(ref2))
+        for x in ref:
+            if x not in ref2:
+                print "*** Content Error {}".format(x)
+
+        self._health_check(self.root, (1 & self.root.val) > 0)
+
+        ret = []
         queue = []
 
         current_node = (self.root, (set_id & 1) > 0)
 
         # Special case for root node, since no information from the previous node is available
-        if current_node[1] and (set_id & current_node[0].val) == 0:
-            yield current_node[0].val
-
         while current_node[0] is not None or len(queue) > 0:
             if current_node[0] is None:
                 current_node = queue.pop()
@@ -63,13 +82,15 @@ class SetStorage:
 
             next_level_set = (set_id & (1 << (current_node[0].level + 1)))
 
-            if not current_node[1]:
-                if current_node[0].fixed or (current_node[0].val & set_id) == 0:
-                    yield current_node[0].val
+            if (not current_node[1] and current_node[0].fixed) or (current_node[0].val & set_id) == 0:
+                ret.append(current_node[0].val)
 
+            if not current_node[1]:
                 queue.append((current_node[0].on, next_level_set))
 
             current_node = (current_node[0].zer, next_level_set)
+
+        return ret
 
 
 class _SetNode:
@@ -87,12 +108,12 @@ class _SetNode:
 
         else:
             pass_on = None
-
+            # Duplicate check should not be necessary
             if self.val is None:
                 self.val = val
                 if val == self.target:
                     self.fixed = True
-            if self.fixed:
+            elif self.fixed:
                 pass_on = val
             elif val == self.target:
                 pass_on, self.val = self.val, val
@@ -106,16 +127,21 @@ class _SetNode:
                 else:
                     pass_on = val
 
-            terminal = 1 << self.level
-            if (terminal & pass_on) > 0:
-                if self.on is None:
-                    self.on = _SetNode(self.target | terminal, self.level + 1)
-                self.on.add(pass_on)
-            else:
-                if self.zer is None:
-                    # Zero node targets are built negating the current bit and setting the next one
-                    self.zer = _SetNode((self.target ^ terminal) | (terminal << 1), self.level + 1)
-                self.zer.add(pass_on)
+            # Special root node handling. Since at the evaluation nothing is known about the first bit, this is necessary
+            if self.level == 0:
+                self.fixed = False
+
+            if pass_on is not None:
+                terminal = 1 << self.level
+                if (terminal & pass_on) > 0:
+                    if self.on is None:
+                        self.on = _SetNode(self.target | terminal, self.level + 1)
+                    self.on.add(pass_on)
+                else:
+                    if self.zer is None:
+                        # Zero node targets are built negating the current bit and setting the next one
+                        self.zer = _SetNode((self.target ^ terminal) | (terminal << 1), self.level + 1)
+                    self.zer.add(pass_on)
 
 
 class _SetStorageIterator:
