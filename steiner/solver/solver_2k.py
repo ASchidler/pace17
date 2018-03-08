@@ -1,6 +1,7 @@
 import networkx as nx
 import sys
 import heapq
+import set_storage as st
 
 
 class Solver2k:
@@ -28,7 +29,7 @@ class Solver2k:
         self.costs = list([None] * (self.max_node + 1))
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = []
+            self.labels[n] = st.SetStorage()
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
@@ -59,7 +60,7 @@ class Solver2k:
             if not n_cost[1]:
                 # Mark permanent
                 self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
-                self.labels[n].append(s)
+                self.labels[n].add(s)
 
                 self.process_neighbors(n, s, n_cost[0])
                 self.process_labels(n, s, n_cost[0])
@@ -91,9 +92,7 @@ class Solver2k:
         heuristic = self.heuristic
         prune = self.prune
 
-        # Disjoint?
-        for other_set in lbl:
-            if (other_set & n_set) == 0:
+        for other_set in lbl.findAllGen(n_set):
                 # Set union
                 combined = n_set | other_set
 
