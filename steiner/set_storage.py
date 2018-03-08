@@ -2,12 +2,10 @@ class SetStorage:
     def __init__(self):
         self.root = _SetNode(1, 0)
         self.initialized = False
-        self.check = []
 
     def add(self, set_id):
         self.initialized = True
         self.root.add(set_id)
-        self.check.append(set_id)
 
     def _health_check(self, n, bit_set):
         if n is None:
@@ -22,9 +20,6 @@ class SetStorage:
 
         self._health_check(n.zer, False)
         self._health_check(n.on, True)
-
-    def getIterator(self, set_id):
-        return _SetStorageIterator(self, set_id)
 
     def findAll(self, set_id):
         if not self.initialized:
@@ -57,16 +52,6 @@ class SetStorage:
     def findAllGen(self, set_id):
         if not self.initialized:
             return
-
-        ref = self.findAll(set_id)
-        ref2 = set([x for x in self.check if (set_id & x) == 0])
-        if len(ref) != len(ref2):
-            print "*** Length Error {} to {}".format(len(ref), len(ref2))
-        for x in ref:
-            if x not in ref2:
-                print "*** Content Error {}".format(x)
-
-        self._health_check(self.root, (1 & self.root.val) > 0)
 
         ret = []
         queue = []
