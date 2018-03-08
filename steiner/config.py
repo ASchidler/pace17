@@ -12,7 +12,7 @@ def reducers():
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
-        # long_edges.LongEdgeReduction(),
+        long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
         voronoi_nodes.VoronoiNodeReduction(),
         voronoi.VoronoiReduction(),
