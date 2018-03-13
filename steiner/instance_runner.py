@@ -9,6 +9,7 @@ import solver.label_store as ls
 import steiner_graph as sg
 import component_finder as cf
 import reduction.degree as dg
+import sys
 
 """ This runner runs all the public instances with debug oparser """
 
@@ -132,9 +133,10 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(53, 54):
+for i in range(7, 126 ):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
+        sys.setcheckinterval(1000)
         current_file = file_path.format(i)
         print current_file
         start = time.time()
