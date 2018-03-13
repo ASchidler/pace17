@@ -1,117 +1,132 @@
 class SetStorage:
-    def __init__(self):
-        self.root = _SetNode(1, 0)
+    def __init__(self, cnt):
         self.initialized = False
+        self._nodes = {}
+        self.add = self.first_add
+        self.cnt = cnt + 1
 
-    def add(self, set_id):
+    def first_add(self, set_id):
         self.initialized = True
-        self.root.add(set_id)
+        self._nodes[0] = (set_id, False, 0)
+        self.add = self.other_add
 
-    def findAllGen(self, set_id):
+    def other_add(self, set_id):
+        current_node_id = 0
+        current_value = set_id
+        current_level = 0
+        current_target = 1
+        placed = False
+
+        while not placed:
+            if current_node_id not in self._nodes:
+                self._nodes[current_node_id] = (current_value, current_value == current_target, current_level)
+                placed = True
+            else:
+                current_node = self._nodes[current_node_id]
+
+                if not current_node[1]:
+                    if current_value == current_target:
+                        # Special root node handling, root node should never be fixed (no information)
+                        self._nodes[current_node_id] = (current_target, current_node_id != 0, current_level)
+                        current_value = current_node[0]
+                    else:
+                        parity_old = bin(current_node[0]).count("1")
+                        parity_new = bin(current_value).count("1")
+
+                        if parity_new < parity_old:
+                            self._nodes[current_node_id] = (current_value, False, current_level)
+                            current_value = current_node[0]
+
+                terminal = 1 << current_level
+                current_level += 1
+                if (terminal & current_value) > 0:
+                    current_node_id = 2 * current_node_id + 1
+                    current_target = current_target | terminal
+                else:
+                    current_node_id = 2 * current_node_id + 2
+                    current_target = current_target ^ terminal | (terminal << 1)
+
+    def find_all(self, set_id):
         if self.initialized:
             queue = []
             pop = queue.pop
             append = queue.append
+            nodes = self._nodes
+            # Array of set bits, extend it so it matches the length of terminals
+            level_set = map(lambda x: x == "1", bin(set_id))
+            level_set.reverse()
+            level_set.extend([False] * (self.cnt - len(level_set)))
 
-            current_node = (self.root, (set_id & 1) > 0)
+            current_node_id = 0
 
             # Special case for root node, since no information from the previous node is available
-            while current_node[0] is not None or len(queue) > 0:
-                if current_node[0] is None:
-                    current_node = pop()
-                    if current_node[0] is None:
-                        continue
+            while 1:
+                try:
+                    current_node = nodes[current_node_id]
+                except KeyError:
+                    try:
+                        current_node_id, current_node = pop()
+                    # No more entries in the queue
+                    except IndexError:
+                        break
 
-                next_level_set = (set_id & (1 << (current_node[0].level + 1)))
+                # Get the value once
+                current_bit = level_set[current_node[2]]
 
-                if (not current_node[1] and current_node[0].fixed) or (current_node[0].val & set_id) == 0:
-                    yield current_node[0].val
+                # Return the current value if fits
+                # (not current_bit and current_node[1]) or
+                if (current_node[0] & set_id) == 0:
+                        yield current_node[0]
 
-                if not current_node[1]:
-                    append((current_node[0].on, next_level_set))
+                # Add the one branch if the bit is not set
+                one_branch = 2 * current_node_id + 1
+                if not current_bit and one_branch in nodes:
+                    append((one_branch, nodes[one_branch]))
 
-                current_node = (current_node[0].zer, next_level_set)
+                # Add the zero branch in any case
+                current_node_id = 2 * current_node_id + 2
 
-
-class _SetNode:
-    def __init__(self, target, level):
-        self.on = None
-        self.zer = None
-        self.val = None
-        self.target = target
-        self.fixed = False
-        self.level = level
-
-    def add(self, val):
-        if self.val is None:
-            self.val = val
-
-        else:
-            pass_on = None
-            # Duplicate check should not be necessary
-            if self.val is None:
-                self.val = val
-                if val == self.target:
-                    self.fixed = True
-            elif self.fixed:
-                pass_on = val
-            elif val == self.target:
-                pass_on, self.val = self.val, val
-                self.fixed = True
-            else:
-                parity_old = bin(self.val).count("1")
-                parity_new = bin(val).count("1")
-
-                if parity_new < parity_old:
-                    pass_on, self.val = self.val, val
-                else:
-                    pass_on = val
-
-            # Special root node handling. Since at the evaluation nothing is known about the first bit, this is necessary
-            if self.level == 0:
-                self.fixed = False
-
-            if pass_on is not None:
-                terminal = 1 << self.level
-                if (terminal & pass_on) > 0:
-                    if self.on is None:
-                        self.on = _SetNode(self.target | terminal, self.level + 1)
-                    self.on.add(pass_on)
-                else:
-                    if self.zer is None:
-                        # Zero node targets are built negating the current bit and setting the next one
-                        self.zer = _SetNode((self.target ^ terminal) | (terminal << 1), self.level + 1)
-                    self.zer.add(pass_on)
 
 class DebuggingSetStorage(SetStorage):
     """This adds self checks to the set storage. It is very slow and its use is to test changes, for
     production use, use the base storage"""
 
-    def __init__(self):
+    def __init__(self, cnt):
         self._check = []
-        SetStorage.__init__(self)
+        SetStorage.__init__(self, cnt)
+        self.add = self._initial_add
 
-    def _health_check(self, n, bit_set):
+    def _health_check(self, n_id, bit_set):
+        n = self._nodes.get(n_id)
         if n is None:
             return
 
-        if n.level > 0:
-            result = n.val & (1 << (n.level - 1))
+        if n[2] > 0:
+            result = n[0] & (1 << (n[2] - 1))
             if result > 0 and not bit_set:
                 print "!!! Set where 0"
             elif result == 0 and bit_set:
                 print "!!! Unset where 1"
 
-        self._health_check(n.zer, False)
-        self._health_check(n.on, True)
+        self._health_check(n_id * 2 + 2, False)
+        self._health_check(n_id * 2 + 1, True)
 
-    def add(self, set_id):
+    def _initial_add(self, set_id):
         self._check.append(set_id)
-        SetStorage.add(self, set_id)
+        self.first_add(set_id)
+        self.add = self._add
 
-    def findAllGen(self, set_id):
+    def _add(self, set_id):
+        self._check.append(set_id)
+        self.other_add(set_id)
+
+    def find_all(self, set_id):
         if self.initialized:
-            ref = list(SetStorage.findAllGen(self, set_id))
+            if self._nodes[0][1]:
+                print "*** Root node should never be fixed"
+                raise StandardError
+            self._health_check(0, (1 & self._nodes[0][0]) > 0)
+            ref = list(SetStorage.find_all(self, set_id))
             ref2 = set([x for x in self._check if (set_id & x) == 0])
             if len(ref) != len(ref2):
                 print "*** Length Error {} to {}".format(len(ref), len(ref2))
@@ -121,12 +136,5 @@ class DebuggingSetStorage(SetStorage):
                     print "*** Content Error {}".format(x)
                     raise StandardError
 
-            self._health_check(self.root, (1 & self.root.val) > 0)
-
             for x in ref:
                 yield x
-
-
-
-
-
