@@ -29,7 +29,7 @@ class Solver2k:
         self.costs = list([None] * (self.max_node + 1))
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = st.SetStorage(len(self.terminals))
+            self.labels[n] = st.DebuggingSetStorage(len(self.terminals))
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))

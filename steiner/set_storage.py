@@ -48,9 +48,6 @@ class SetStorage:
 
     def find_all(self, set_id):
         if self.initialized:
-            queue = []
-            pop = queue.pop
-            append = queue.append
             nodes = self._nodes
             # Array of set bits, extend it so it matches the length of terminals
             level_set = map(lambda x: x == "1", bin(set_id))
@@ -58,33 +55,31 @@ class SetStorage:
             level_set.extend([False] * (self.cnt - len(level_set)))
 
             current_node_id = 0
+            queue = []
 
             # Special case for root node, since no information from the previous node is available
             while 1:
                 try:
-                    current_node = nodes[current_node_id]
+                    c_root = nodes[current_node_id]
                 except KeyError:
+                    break
+
+                stepping = (2 * current_node_id) + 2 - current_node_id
+                for c_sub in xrange(0, self.cnt):
+                    c_id = current_node_id + ((1 << c_sub) - 1) * stepping
+
                     try:
-                        current_node_id, current_node = pop()
-                    # No more entries in the queue
-                    except IndexError:
+                        val = nodes[c_id]
+                        if (val[0] & set_id) == 0:
+                            yield val[0]
+                    except KeyError:
                         break
 
-                # Get the value once
-                current_bit = level_set[current_node[2]]
-
-                # Return the current value if fits
-                # (not current_bit and current_node[1]) or
-                if (current_node[0] & set_id) == 0:
-                        yield current_node[0]
-
                 # Add the one branch if the bit is not set
-                one_branch = 2 * current_node_id + 1
-                if not current_bit and one_branch in nodes:
-                    append((one_branch, nodes[one_branch]))
-
-                # Add the zero branch in any case
-                current_node_id = 2 * current_node_id + 2
+                if not level_set[c_root[2]]:
+                    current_node_id = 2 * current_node_id + 1
+                else:
+                    break
 
 
 class DebuggingSetStorage(SetStorage):
