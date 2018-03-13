@@ -3,7 +3,7 @@ import sys
 import heapq
 import set_storage as st
 
-
+# TODO: Upon kill signal return the currently best solution, no matter if marked permanent or not
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
@@ -29,7 +29,7 @@ class Solver2k:
         self.costs = list([None] * (self.max_node + 1))
 
         for n in nx.nodes(self.steiner.graph):
-            self.labels[n] = st.SetStorage()
+            self.labels[n] = st.SetStorage(len(self.terminals))
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
@@ -92,7 +92,7 @@ class Solver2k:
         heuristic = self.heuristic
         prune = self.prune
 
-        for other_set in lbl.findAllGen(n_set):
+        for other_set in lbl.find_all(n_set):
                 # Set union
                 combined = n_set | other_set
 
