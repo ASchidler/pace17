@@ -91,6 +91,9 @@ class Solver2k:
         cst = self.costs[n]
         heuristic = self.heuristic
         prune = self.prune
+        approx = self.steiner.get_approximation().cost
+        q = self.queue
+        push = heapq.heappush
 
         for other_set in lbl.find_all(n_set):
                 # Set union
@@ -105,8 +108,8 @@ class Solver2k:
                         cst[combined] = (total, False, other_set, True)
 
                         h = heuristic(n, combined)
-                        if total + h <= self.steiner.get_approximation().cost and not prune(n, combined, total, other_set):
-                            heapq.heappush(self.queue, [total + h, n, combined])
+                        if total + h <= approx and not prune(n, combined, total, other_set):
+                            push(q, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
