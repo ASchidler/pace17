@@ -38,11 +38,10 @@ class MstHeuristic:
         """Calculate the costs of an MST using networkx"""
 
         g = nx.Graph()
+        length = self.steiner.get_lengths
+        edge = g.add_edge
 
         # Cartesian product
-        for (t1, t2) in ((x, y) for x in ts for y in ts if y > x):
-            g.add_edge(t1, t2, weight=self.steiner.get_lengths(t1, t2))
-
-        mst = list(nx.minimum_spanning_edges(g))
-        cost = sum(d['weight'] for u, v, d in mst)
+        [edge(t1, t2, weight=length(t1, t2)) for t1 in ts for t2 in ts if t2 > t1]
+        cost = sum(d['weight'] for u, v, d in nx.minimum_spanning_edges(g))
         return cost
