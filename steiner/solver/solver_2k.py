@@ -2,6 +2,7 @@ import networkx as nx
 import sys
 import heapq
 import set_storage as st
+import itertools as it
 
 # TODO: Upon kill signal return the currently best solution, no matter if marked permanent or not
 class Solver2k:
@@ -87,7 +88,8 @@ class Solver2k:
                         heapq.heappush(self.queue, [total + h, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
-        lbl = self.labels[n]
+        # First localize for better performance
+        lbl = self.labels[n].find_all
         cst = self.costs[n]
         heuristic = self.heuristic
         prune = self.prune
@@ -95,7 +97,20 @@ class Solver2k:
         q = self.queue
         push = heapq.heappush
 
-        for other_set in lbl.find_all(n_set):
+        # All disjoint set candidates
+        # sets = ((o, o | n_set, n_cost + cst[o][0], cst[o | n_set]) for o in lbl(n_set))
+        # # Filter all sets with costs higher than the currently known
+        # sets_filterd = it.ifilter(lambda (ox, cx, tx, ccx): not ccx[1] and ccx[0] > tx, sets)
+        # # Add heuristic data. The result has to be a list, not a generator
+        # set_data = [(o, c, t, heuristic(n, c)) for (o, c, t, cc) in sets_filterd]
+        # # Prune result
+        # set_approx = it.ifilter(lambda (ox, cx, tx, hx): tx + hx <= approx and not prune(n, cx, tx, ox), set_data)
+        # # Add to queue
+        # map(lambda (ox, cx, tx, hx): push(q, [tx + hx, n, cx]), set_approx)
+        # cst.update((c, (t, False, o, True)) for (o, c, t, h) in set_data)
+        # cst.update({c: (t, False, o, True) for (o, c, t, h) in set_approx})
+        #
+        for other_set in lbl(n_set):
                 # Set union
                 combined = n_set | other_set
 
