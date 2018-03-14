@@ -97,19 +97,6 @@ class Solver2k:
         q = self.queue
         push = heapq.heappush
 
-        # All disjoint set candidates
-        # sets = ((o, o | n_set, n_cost + cst[o][0], cst[o | n_set]) for o in lbl(n_set))
-        # # Filter all sets with costs higher than the currently known
-        # sets_filterd = it.ifilter(lambda (ox, cx, tx, ccx): not ccx[1] and ccx[0] > tx, sets)
-        # # Add heuristic data. The result has to be a list, not a generator
-        # set_data = [(o, c, t, heuristic(n, c)) for (o, c, t, cc) in sets_filterd]
-        # # Prune result
-        # set_approx = it.ifilter(lambda (ox, cx, tx, hx): tx + hx <= approx and not prune(n, cx, tx, ox), set_data)
-        # # Add to queue
-        # map(lambda (ox, cx, tx, hx): push(q, [tx + hx, n, cx]), set_approx)
-        # cst.update((c, (t, False, o, True)) for (o, c, t, h) in set_data)
-        # cst.update({c: (t, False, o, True) for (o, c, t, h) in set_approx})
-        #
         for other_set in lbl(n_set):
                 # Set union
                 combined = n_set | other_set
@@ -163,12 +150,14 @@ class Solver2k:
         dist = self.prune2_dist(target_set)
 
         # Find the minimum distance between n and R \ set
-        ts = self.to_list(self.max_set ^ target_set)
-        ts.append(self.root_node)
-        for t in ts:
-            lt = self.steiner.get_lengths(t, n)
+        length = self.steiner.get_lengths
+        for t in (t for (s, t) in self.terminal_ids.items() if (s & set_id) == 0):
+            lt = length(t, n)
             if lt < dist[0]:
                 dist = (lt, t)
+        lt = length(self.root_node, n)
+        if lt < dist[0]:
+            dist = (lt, self.root_node)
 
         # Check if we can lower the bound
         w = c + dist[0]
@@ -197,8 +186,9 @@ class Solver2k:
         min_val = sys.maxint
         min_node = None
 
-        for (t1, t2) in ((x, y) for x in ts1 for y in ts2):
-            ls = self.steiner.get_lengths(t1, t2)
+        lengths = self.steiner.get_lengths
+        for (t1, t2) in ((x, y) for x in ts1 for y in ts2 if y > x):
+            ls = lengths(t1, t2)
             if ls < min_val:
                 min_val = ls
                 min_node = t2

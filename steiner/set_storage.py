@@ -21,47 +21,28 @@ class SetStorage:
     def _other_add(self, set_id):
         """ Adds every value but the first and restructures collection as needed"""
         current_node_id = 0
-        current_value = set_id
         current_level = 0
-        current_target = 1
         placed = False
+        nodes = self._nodes
 
         # Try to place the value
         while not placed:
             # If we have a non-existing node, we can place the value
-            if current_node_id not in self._nodes:
-                self._nodes[current_node_id] = current_value
+            if current_node_id not in nodes:
+                nodes[current_node_id] = set_id
                 placed = True
             # Determine if the current value of the node or the new value is placed in the current node
             else:
-                current_node = self._nodes[current_node_id]
-
-                # If the node already has the target value, do not change
-                if not current_node == current_target:
-                    # If the new value has the target value, place
-                    if current_value == current_target:
-                        self._nodes[current_node_id] = current_target
-                        current_value = current_node
-                    # Otherwise the lower parity stays (higher likelihood to be disjoint)
-                    else:
-                        parity_old = bin(current_node).count("1")
-                        parity_new = bin(current_value).count("1")
-
-                        if parity_new < parity_old:
-                            self._nodes[current_node_id], current_value = current_value, current_node
-
                 # Place the value
                 terminal = 1 << current_level
                 current_level += 1
                 # If the current bit of the value is set branch left, otherwise branch right
-                if (terminal & current_value) > 0:
+                if (terminal & set_id) > 0:
                     current_node_id = 2 * current_node_id + 1
                     # The new target is the set plus the current terminal
-                    current_target = current_target | terminal
                 else:
                     current_node_id = 2 * current_node_id + 2
                     # The new target is the set without the current terminal and with the next terminal
-                    current_target = current_target ^ terminal | (terminal << 1)
 
     def find_all(self, set_id):
         """" Returns all stored sets that are disjoint from the given set"""
