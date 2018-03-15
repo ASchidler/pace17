@@ -8,6 +8,7 @@ class SteinerGraph:
     def __init__(self):
         self.graph = nx.Graph()
         self.terminals = set()
+        self.closest_terminals = []
         self._lengths = {}
         self._steiner_lengths = None
         self._approximation = None

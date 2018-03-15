@@ -23,16 +23,16 @@ class MstHeuristic:
             self.mst[set_id] = cost
 
         # Find minimum pairwise distance
-        min_val = min_val2 = sys.maxint
+        min_val = []
 
-        for t in ts:
-            lg = length(t, n)
-            if lg < min_val:
-                min_val2, min_val = min_val, lg
-            elif lg < min_val2:
-                min_val2 = lg
+        for (t, l) in self.steiner.closest_terminals[n]:
+            if t in ts:
+                min_val.append(l)
 
-        return (min_val + min_val2 + cost) / 2
+            if len(min_val) == 2:
+                break
+
+        return (min_val[0] + min_val[1] + cost) / 2
 
     def calc_mst(self, ts):
         """Calculate the costs of an MST using networkx"""
