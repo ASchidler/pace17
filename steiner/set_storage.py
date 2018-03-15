@@ -1,90 +1,77 @@
 class SetStorage:
+    """A storage for sets that can quickly retrieve disjoint sets for a given set"""
+
+    # Empty since it will be overridden
+    def add(self, set_id):
+        """Adds a value to the collection"""
+        pass
+
     def __init__(self, cnt):
         self.initialized = False
         self._nodes = {}
-        self.add = self.first_add
+        self.add = self._first_add
         self.cnt = cnt + 1
 
-    def first_add(self, set_id):
+    def _first_add(self, set_id):
+        """ Adds the first value. Additional checks are skipped"""
         self.initialized = True
-        self._nodes[0] = (set_id, False, 0)
-        self.add = self.other_add
+        self._nodes[0] = set_id
+        self.add = self._other_add
 
-    def other_add(self, set_id):
+    def _other_add(self, set_id):
+        """ Adds every value but the first and restructures collection as needed"""
         current_node_id = 0
-        current_value = set_id
         current_level = 0
-        current_target = 1
         placed = False
+        nodes = self._nodes
 
+        # Try to place the value
         while not placed:
-            if current_node_id not in self._nodes:
-                self._nodes[current_node_id] = (current_value, current_value == current_target, current_level)
+            # If we have a non-existing node, we can place the value
+            if current_node_id not in nodes:
+                nodes[current_node_id] = set_id
                 placed = True
+            # Determine if the current value of the node or the new value is placed in the current node
             else:
-                current_node = self._nodes[current_node_id]
-
-                if not current_node[1]:
-                    if current_value == current_target:
-                        # Special root node handling, root node should never be fixed (no information)
-                        self._nodes[current_node_id] = (current_target, current_node_id != 0, current_level)
-                        current_value = current_node[0]
-                    else:
-                        parity_old = bin(current_node[0]).count("1")
-                        parity_new = bin(current_value).count("1")
-
-                        if parity_new < parity_old:
-                            self._nodes[current_node_id] = (current_value, False, current_level)
-                            current_value = current_node[0]
-
+                # Place the value
                 terminal = 1 << current_level
                 current_level += 1
-                if (terminal & current_value) > 0:
+                # If the current bit of the value is set branch left, otherwise branch right
+                if (terminal & set_id) > 0:
                     current_node_id = 2 * current_node_id + 1
-                    current_target = current_target | terminal
+                    # The new target is the set plus the current terminal
                 else:
                     current_node_id = 2 * current_node_id + 2
-                    current_target = current_target ^ terminal | (terminal << 1)
+                    # The new target is the set without the current terminal and with the next terminal
 
     def find_all(self, set_id):
+        """" Returns all stored sets that are disjoint from the given set"""
+
         if self.initialized:
-            queue = []
-            pop = queue.pop
-            append = queue.append
             nodes = self._nodes
             # Array of set bits, extend it so it matches the length of terminals
             level_set = map(lambda x: x == "1", bin(set_id))
             level_set.reverse()
             level_set.extend([False] * (self.cnt - len(level_set)))
 
-            current_node_id = 0
+            # Special case for the root node
+            ids = [0]
+            if (nodes[0] & set_id) == 0:
+                yield nodes[0]
 
-            # Special case for root node, since no information from the previous node is available
-            while 1:
-                try:
-                    current_node = nodes[current_node_id]
-                except KeyError:
-                    try:
-                        current_node_id, current_node = pop()
-                    # No more entries in the queue
-                    except IndexError:
-                        break
+            # Now traverse the tree level by level, always expanding the selected node from the previous level
+            for c_level in xrange(1, self.cnt):
+                if not level_set[c_level - 1]:
+                    # Add one and zero branches
+                    ids = [2 * i + o for i in ids for o in [1, 2] if (2 * i + o) in nodes]
+                else:
+                    # Only zero branches
+                    ids = [2 * i + 2 for i in ids if (2 * i + 2) in nodes]
 
-                # Get the value once
-                current_bit = level_set[current_node[2]]
-
-                # Return the current value if fits
-                # (not current_bit and current_node[1]) or
-                if (current_node[0] & set_id) == 0:
-                        yield current_node[0]
-
-                # Add the one branch if the bit is not set
-                one_branch = 2 * current_node_id + 1
-                if not current_bit and one_branch in nodes:
-                    append((one_branch, nodes[one_branch]))
-
-                # Add the zero branch in any case
-                current_node_id = 2 * current_node_id + 2
+                # Now check if the values are disjoint
+                for val in (nodes[i] for i in ids):
+                    if (val & set_id) == 0:
+                        yield val
 
 
 class DebuggingSetStorage(SetStorage):
@@ -96,36 +83,39 @@ class DebuggingSetStorage(SetStorage):
         SetStorage.__init__(self, cnt)
         self.add = self._initial_add
 
-    def _health_check(self, n_id, bit_set):
+    def _health_check(self, n_id, bit_set, lvl):
+        """ Checks if the position of the values in the tree is valid"""
         n = self._nodes.get(n_id)
         if n is None:
             return
 
-        if n[2] > 0:
-            result = n[0] & (1 << (n[2] - 1))
+        if lvl > 0:
+            result = n & (1 << (lvl - 1))
             if result > 0 and not bit_set:
                 print "!!! Set where 0"
             elif result == 0 and bit_set:
                 print "!!! Unset where 1"
 
-        self._health_check(n_id * 2 + 2, False)
-        self._health_check(n_id * 2 + 1, True)
+        self._health_check(n_id * 2 + 2, False, lvl + 1)
+        self._health_check(n_id * 2 + 1, True, lvl + 1)
 
     def _initial_add(self, set_id):
+        """Used to override the initial add in the base class"""
         self._check.append(set_id)
-        self.first_add(set_id)
+        self._first_add(set_id)
         self.add = self._add
 
     def _add(self, set_id):
+        """Used to override the other add in the base class"""
         self._check.append(set_id)
-        self.other_add(set_id)
+        self._other_add(set_id)
 
     def find_all(self, set_id):
+        """Finds all disjoint sets and performs a consistency check on the colleciton"""
         if self.initialized:
-            if self._nodes[0][1]:
-                print "*** Root node should never be fixed"
-                raise StandardError
-            self._health_check(0, (1 & self._nodes[0][0]) > 0)
+            # Check positions in the tree
+            self._health_check(0, (1 & self._nodes[0]) > 0, 0)
+            # Verify that all disjoint values are returned
             ref = list(SetStorage.find_all(self, set_id))
             ref2 = set([x for x in self._check if (set_id & x) == 0])
             if len(ref) != len(ref2):
@@ -136,5 +126,6 @@ class DebuggingSetStorage(SetStorage):
                     print "*** Content Error {}".format(x)
                     raise StandardError
 
+            # Return results
             for x in ref:
                 yield x
