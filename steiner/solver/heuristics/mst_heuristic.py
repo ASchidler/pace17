@@ -13,7 +13,8 @@ class MstHeuristic:
 
         # Only one terminal
         if len(ts) == 1:
-            return length(ts[0], n)
+            for t in ts:
+                return length(t, n)
 
         # Calculate MST costs
         if set_id in self.mst:
