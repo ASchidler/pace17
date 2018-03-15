@@ -2,6 +2,7 @@ import networkx as nx
 import sys
 import heapq
 import set_storage as st
+import itertools as it
 
 # TODO: Upon kill signal return the currently best solution, no matter if marked permanent or not
 class Solver2k:
@@ -87,12 +88,16 @@ class Solver2k:
                         heapq.heappush(self.queue, [total + h, other_node, n_set])
 
     def process_labels(self, n, n_set, n_cost):
-        lbl = self.labels[n]
+        # First localize for better performance
+        lbl = self.labels[n].find_all
         cst = self.costs[n]
         heuristic = self.heuristic
         prune = self.prune
+        approx = self.steiner.get_approximation().cost
+        q = self.queue
+        push = heapq.heappush
 
-        for other_set in lbl.find_all(n_set):
+        for other_set in lbl(n_set):
                 # Set union
                 combined = n_set | other_set
 
@@ -105,8 +110,8 @@ class Solver2k:
                         cst[combined] = (total, False, other_set, True)
 
                         h = heuristic(n, combined)
-                        if total + h <= self.steiner.get_approximation().cost and not prune(n, combined, total, other_set):
-                            heapq.heappush(self.queue, [total + h, n, combined])
+                        if total + h <= approx and not prune(n, combined, total, other_set):
+                            push(q, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -145,12 +150,14 @@ class Solver2k:
         dist = self.prune2_dist(target_set)
 
         # Find the minimum distance between n and R \ set
-        ts = self.to_list(self.max_set ^ target_set)
-        ts.append(self.root_node)
-        for t in ts:
-            lt = self.steiner.get_lengths(t, n)
+        length = self.steiner.get_lengths
+        for t in (t for (s, t) in self.terminal_ids.items() if (s & set_id) == 0):
+            lt = length(t, n)
             if lt < dist[0]:
                 dist = (lt, t)
+        lt = length(self.root_node, n)
+        if lt < dist[0]:
+            dist = (lt, self.root_node)
 
         # Check if we can lower the bound
         w = c + dist[0]
@@ -179,8 +186,9 @@ class Solver2k:
         min_val = sys.maxint
         min_node = None
 
-        for (t1, t2) in ((x, y) for x in ts1 for y in ts2):
-            ls = self.steiner.get_lengths(t1, t2)
+        lengths = self.steiner.get_lengths
+        for (t1, t2) in ((x, y) for x in ts1 for y in ts2 if y > x):
+            ls = lengths(t1, t2)
             if ls < min_val:
                 min_val = ls
                 min_node = t2

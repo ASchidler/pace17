@@ -9,9 +9,11 @@ class MstHeuristic:
 
     """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
     def calculate(self, n, set_id, ts):
+        length = self.steiner.get_lengths
+
         # Only one terminal
         if len(ts) == 1:
-            return self.steiner.get_lengths(ts[0], n)
+            return length(ts[0], n)
 
         # Calculate MST costs
         if set_id in self.mst:
@@ -24,7 +26,7 @@ class MstHeuristic:
         min_val = min_val2 = sys.maxint
 
         for t in ts:
-            lg = self.steiner.get_lengths(t, n)
+            lg = length(t, n)
             if lg < min_val:
                 min_val2, min_val = min_val, lg
             elif lg < min_val2:
@@ -36,11 +38,10 @@ class MstHeuristic:
         """Calculate the costs of an MST using networkx"""
 
         g = nx.Graph()
+        length = self.steiner.get_lengths
+        edge = g.add_edge
 
         # Cartesian product
-        for (t1, t2) in ((x, y) for x in ts for y in ts if y > x):
-            g.add_edge(t1, t2, weight=self.steiner.get_lengths(t1, t2))
-
-        mst = list(nx.minimum_spanning_edges(g))
-        cost = sum(d['weight'] for u, v, d in mst)
+        [edge(t1, t2, weight=length(t1, t2)) for t1 in ts for t2 in ts if t2 > t1]
+        cost = sum(d['weight'] for u, v, d in nx.minimum_spanning_edges(g))
         return cost
