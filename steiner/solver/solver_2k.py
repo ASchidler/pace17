@@ -4,6 +4,7 @@ import heapq
 import set_storage as st
 import itertools as it
 
+
 # TODO: Upon kill signal return the currently best solution, no matter if marked permanent or not
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
@@ -28,6 +29,8 @@ class Solver2k:
 
         # Use the approximation + 1 (otherwise solving will fail if the approximation is correct) as an upper cost bound
         self.costs = list([None] * (self.max_node + 1))
+        steiner.closest_terminals = list([None] * (self.max_node + 1))
+        length = steiner.get_lengths
 
         for n in nx.nodes(self.steiner.graph):
             self.labels[n] = st.SetStorage(len(self.terminals))
@@ -35,6 +38,10 @@ class Solver2k:
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
             self.costs[n] = SolverCosts(s_id, steiner.get_approximation().cost + 1)
+
+            # Calc closest terminals per node
+            steiner.closest_terminals[n] = [(t, length(t, n)) for t in steiner.terminals]
+            steiner.closest_terminals[n].sort(key=lambda x: x[1])
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -119,7 +126,7 @@ class Solver2k:
 
         set_id = self.max_set ^ set_id
         ts = self.to_list(set_id)
-        ts.append(self.root_node)
+        ts.add(self.root_node)
 
         max_val = 0
         for h in self.heuristics:
@@ -128,10 +135,7 @@ class Solver2k:
         return max_val
 
     def prune(self, n, set_id, c, set_id2=None):
-        target_set = set_id
-
-        if set_id2 is not None:
-            target_set = set_id | set_id2
+        target_set = set_id if set_id2 is None else set_id | set_id2
 
         # First check if there is a bound available
         if target_set not in self.prune_bounds:
@@ -146,57 +150,50 @@ class Solver2k:
         if c > bound[0]:
             return True
 
-        # Otherwise check if we have a new upper bound
-        dist = self.prune2_dist(target_set)
-
-        # Find the minimum distance between n and R \ set
-        length = self.steiner.get_lengths
-        for t in (t for (s, t) in self.terminal_ids.items() if (s & set_id) == 0):
-            lt = length(t, n)
-            if lt < dist[0]:
-                dist = (lt, t)
-        lt = length(self.root_node, n)
-        if lt < dist[0]:
-            dist = (lt, self.root_node)
-
-        # Check if we can lower the bound
-        w = c + dist[0]
-        if w < bound[0]:
-            self.prune_bounds[target_set] = (w, [dist[1]])
+        # Check if there is a new upper bound
+        self.prune_check_bound(target_set, n, bound[0], c)
 
         # In any case do not prune
         return False
 
-    def prune2_dist(self, set_id):
+    def prune_check_bound(self, set_id, n, bound, c):
         """Calculates the minimum distance between the cut of terminals in the set and not in the set"""
-        if set_id in self.prune_dist:
-            return self.prune_dist[set_id], None
 
-        ts1 = []
-        ts2 = []
+        t_in = []
+        t_out = []
 
         for (s, t) in self.terminal_ids.items():
             if (s & set_id) > 0:
-                ts1.append(t)
+                t_in.append(t)
             else:
-                ts2.append(t)
+                t_out.append(t)
 
-        ts2.append(self.root_node)
+        t_out.append(self.root_node)
 
-        min_val = sys.maxint
-        min_node = None
+        # Find minimum distance between the terminals in the cut and outside the cut
+        if set_id in self.prune_dist:
+            dist = self.prune_dist[set_id], None
+        else:
+            lengths = self.steiner.get_lengths
+            dist = min(((lengths(t1, t2), t2) for t1 in t_in for t2 in t_out), key=lambda x: x[0])
 
-        lengths = self.steiner.get_lengths
-        for (t1, t2) in ((x, y) for x in ts1 for y in ts2 if y > x):
-            ls = lengths(t1, t2)
-            if ls < min_val:
-                min_val = ls
-                min_node = t2
+            self.prune_dist[set_id] = dist[0]
 
-        self.prune_dist[set_id] = min_val
-        return min_val, min_node
+        # Find the minimum distance between n and R \ set
+        for (t, l) in self.steiner.closest_terminals[n]:
+            if t in t_out:
+                dist = (l, t)
+                break
+
+        # Check if we can lower the bound
+        w = c + dist[0]
+        if w < bound:
+            self.prune_bounds[set_id] = (w, [dist[1]])
 
     def prune2_combine(self, set_id1, set_id2):
+        """Calculates a new upper bound using upper bounds from two subsets, if applicable"""
+
+        # Check if bounds for both sets exist
         if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
             return sys.maxint, []
 
@@ -205,30 +202,14 @@ class Solver2k:
         set1_entry = self.prune_bounds[set_id1]
         set2_entry = self.prune_bounds[set_id2]
 
-        usable = True
-        for e in set1_entry[1]:
-            if e in set2:
-                usable = False
-
-        if not usable:
-            usable = True
-
-            for e in set2_entry[1]:
-                if e in set1:
-                    usable = False
-
-        if not usable:
+        # To allow combination of the partial solutions at least one set must be disjoint from the other solutions
+        # used nodes
+        if any(e in set2 for e in set1_entry[1]) and any(e in set1 for e in set2_entry[1]):
             return sys.maxint, []
 
+        # Combine subset solutions
         val = set1_entry[0] + set2_entry[0]
-        s = list(set1_entry[1])
-        s.extend(set2_entry[1])
-        for e in set1:
-            if e in s:
-                s.remove(e)
-        for e in set2:
-            if e in s:
-                s.remove(e)
+        s = [x for x in it.chain(set1_entry[1], set2_entry[1]) if x not in set1 and x not in set2]
 
         self.prune_bounds[set_id1 | set_id2] = (val, s)
         return val, s
@@ -256,7 +237,7 @@ class Solver2k:
     def to_list(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
 
-        return [t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0]
+        return set(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
 
 
 class SolverCosts(dict):
