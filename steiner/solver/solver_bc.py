@@ -116,6 +116,10 @@ class SolverBc:
     def solve_branch(self, cuts, fixed):
         c_a_ub = list(self.a_ub)
         c_b_ub = list(self.b_ub)
+        c_bounds = list(self.bounds)
+
+        for (idx, val) in fixed:
+            c_bounds[idx] = (val, val)
 
         while True:
             for c_cut in cuts:
@@ -128,66 +132,70 @@ class SolverBc:
                 c_a_ub.append(cut_list)
 
             # First solve relaxation
-            lp = sp.linprog(self.costs, c_a_ub, c_b_ub, self.a_eq, self.b_eq, self.bounds, options={'maxiter': 1000})
+            lp = sp.linprog(self.costs, c_a_ub, c_b_ub, self.a_eq, self.b_eq, c_bounds, options={'maxiter': 1000})
 
-            if not lp.success:
-                raise RuntimeError("Simplex Failed {}".format(lp.status))
-
-            # Check if solved
-            epsilon = 0.0000001
-
-            # Check if every var is either 0 or 1
-            violated_vars = 0
-            for c_x in lp.x:
-                if (c_x - epsilon) > 0 and (c_x + epsilon) < 1:
-                    violated_vars += 1
-
-            print "Simplex run, {} violated vars".format(violated_vars)
-
-            if violated_vars == 0:
-                result_graph = nx.Graph()
-                for i in range(0, len(lp.x)):
-                    if lp.x[i] + epsilon >= 1:
-                        u, v = self.edges[i][0], self.edges[i][1]
-                        result_graph.add_edge(u, v, weight=self.steiner.graph[u][v]['weight'])
-
-                result = result_graph, result_graph.size(weight='weight')
-
-                if result[1] < self.upper_bound:
-                    self.upper_bound = result[1]
-                    self.upper_bound_graph = result[0]
-
+            if lp.success and self.check_solved(lp):
                 return
 
-            # Find cuts
-            cuts_prev = len(cuts)
-            for t in self.terminals:
-                cut_graph = nx.DiGraph()
-                for i in range(0, len(lp.x)):
-                    c_edge = self.edges[i]
-                    cut_graph.add_edge(c_edge[0], c_edge[1], capacity=lp.x[i] + 0.000001)
+            # Check for branching conditions
+            if not lp.success or 0 == self.find_cuts(lp, cuts):
+                print "Branching"
+                return
+
+    def check_solved(self, result):
+        epsilon = 0.0000001
+
+        # Check if every var is either 0 or 1
+        violated_vars = 0
+        for c_x in result.x:
+            if (c_x - epsilon) > 0 and (c_x + epsilon) < 1:
+                violated_vars += 1
+
+        print "Simplex run, {} violated vars".format(violated_vars)
+
+        if violated_vars == 0:
+            result_graph = nx.Graph()
+            for i in range(0, len(result.x)):
+                if result.x[i] + epsilon >= 1:
+                    u, v = self.edges[i][0], self.edges[i][1]
+                    result_graph.add_edge(u, v, weight=self.steiner.graph[u][v]['weight'])
+
+            result = result_graph, result_graph.size(weight='weight')
+
+            if result[1] < self.upper_bound:
+                self.upper_bound = result[1]
+                self.upper_bound_graph = result[0]
+
+            return True
+
+        return False
+
+    def find_cuts(self, result, cuts):
+        cuts_prev = len(cuts)
+        for t in self.terminals:
+            cut_graph = nx.DiGraph()
+            for i in range(0, len(result.x)):
+                c_edge = self.edges[i]
+                cut_graph.add_edge(c_edge[0], c_edge[1], capacity=result.x[i] + 0.000001)
+
+            cut_val, cut_partition = nx.minimum_cut(cut_graph, self.root, t)
+            # Violated cut
+            while cut_val < 1:
+                cut_set = set()
+                # Find all incoming edges to the cut
+                for n in cut_partition[1]:
+                    for n2 in nx.neighbors(self.steiner.graph, n):
+                        if n2 not in cut_partition[1]:
+                            idx = self.edges.index((n2, n))
+                            cut_set.add(idx)
+                            cut_graph[n2][n]['capacity'] = 1.000001
+
+                # These steps are necessary to guarantee no duplicate cuts exist
+                c_cut = list(cut_set)
+                c_cut.sort()
+                cuts.add(tuple(c_cut))
 
                 cut_val, cut_partition = nx.minimum_cut(cut_graph, self.root, t)
-                # Violated cut
-                while cut_val < 1:
-                    cut_set = set()
-                    # Find all incoming edges to the cut
-                    for n in cut_partition[1]:
-                        for n2 in nx.neighbors(self.steiner.graph, n):
-                            if n2 not in cut_partition[1]:
-                                idx = self.edges.index((n2, n))
-                                cut_set.add(idx)
-                                cut_graph[n2][n]['capacity'] = 1.000001
 
-                    # These steps are necessary to guarantee no duplicate cuts exist
-                    c_cut = list(cut_set)
-                    c_cut.sort()
-                    cuts.add(tuple(c_cut))
-
-                    cut_val, cut_partition = nx.minimum_cut(cut_graph, self.root, t)
-
-            if len(cuts) - cuts_prev == 0:
-                print "No solution found"
-                return
-
-            print "{} cuts found".format(len(cuts) - cuts_prev)
+        print "{} cuts found".format(len(cuts) - cuts_prev)
+        return len(cuts) - cuts_prev
