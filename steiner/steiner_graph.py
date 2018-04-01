@@ -8,7 +8,7 @@ class SteinerGraph:
     def __init__(self):
         self.graph = nx.Graph()
         self.terminals = set()
-        self.closest_terminals = []
+        self._closest_terminals = None
         self._lengths = {}
         self._steiner_lengths = None
         self._approximation = None
@@ -63,56 +63,68 @@ class SteinerGraph:
     def calculate_steiner_length(self):
         # Create 2-D dictionary
         self._steiner_lengths = {}
-        for n in nx.nodes(self.graph):
-            self._steiner_lengths[n] = dict(self.get_lengths(n))
-
         self.refresh_steiner_lengths()
 
     def refresh_steiner_lengths(self):
         """ Calculates the steiner distances"""
 
-        for n in nx.nodes(self.graph):
-            terminals = 0
-            visited = set()
-            visited.add(n)
+        g = nx.Graph()
 
-            if n in self.terminals:
-                terminals = terminals + 1
+        [g.add_edge(t1, t2, weight=self.get_lengths(t1, t2))
+         for t1 in self.terminals for t2 in self.terminals if t2 > t1]
 
-                while terminals < len(self.terminals):
-                    min_val = sys.maxint
-                    min_node = None
+        mst = nx.maximum_spanning_tree(g)
 
-                    # Closest terminal
-                    for t in self.terminals:
-                        if t not in visited:
-                            c = self.get_lengths(t, n)
-                            if c < min_val:
-                                min_val = c
-                                min_node = t
+        for (t1, t2) in [(t1, t2) for t1 in self.terminals for t2 in self.terminals if t2 > t1]:
+            p = nx.shortest_path(mst, t1, t2)
+            max_l = 0
+            for i in xrange(1, len(p)):
+                max_l = max(max_l, g[p[i-1]][p[i]]['weight'])
 
-                    terminals = terminals + 1
-                    visited.add(min_node)
+            self._steiner_lengths.setdefault(t1, {})[t2] = max_l
 
-                    # Calculate steiner distance to nodes
-                    for s in nx.nodes(self.graph):
-                        if s not in visited:
-                            old = self.get_lengths(n, s)
-                            alt = max(min_val, self.get_lengths(n, s))
-
-                            if alt <= old:
-                                if s not in self.terminals:
-                                    visited.add(s)
-
-                                if alt < old:
-                                    self._steiner_lengths[n][s] = alt
-                                    self._steiner_lengths[s][n] = alt
-
-    def get_steiner_lengths(self, n1, n2):
+    def get_steiner_lengths(self, n1, n2, bound):
         if self._steiner_lengths is None:
             self.calculate_steiner_length()
 
-        return self._steiner_lengths[n1][n2]
+        if n1 > n2:
+            n1, n2 = n2, n1
+
+        # Two terminals? Directly use value
+        if n1 in self.terminals and n2 in self.terminals:
+            return self._steiner_lengths[n1][n2]
+
+        # The distances to the closest terminal are a lower bound
+        cls1 = self.get_closest()[n1]
+        cls2 = self.get_closest()[n2]
+
+        lb = max(self.get_lengths(cls1[0][0], n1), self.get_lengths(cls2[0][0], n2))
+
+        # In case the voronoi region is the same, the lower bound is equal to the upper bound
+        # If the lower bound is larger than the bound -> Cannot be satisfied
+        if lb > bound or cls1[0][0] == cls2[0][0]:
+            return lb
+
+        iterations = range(0, min(len(self.terminals), 3))
+
+        # TODO: This should use the terminal free distance, not the general distance, also for ranking
+        for i, j in ((i, j) for i in iterations for j in iterations):
+            t1 = self.get_closest()[n1][i][0]
+            t2 = self.get_closest()[n2][j][0]
+            val1 = self.get_lengths(t1, n1)
+            val2 = self.get_lengths(t2, n2)
+
+            if t1 > t2:
+                t1, t2 = t2, t1
+
+            val3 = 0 if t1 == t2 else self._steiner_lengths[t1][t2]
+            result = max([val1, val2, val3])
+
+            if result < bound:
+                return result
+
+        # Since nothing below the bound could be found...
+        return sys.maxint
 
     def path_contains(self, n1, n2, u, v, c):
         path_dist = self.get_lengths(n1, n2)
@@ -217,3 +229,14 @@ class SteinerGraph:
                     self._voronoi_areas[min_node].add(n)
 
         return self._voronoi_areas
+
+    def get_closest(self):
+        if self._closest_terminals is None:
+            max_node = max(nx.nodes(self.graph))
+            self._closest_terminals = list([None] * (max_node + 1))
+
+            for n in nx.nodes(self.graph):
+                self._closest_terminals[n] = [(t, self.get_lengths(t, n)) for t in self.terminals]
+                self._closest_terminals[n].sort(key=lambda x: x[1])
+
+        return self._closest_terminals
