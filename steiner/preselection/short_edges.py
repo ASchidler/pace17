@@ -1,7 +1,7 @@
 import networkx as nx
 import sys
 
-
+# According to Polzin 04 this test is more complicated than SL and NV and the difference negligible
 class ShortEdgeReduction:
     """Also called Nearest Special Vertex (NSV) test. """
     def __init__(self):

@@ -14,6 +14,10 @@ class ShortLinkPreselection:
         vor = steiner.get_voronoi()
 
         for (t, r) in vor.items():
+            # May have been removed in between
+            if t not in steiner.terminals:
+                continue
+
             # Find shortest and second shortest edge out
             min1 = (0, 0, sys.maxint)
             min2 = (0, 0, sys.maxint)
@@ -34,17 +38,8 @@ class ShortLinkPreselection:
 
             # TODO: If there is no min2, contract?
             if min1[2] < sys.maxint and min2[2] < sys.maxint:
-                other_t = None
-
-                if min1[1] in steiner.terminals:
-                    other_t = min1[1]
-                else:
-                    for (t2, r2) in vor.items():
-                        if min1[1] in r2:
-                            other_t = t2
-                            break
-
-                total = steiner.get_lengths(t, min1[0]) + min1[2] + steiner.get_lengths(other_t, min1[1])
+                other_t, dist = steiner.get_closest(min1[1])[0]
+                total = steiner.get_lengths(t, min1[0]) + min1[2] + dist
 
                 if min2[2] >= total:
                     track = track + 1
