@@ -13,6 +13,7 @@ class SdcReduction:
             # Iteration limit
             if edge_count > 1000:
                 break
+
             result = self.modified_dijkstra(steiner, u, v, d)
             delete = False
             if result[0] is not None:
@@ -67,7 +68,8 @@ class SdcReduction:
                     cost = c_val[0] + steiner.graph[n][n2]['weight']
                     if n2 in steiner.terminals:
                         scanned[n2] = min(scanned[n2], cost)
-                    hq.heappush(queue, [cost, n2])
+                    else:
+                        hq.heappush(queue, [cost, n2])
 
         return False, None
 
