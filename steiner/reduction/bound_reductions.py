@@ -21,13 +21,16 @@ class BoundNodeReduction:
 
         for n in list(nx.nodes(steiner.graph)):
             if n not in steiner.terminals:
-                dists = steiner.get_closest(n)
-                total = dists[0][1] + dists[1][1] + t_weight
-                if total > steiner.get_approximation().cost or \
-                        (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.has_node(
-                            n)):
-                    steiner.remove_node(n)
-                    cnt += 1
+                dists = steiner.get_restricted_closest(n)
+
+                if dists[1][1] < sys.maxint:
+                    total = dists[0][1] + dists[1][1] + t_weight
+
+                    if total > steiner.get_approximation().cost or \
+                            (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.has_node(
+                                n)):
+                        steiner.remove_node(n)
+                        cnt += 1
 
         return cnt
 
@@ -53,14 +56,14 @@ class BoundEdgeReduction:
             t_weight += radius[i][0]
 
         for (u, v, d) in steiner.graph.edges(data='weight'):
-            dist1 = steiner.get_closest(u)[0]
-            dist2 = steiner.get_closest(v)[0]
+            dist1 = steiner.get_restricted_closest(u)[0]
+            dist2 = steiner.get_restricted_closest(v)[0]
 
             if dist1[0] != dist2[0]:
                 total = d + dist1[1] + dist2[1] + t_weight
             else:
-                d12 = steiner.get_closest(u)[1][1]
-                d22 = steiner.get_closest(v)[1][1]
+                d12 = steiner.get_restricted_closest(u)[1][1]
+                d22 = steiner.get_restricted_closest(v)[1][1]
                 total = d + min(dist1[1] + d22, dist2[1] + d12) + t_weight
 
             if total > steiner.get_approximation().cost:
@@ -91,22 +94,25 @@ class BoundNtdkReduction:
             t_weight += radius[i][0]
 
         for n in list(nx.nodes(steiner.graph)):
-            # TODO: Find a good upper bound
+            # TODO: Find a good upper bound for the degree
             if n not in steiner.terminals and 2 < steiner.graph.degree[n] <= 5:
-                closest = steiner.get_closest(n)
-                total = closest[0][1] + closest[1][1] + closest[2][1] + t_weight
+                closest = steiner.get_restricted_closest(n)
 
-                if total > steiner.get_approximation().cost or (total == steiner.get_approximation().cost and
-                                                                not steiner.get_approximation().tree.has_node(n)):
-                    nb = nx.neighbors(steiner.graph, n)
-                    for (n1, n2) in ((x, y) for x in nb for y in nb if y > x):
-                        c1 = steiner.graph[n][n1]['weight']
-                        c2 = steiner.graph[n][n2]['weight']
+                if closest[2][1] < sys.maxint:
+                    total = closest[0][1] + closest[1][1] + closest[2][1] + t_weight
 
-                        if steiner.add_edge(n1, n2, c1 + c2):
-                            self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
+                    if total > steiner.get_approximation().cost or (total == steiner.get_approximation().cost and
+                                                                    not steiner.get_approximation().tree.has_node(n)):
+                        nb = list(nx.neighbors(steiner.graph, n))
+                        for (n1, n2) in ((x, y) for x in nb for y in nb if y > x):
+                            c1 = steiner.graph[n][n1]['weight']
+                            c2 = steiner.graph[n][n2]['weight']
 
-                    steiner.remove_node(n)
+                            if steiner.add_edge(n1, n2, c1 + c2):
+                                self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
+
+                        steiner.remove_node(n)
+                        cnt += 1
 
         return cnt
 
@@ -162,14 +168,14 @@ class BoundGraphReduction:
 
         for n in list(nx.nodes(steiner.graph)):
             if n not in steiner.terminals:
-                dists = steiner.get_closest(n)
+                dists = steiner.get_restricted_closest(n)
                 total = dists[0][1] + dists[1][1] + mst_sum
                 if total > steiner.get_approximation().cost:
                     steiner.remove_node(n)
                     cnt += 1
 
         for (u, v, d) in steiner.graph.edges(data='weight'):
-            total = steiner.get_closest(u)[0][1] + steiner.get_closest(v)[0][1] + mst_sum
+            total = steiner.get_restricted_closest(u)[0][1] + steiner.get_restricted_closest(v)[0][1] + mst_sum
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
                 cnt += 1
