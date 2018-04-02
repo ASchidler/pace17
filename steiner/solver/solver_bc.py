@@ -12,8 +12,6 @@ class SolverBc:
         self.upper_bound_graph = self.steiner.get_approximation().tree
         self.a_ub = []
         self.b_ub = []
-        self.a_eq = []
-        self.b_eq = []
 
         self.nodes = [n for n in nx.nodes(self.steiner.graph) if n not in self.terminals]
 
@@ -32,42 +30,8 @@ class SolverBc:
             self.edges.append((u, v))
             self.edges.append((v, u))
 
-        self.bounds = [(0, 1)] * len(self.edges)
-
-        # Add default rules
-        # No incoming edges to root and at least on outgoing for the root node
-        root_arr = [0] * len(self.edges)
-        for n in nx.neighbors(steiner.graph, self.root):
-            # Treat as incoming edge
-            idx = self.edges.index((n, self.root))
-            self.bounds[idx] = (0, 0)
-            # Outgoing edge
-            idx = self.edges.index((self.root, n))
-            root_arr[idx] = -1
-
-        self.a_ub.append(root_arr)
-        self.b_ub.append(-1)
-
-        # Terminals have to have exactly one incoming edge
-        for t in self.terminals:
-            arr = [0] * len(self.edges)
-            for n in nx.neighbors(steiner.graph, t):
-                idx = self.edges.index((n, t))
-                arr[idx] = 1
-
-            self.a_eq.append(arr)
-            self.b_eq.append(1)
-
-        # Non-Terminals have at max one incoming edge
-        for n in self.nodes:
-            arr = [0] * len(self.edges)
-            for n2 in nx.neighbors(steiner.graph, n):
-                # Treat as incoming edge
-                idx = self.edges.index((n2, n))
-                arr[idx] = 1
-
-            self.a_ub.append(arr)
-            self.b_ub.append(1)
+        self.a_eq = [[0] * len(self.edges)]
+        self.b_eq = [0]
 
         # For Non-Terminals, more or equal have to exit than entered (according to paper, this strengthens relaxations)
         for n in self.nodes:
@@ -83,36 +47,12 @@ class SolverBc:
             self.a_ub.append(arr)
             self.b_ub.append(0)
 
-        # For Non-Terminals for any selected outgoing edge, there must be an incoming edge
-        for n in self.nodes:
-            for na in nx.neighbors(steiner.graph, n):
-                arr = [0] * len(self.edges)
-                idx_out = self.edges.index((n, na))
-                arr[idx_out] = 1
-                for n2 in nx.neighbors(steiner.graph, n):
-                    # Treat as incoming edge
-                    idx_in = self.edges.index((n2, n))
-                    arr[idx_in] = -1
-
-                self.a_ub.append(arr)
-                self.b_ub.append(0)
-
-        # Not both arcs of an edge can be in a solution (the result is a directed tree)
-        for i in range(0, len(self.edges), 2):
-            arr = [0] * len(self.edges)
-            arr[i] = 1
-            arr[i+1] = 1
-
-            self.a_ub.append(arr)
-            self.b_ub.append(1)
-
     def solve(self):
         self.solve_branch(set(), set())
         print "Solution found {}".format(self.upper_bound)
         return self.upper_bound_graph, self.upper_bound
 
     def solve_branch(self, cuts, fixed):
-        c_bounds = list(self.bounds)
         c_a_eq = list(self.a_eq)
         c_b_eq = list(self.b_eq)
 
@@ -140,16 +80,18 @@ class SolverBc:
                 c_a_ub.append(cut_list)
 
             # First solve relaxation
-            lp = sp.linprog(self.costs, c_a_ub, c_b_ub, c_a_eq, c_b_eq, c_bounds, options={'maxiter': 10000})
+            lp = sp.linprog(self.costs, c_a_ub, c_b_ub, c_a_eq, c_b_eq, (0, 1), options={'maxiter': 10000})
 
             if lp.success:
                 last_result = lp.x
+                cut_cnt = self.find_cuts(lp, cuts)
+                print "Current solution {}".format(lp.fun)
 
-                if self.check_solved(lp):
+                if 0 == cut_cnt and self.check_solved(lp):
                     return
 
             # Check for branching conditions
-            if not lp.success or 0 == self.find_cuts(lp, cuts):
+            if not lp.success or 0 == cut_cnt:
                 branch_at = None
                 if last_result is not None:
                     c_min = sys.maxint, -1
@@ -174,7 +116,6 @@ class SolverBc:
                 rules2.add((branch_at, 1))
                 c_a_ub = None
                 c_a_eq = None
-                c_bounds = None
                 c_b_eq = None
                 c_b_ub = None
                 self.solve_branch(set(cuts), rules)
