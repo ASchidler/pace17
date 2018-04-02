@@ -64,7 +64,10 @@ class BoundEdgeReduction:
             else:
                 d12 = steiner.get_restricted_closest(u)[1][1]
                 d22 = steiner.get_restricted_closest(v)[1][1]
-                total = d + min(dist1[1] + d22, dist2[1] + d12) + t_weight
+                if d12 < sys.maxint and d22 < sys.maxint:
+                    total = d + min(dist1[1] + d22, dist2[1] + d12) + t_weight
+                else:
+                    total = d + dist1[1] + dist2[1] + t_weight
 
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
