@@ -53,7 +53,7 @@ class SdcReduction:
             elif n in steiner.terminals and n != u:
                 return None, scanned
             # Do not search too far
-            elif len(visited) > 10:
+            elif len(visited) > 20:
                 return False, None
 
             if n in visited:

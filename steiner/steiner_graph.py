@@ -14,6 +14,8 @@ class SteinerGraph:
         self._approximation = None
         self._voronoi_areas = None
         self._radius = None
+        self._restricted_lengths = {}
+        self._restricted_closest = None
 
     def add_edge(self, n1, n2, c):
         """Adds an edge to the graph. Distances are updated in case it replaces the same edge with higher costs."""
@@ -108,21 +110,19 @@ class SteinerGraph:
 
         iterations = range(0, min(len(self.terminals), 3))
 
-        # TODO: This should use the terminal free distance, not the general distance, also for ranking
         for i, j in ((i, j) for i in iterations for j in iterations):
-            t1 = self.get_closest(n1)[i][0]
-            t2 = self.get_closest(n2)[j][0]
-            val1 = self.get_lengths(t1, n1)
-            val2 = self.get_lengths(t2, n2)
+            t1 = self.get_restricted_closest(n1)[i]
+            t2 = self.get_restricted_closest(n2)[j]
 
-            if t1 > t2:
-                t1, t2 = t2, t1
+            if t1[1] < sys.maxint and t2[1] < sys.maxint:
+                if t1[0] > t2[0]:
+                    t1, t2 = t2, t1
 
-            val3 = 0 if t1 == t2 else self._steiner_lengths[t1][t2]
-            result = max([val1, val2, val3])
+                val3 = 0 if t1[0] == t2[0] else self._steiner_lengths[t1[0]][t2[0]]
+                result = max([t1[1], t2[1], val3])
 
-            if result < bound:
-                return result
+                if result < bound:
+                    return result
 
         # Since nothing below the bound could be found...
         return sys.maxint
@@ -201,9 +201,20 @@ class SteinerGraph:
                         self._closest_terminals[i] = [x for x in self._closest_terminals[i] if x[0] != tsource]
                         if ttarget not in self.terminals:
                             self._closest_terminals[i].append((ttarget, self.get_lengths(ttarget, i)))
-                            self._closest_terminals[i].sort()
+                            self._closest_terminals[i].sort(key=lambda x: x[1])
                     else:
                         self._closest_terminals[i] = None
+
+        if self._restricted_closest is not None:
+            for i in xrange(0, len(self._restricted_closest)):
+                if self._restricted_closest[i] is not None:
+                    if self.graph.has_node(i):
+                        self._restricted_closest[i] = [x for x in self._restricted_closest[i] if x[0] != tsource]
+                        if ttarget not in self.terminals:
+                            self._restricted_closest[i].append((ttarget, self.get_restricted(ttarget, i)))
+                            self._restricted_closest[i].sort(key=lambda x: x[1])
+                    else:
+                        self._restricted_closest[i] = None
 
         if ttarget not in self.terminals:
             self.terminals.add(ttarget)
@@ -268,3 +279,25 @@ class SteinerGraph:
             self.get_voronoi()
 
         return self._radius
+
+    def get_restricted(self, t, n):
+        if t not in self._restricted_lengths:
+            g_prime = self.graph.copy()
+            for t_prime in self.terminals:
+                if t_prime != t:
+                    g_prime.remove_node(t_prime)
+
+            self._restricted_lengths[t] = nx.single_source_dijkstra_path_length(g_prime, t)
+
+        return self._restricted_lengths[t].setdefault(n, sys.maxint)
+
+    def get_restricted_closest(self, n):
+        if self._restricted_closest is None:
+            max_node = max(nx.nodes(self.graph))
+            self._restricted_closest = list([None] * (max_node + 1))
+
+        if self._restricted_closest[n] is None:
+            self._restricted_closest[n] = [(t, self.get_restricted(t, n)) for t in self.terminals]
+            self._restricted_closest[n].sort(key=lambda x: x[1])
+
+        return self._restricted_closest[n]
