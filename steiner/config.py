@@ -14,6 +14,7 @@ def reducers():
         terminal_distance.CostVsTerminalDistanceReduction(),
         long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
+        sdc.SdcReduction(),
         voronoi_nodes.VoronoiNodeReduction(),
         voronoi.VoronoiReduction(),
         ntdk.NtdkReduction(),
@@ -26,9 +27,10 @@ def reducers():
 def contractors():
     return [
         terminals.TerminalReduction(),
-        short_edges.ShortEdgeReduction(),
+        nearest_vertex.NearestVertex(),
+        # short_edges.ShortEdgeReduction(),
         # length_transform.LengthTransformReduction(),
-        # short_links.ShortLinkPreselection(),
+        short_links.ShortLinkPreselection(),
     ]
 
 

@@ -10,9 +10,12 @@ class NearestVertex:
 
     def reduce(self, steiner):
         cnt = 0
+        steiner._voronoi_areas = None
+        steiner._closest_terminals = None
 
-        for t in steiner.terminals:
-            if steiner.graph.degree[t] >= 2:
+        for t in list(steiner.terminals):
+            # t may have been deleted before
+            if t in steiner.terminals and steiner.graph.degree[t] >= 2:
                 e1 = (None, sys.maxint)
                 e2 = (None, sys.maxint)
                 e3 = (None, sys.maxint)
@@ -21,16 +24,13 @@ class NearestVertex:
                     d = steiner.graph[t][n]['weight']
 
                     if d < e1[1]:
-                        e3 = e2
-                        e2 = e1
-                        e1 = n, d
+                        e3, e2, e1 = e2, e1, (n, d)
                     elif d < e2[1]:
-                        e3 = e2
-                        e2 = n, d
+                        e3, e2 = e2, (n, d)
                     elif d < e3[1]:
                         e3 = n, d
 
-                if e1[1] in steiner.get_voronoi()[t]:
+                if e1[0] in steiner.get_voronoi()[t]:
                     # Get closest terminal to terminal, since t is closest to t, use second entry
                     cmp_val = steiner.get_closest(t)[1][1]
                 else:
@@ -66,6 +66,8 @@ class NearestVertex:
                         self.merged.append(e)
 
                     cnt += 1
+                    steiner._voronoi_areas = None
+                    steiner._closest_terminals = None
 
         return cnt
 

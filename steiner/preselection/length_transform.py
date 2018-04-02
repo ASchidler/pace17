@@ -2,8 +2,9 @@ import networkx as nx
 import sys
 
 
+# Useful with short links, therefore not in use
 class LengthTransformReduction:
-    """Also called Nearest Special Vertex (NSV) test. """
+
     def __init__(self):
         self.terminals = None
         self.max_terminal = None

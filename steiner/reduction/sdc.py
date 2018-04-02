@@ -7,7 +7,12 @@ import sys
 class SdcReduction:
     def reduce(self, steiner):
         count = 0
+        edge_count = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
+            edge_count += 1
+            # Iteration limit
+            if edge_count > 1000:
+                break
             result = self.modified_dijkstra(steiner, u, v, d)
             delete = False
             if result[0] is not None:
