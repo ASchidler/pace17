@@ -258,6 +258,10 @@ class SteinerGraph:
 
                     self._voronoi_areas[min_node].add(n)
 
+            # Try terminal to terminal distances
+            for t1, t2 in ((t1, t2) for t1 in self.terminals for t2 in self.terminals if t2 != t1):
+                radius_tmp[t1] = min(radius_tmp[t1], self.get_lengths(t1, t2))
+
             self._radius = [(y, x) for (x, y) in radius_tmp.items()]
             self._radius.sort(key=lambda tup: tup[0])
 
@@ -288,6 +292,16 @@ class SteinerGraph:
                     g_prime.remove_node(t_prime)
 
             self._restricted_lengths[t] = nx.single_source_dijkstra_path_length(g_prime, t)
+
+            # Find shortest paths to other terminals
+            for t_prime in self.terminals:
+                if t != t_prime:
+                    dist = sys.maxint
+                    for n in nx.neighbors(self.graph, t_prime):
+                        if n == t or n not in self.terminals:
+                            dist = min(dist, self._restricted_lengths[t][n] + self.graph[n][t_prime]['weight'])
+
+                    self._restricted_lengths[t][t_prime] = dist
 
         return self._restricted_lengths[t].setdefault(n, sys.maxint)
 
