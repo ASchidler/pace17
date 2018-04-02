@@ -95,8 +95,8 @@ class SteinerGraph:
             return self._steiner_lengths[n1][n2]
 
         # The distances to the closest terminal are a lower bound
-        cls1 = self.get_closest()[n1]
-        cls2 = self.get_closest()[n2]
+        cls1 = self.get_closest(n1)
+        cls2 = self.get_closest(n2)
 
         lb = max(self.get_lengths(cls1[0][0], n1), self.get_lengths(cls2[0][0], n2))
 
@@ -109,8 +109,8 @@ class SteinerGraph:
 
         # TODO: This should use the terminal free distance, not the general distance, also for ranking
         for i, j in ((i, j) for i in iterations for j in iterations):
-            t1 = self.get_closest()[n1][i][0]
-            t2 = self.get_closest()[n2][j][0]
+            t1 = self.get_closest(n1)[i][0]
+            t2 = self.get_closest(n2)[j][0]
             val1 = self.get_lengths(t1, n1)
             val2 = self.get_lengths(t2, n2)
 
@@ -193,6 +193,17 @@ class SteinerGraph:
     def move_terminal(self, tsource, ttarget):
         self.terminals.remove(tsource)
 
+        if self._closest_terminals is not None:
+            for i in xrange(0, len(self._closest_terminals)):
+                if self._closest_terminals[i] is not None:
+                    if self.graph.has_node(i):
+                        self._closest_terminals[i] = [x for x in self._closest_terminals[i] if x[0] != tsource]
+                        if ttarget not in self.terminals:
+                            self._closest_terminals[i].append((ttarget, self.get_lengths(ttarget, i)))
+                            self._closest_terminals[i].sort()
+                    else:
+                        self._closest_terminals[i] = None
+
         if ttarget not in self.terminals:
             self.terminals.add(ttarget)
 
@@ -230,13 +241,13 @@ class SteinerGraph:
 
         return self._voronoi_areas
 
-    def get_closest(self):
+    def get_closest(self, n):
         if self._closest_terminals is None:
             max_node = max(nx.nodes(self.graph))
             self._closest_terminals = list([None] * (max_node + 1))
 
-            for n in nx.nodes(self.graph):
-                self._closest_terminals[n] = [(t, self.get_lengths(t, n)) for t in self.terminals]
-                self._closest_terminals[n].sort(key=lambda x: x[1])
+        if self._closest_terminals[n] is None:
+            self._closest_terminals[n] = [(t, self.get_lengths(t, n)) for t in self.terminals]
+            self._closest_terminals[n].sort(key=lambda x: x[1])
 
-        return self._closest_terminals
+        return self._closest_terminals[n]
