@@ -1,1 +1,1 @@
-__all__ = ["zeroedge", "short_edges", "short_links", "length_transform"]
+__all__ = ["zeroedge", "short_edges", "short_links", "length_transform", "nearest_vertex"]
