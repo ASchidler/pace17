@@ -13,6 +13,7 @@ class SteinerGraph:
         self._steiner_lengths = None
         self._approximation = None
         self._voronoi_areas = None
+        self._radius = None
 
     def add_edge(self, n1, n2, c):
         """Adds an edge to the graph. Distances are updated in case it replaces the same edge with higher costs."""
@@ -222,9 +223,11 @@ class SteinerGraph:
     def get_voronoi(self):
         if self._voronoi_areas is None:
             self._voronoi_areas = {}
+            radius_tmp = {}
 
             for t in self.terminals:
                 self._voronoi_areas[t] = set()
+                radius_tmp[t] = sys.maxint
 
             for n in nx.nodes(self.graph):
                 if n not in self.terminals:
@@ -233,11 +236,19 @@ class SteinerGraph:
 
                     for t in self.terminals:
                         c = self.get_lengths(t, n)
+
                         if c < min_val:
+                            if min_node is not None:
+                                radius_tmp[min_node] = min(radius_tmp[min_node], min_val)
                             min_val = c
                             min_node = t
+                        else:
+                            radius_tmp[t] = min(radius_tmp[t], c)
 
                     self._voronoi_areas[min_node].add(n)
+
+            self._radius = [(y, x) for (x, y) in radius_tmp.items()]
+            self._radius.sort(key=lambda tup: tup[0])
 
         return self._voronoi_areas
 
@@ -251,3 +262,9 @@ class SteinerGraph:
             self._closest_terminals[n].sort(key=lambda x: x[1])
 
         return self._closest_terminals[n]
+
+    def get_radius(self):
+        if self._radius is None:
+            self.get_voronoi()
+
+        return self._radius

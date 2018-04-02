@@ -12,11 +12,15 @@ def reducers():
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
+        bound_reductions.BoundGraphReduction(),
+        bound_reductions.BoundNtdkReduction(),
+        bound_reductions.BoundNodeReduction(),
+        bound_reductions.BoundEdgeReduction(),
         long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
-        sdc.SdcReduction(),
         voronoi_nodes.VoronoiNodeReduction(),
         voronoi.VoronoiReduction(),
+        sdc.SdcReduction(),
         ntdk.NtdkReduction(),
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
@@ -28,8 +32,6 @@ def contractors():
     return [
         terminals.TerminalReduction(),
         nearest_vertex.NearestVertex(),
-        # short_edges.ShortEdgeReduction(),
-        # length_transform.LengthTransformReduction(),
         short_links.ShortLinkPreselection(),
     ]
 
