@@ -81,7 +81,6 @@ class ShortLinkPreselection:
                 solution[0].add_edge(n1, n2, weight=w)
                 cost = cost + w
                 change = True
-                print w
             self._done = True
 
         for (e1, e2) in self.merged:
