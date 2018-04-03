@@ -12,10 +12,6 @@ def reducers():
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
-        bound_reductions.BoundGraphReduction(),
-        bound_reductions.BoundNtdkReduction(),
-        bound_reductions.BoundNodeReduction(),
-        bound_reductions.BoundEdgeReduction(),
         long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
         voronoi_nodes.VoronoiNodeReduction(),
@@ -25,6 +21,10 @@ def reducers():
         cut_reachability.CutReachabilityReduction(),
         cut_reachability_edge.CutReachabilityEdgeReduction(),
         reachability.ReachabilityReduction(),
+        bound_reductions.BoundNodeReduction(),
+        bound_reductions.BoundEdgeReduction(),
+        bound_reductions.BoundGraphReduction(),
+        bound_reductions.BoundNtdkReduction(),
     ]
 
 
