@@ -26,10 +26,17 @@ for steiner in components:
         cnt = 0
         for r in reducers:
             cnt = cnt + r.reduce(steiner)
-            steiner._lengths = {}
-            steiner._approximation = None
+
+        steiner._lengths = {}
+        steiner._approximation = None
+
         for c in contractors:
             cnt = cnt + c.reduce(steiner)
+
+        steiner._lengths = {}
+        steiner._approximation = None
+        steiner._restricted_lengths = {}
+        steiner._restricted_closest = None
 
         if cnt == 0:
             break
