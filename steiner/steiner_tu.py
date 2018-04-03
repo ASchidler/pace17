@@ -37,6 +37,7 @@ for steiner in components:
         steiner._approximation = None
         steiner._restricted_lengths = {}
         steiner._restricted_closest = None
+        steiner._radius = None
 
         if cnt == 0:
             break

@@ -66,6 +66,7 @@ def process_file(filename, solve, apply_reductions):
                 steiner._restricted_lengths = {}
                 steiner._restricted_closest = None
                 steiner._approximation = None
+                steiner._radius = None
 
                 if cnt_changes == 0:
                     break
