@@ -1,6 +1,7 @@
 import networkx as nx
 import sys
 import steiner_approximation as sa
+from collections import defaultdict
 
 
 class SteinerGraph:
@@ -234,11 +235,9 @@ class SteinerGraph:
     def get_voronoi(self):
         if self._voronoi_areas is None:
             self._voronoi_areas = {}
-            radius_tmp = {}
 
             for t in self.terminals:
                 self._voronoi_areas[t] = set()
-                radius_tmp[t] = sys.maxint
 
             for n in nx.nodes(self.graph):
                 if n not in self.terminals:
@@ -249,21 +248,10 @@ class SteinerGraph:
                         c = self.get_lengths(t, n)
 
                         if c < min_val:
-                            if min_node is not None:
-                                radius_tmp[min_node] = min(radius_tmp[min_node], min_val)
                             min_val = c
                             min_node = t
-                        else:
-                            radius_tmp[t] = min(radius_tmp[t], c)
 
                     self._voronoi_areas[min_node].add(n)
-
-            # Try terminal to terminal distances
-            for t1, t2 in ((t1, t2) for t1 in self.terminals for t2 in self.terminals if t2 != t1):
-                radius_tmp[t1] = min(radius_tmp[t1], self.get_lengths(t1, t2))
-
-            self._radius = [(y, x) for (x, y) in radius_tmp.items()]
-            self._radius.sort(key=lambda tup: tup[0])
 
         return self._voronoi_areas
 
@@ -279,8 +267,20 @@ class SteinerGraph:
         return self._closest_terminals[n]
 
     def get_radius(self):
+        # This can be included into voronoi generation for efficiency. It is not for readability
         if self._radius is None:
-            self.get_voronoi()
+            vor = self.get_voronoi()
+            radius_tmp = defaultdict(lambda: sys.maxint)
+
+            for t, l in vor.items():
+                for t2 in self.terminals:
+                    if t2 != t:
+                        radius_tmp[t2] = min(radius_tmp[t2], self.get_lengths(t2, t))
+                        for n in l:
+                            radius_tmp[t2] = min(radius_tmp[t2], self.get_lengths(t2, n))
+
+            self._radius = [(y, x) for (x, y) in radius_tmp.items()]
+            self._radius.sort(key=lambda tup: tup[0])
 
         return self._radius
 
@@ -297,9 +297,9 @@ class SteinerGraph:
             for t_prime in self.terminals:
                 if t != t_prime:
                     dist = sys.maxint
-                    for n in nx.neighbors(self.graph, t_prime):
-                        if n == t or n not in self.terminals:
-                            dist = min(dist, self._restricted_lengths[t][n] + self.graph[n][t_prime]['weight'])
+                    for n2 in nx.neighbors(self.graph, t_prime):
+                        if (n2 == t or n2 not in self.terminals) and n2 in self._restricted_lengths[t]:
+                            dist = min(dist, self._restricted_lengths[t][n2] + self.graph[n2][t_prime]['weight'])
 
                     self._restricted_lengths[t][t_prime] = dist
 
