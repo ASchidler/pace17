@@ -23,18 +23,16 @@ class ShortLinkPreselection:
             min2 = (0, 0, sys.maxint)
 
             for (u, v, d) in steiner.graph.edges(data='weight'):
-                # Flip to have the inside node guaranteed at u
-                if v == t or v in r:
-                    u, v = v, u
+                u_in = (u == t or u in r)
+                v_in = (v == t or v in r)
 
-                # Bridges region
-                if (u == t or u in r) and v not in r and v != t:
-                    if d < min2[2]:
-                        if d < min1[2]:
-                            min2 = min1
-                            min1 = (u, v, d)
-                        else:
-                            min2 = (u, v, d)
+                # Bridges region?
+                if u_in ^ v_in:
+                    if d < min1[2]:
+                        min2 = min1
+                        min1 = (u, v, d)
+                    elif d < min2[2]:
+                        min2 = (u, v, d)
 
             # TODO: If there is no min2, contract?
             if min1[2] < sys.maxint and min2[2] < sys.maxint:
@@ -48,12 +46,7 @@ class ShortLinkPreselection:
                     self.deleted.append((min1[0], min1[1], min1[2]))
 
                     # Contract, prefer to contract into a terminal
-                    if min1[0] in steiner.terminals:
-                        n1 = min1[0]
-                        n2 = min1[1]
-                    else:
-                        n1 = min1[1]
-                        n2 = min1[0]
+                    n1, n2 = (min1[0], min1[1]) if min1[0] in steiner.terminals else (min1[1], min1[0])
 
                     for e in steiner.contract_edge(n1, n2):
                         self.merged.append(e)
