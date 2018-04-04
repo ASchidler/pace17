@@ -79,14 +79,19 @@ class VoronoiPartition:
         t = self._tmp_closest[n] if n in self._tmp_closest else self.closest[n]
         vor = self._tmp_regions[t] if t in self._tmp_regions else self.regions[t]
 
+        path = []
+
         while n != t:
             # This is the switch from the "new" assignment back into assigned territory
             if n not in vor:
                 vor = self.regions[t]
 
             prev = vor[n][1]
-            yield prev, n, self.source[n][prev]['weight']
+            path.append((n, prev, self.source[n][prev]['weight']))
             n = prev
+
+        #returns path and endpoint
+        return path, n
 
     def dist(self, n):
         if n in self._tmp_closest:
@@ -252,6 +257,9 @@ class SteinerApproximation:
         # Work on a copy
         g_prime = self.tree.copy()
 
+        forbidden = set()
+        pinned = set()
+
         def path_exchange_rec(node, last, parent):
             c_path.append(node)
             new_last = node if node in key_nodes else last
@@ -259,14 +267,16 @@ class SteinerApproximation:
             subset = set()
             for n2 in nx.neighbors(self.tree, node):
                 if n2 != parent:
-                    subset = subset.union((path_exchange_rec(n2, new_last, node)))
+                    [subset.add(x) for x in (path_exchange_rec(n2, new_last, node))]
 
             # Remove self from path
             c_path.pop()
+
             subset.add(node)
 
             # Is start of a key path and not the root?
             if node in key_nodes and parent is not None:
+
                 # Find intermediary nodes and cost of the current key path
                 intermediaries = set()
                 idx = len(c_path) - 1
@@ -276,10 +286,14 @@ class SteinerApproximation:
                     c_path_cost += steiner.graph[c_path[idx]][c_path[idx - 1]]['weight']
                     idx -= 1
 
+                # Do not try to remove pinned elements
+                if any((x in pinned for x in intermediaries)):
+                    return subset
+
                 # "Repair" Voronoi, i.e. assign the nodes associated with the intermediaries to new nodes
                 vor.repair(intermediaries)
 
-                min_bound = (None, None, sys.maxint, None)
+                min_bound = (sys.maxint, None, None, None)
                 while True and len(bridges[node]) > 0:
                     c_cost, (x, y, dist) = bridges[node][0]
                     u_in = any(x in vor.regions[n2] for n2 in subset)
@@ -292,51 +306,62 @@ class SteinerApproximation:
                     if u_in and v_in:
                         bridges[node].pop(0)
                     else:
-                        min_bound = (x, y, c_cost, dist)
+                        p1 = vor.extract_path(x)
+                        p2 = vor.extract_path(y)
+
+                        if p1[1] not in forbidden and p2[1] not in forbidden:
+                            min_bound = (c_cost, (x, y, dist), p1, p2)
                         break
 
                 # Find cheapest edge in intermediaries
-                # TODO: The costs don't match, i.e. since one of the nodes is no longer in the voronoi region
-                # of the intermediary, the distance calculation used in the bridge entries no longer matches...
-                # This is also true of the path calculation
+                # Since the bridge values calculations do not match anymore, search all
                 for p in intermediaries:
                     for c, (x, y, dist) in bridges[p]:
-                        if c >= min_bound[2]:
-                            break
-                        else:
-                            u_in = any(x in vor.regions[n2] for n2 in subset)
-                            v_in = any(y in vor.regions[n2] for n2 in subset)
-                            u_in = u_in or any(x in vor._tmp_regions[n2] for n2 in subset)
-                            v_in = v_in or any(y in vor._tmp_regions[n2] for n2 in subset)
+                        u_in = any(x in vor.regions[n2] for n2 in subset)
+                        v_in = any(y in vor.regions[n2] for n2 in subset)
+                        u_in = u_in or any(x in vor._tmp_regions[n2] for n2 in subset)
+                        v_in = v_in or any(y in vor._tmp_regions[n2] for n2 in subset)
 
-                            if u_in ^ v_in:
-                                min_bound = (x, y, c, dist)
-                                break
+                        if u_in ^ v_in:
+                            total_cost = vor.dist(x) + vor.dist(y) + dist
+                            if total_cost < min_bound[2]:
+                                p1 = vor.extract_path(x)
+                                p2 = vor.extract_path(y)
 
-                # Found a better key path
-                if min_bound[2] <= c_path_cost:
-                    # Remove old path
+                                if p1[1] not in forbidden and p2[1] not in forbidden:
+                                    min_bound = (total_cost, (x, y, dist), p1, p2)
+
+                # Found a better key path. Favor new tries tries to establish a new path to change the tree
+                if min_bound[0] < c_path_cost or (favor_new and min_bound[0] == c_path_cost):
                     idx = len(c_path) - 1
                     g_prime.remove_edge(parent, node)
+
                     while c_path[idx] != last:
                         g_prime.remove_edge(c_path[idx], c_path[idx - 1])
                         idx -= 1
 
-                    p1 = list(vor.extract_path(min_bound[0]))
-                    p2 = list(vor.extract_path(min_bound[1]))
                     # Add new path
-                    for (x, y, dist) in vor.extract_path(min_bound[0]):
+                    for (x, y, dist) in min_bound[2][0]:
                         g_prime.add_edge(x, y, weight=dist)
-                    for (x, y, dist) in vor.extract_path(min_bound[1]):
+                    for (x, y, dist) in min_bound[3][0]:
                         g_prime.add_edge(x, y, weight=dist)
 
-                    g_prime.add_edge(min_bound[0], min_bound[1], weight=min_bound[3])
+                    (x, y, dist) = min_bound[1]
+                    g_prime.add_edge(x, y, weight=dist)
 
                     # Remove intermediaries, if orphaned
                     [g_prime.remove_node(x) for x in intermediaries if g_prime.degree[x] == 0]
-                if not nx.is_connected(g_prime) or not nx.is_tree(g_prime) or len(
-                        [x for x in steiner.terminals if not g_prime.has_node(x)]) > 0:
-                    print "Error"
+                    if not nx.is_connected(g_prime) or not nx.is_tree(g_prime) or len(
+                            [x for x in steiner.terminals if not g_prime.has_node(x)]) > 0:
+                        print "Error"
+
+                    # Add descendants and intermediaries as forbidden
+                    [forbidden.add(x) for x in subset]
+                    [forbidden.add(x) for x in intermediaries]
+
+                    # Add endpoints as pinned
+                    pinned.add(min_bound[2][1])
+                    pinned.add(min_bound[3][1])
 
                 # Merge bridge list with parent
                 bridges[last] = list(heapq.merge(bridges[last], bridges[node]))
@@ -352,3 +377,15 @@ class SteinerApproximation:
 
         self.tree = g_prime
         self.cost = sum([d for (u, v, d) in g_prime.edges(data='weight')])
+
+    def descend(self, g, n, r):
+        lst = set()
+        lst.add(n)
+
+        prev = 0
+        while prev != len(lst):
+            prev = len(lst)
+            n = [x for v in lst for x in nx.neighbors(g, v) if x != r]
+            [lst.add(x) for x in n]
+
+        return lst
