@@ -133,6 +133,15 @@ class SteinerApproximation:
             self.vertex_insertion(steiner)
             print "VI {}".format(self.cost)
 
+            # Remove non-terminal leafs
+            old = sys.maxint
+            while old != len(nx.nodes(self.tree)):
+                old = len(nx.nodes(self.tree))
+
+                for (n, d) in list(nx.degree(self.tree)):
+                    if d == 1 and n not in steiner.terminals:
+                        self.tree.remove_node(n)
+
     def calculate(self, steiner, start_node):
         # Solution init
         tree = nx.Graph()
@@ -395,6 +404,9 @@ class SteinerApproximation:
         self.cost = sum([d for (u, v, d) in g_prime.edges(data='weight')])
 
     def keyvertex_deletion(self, steiner):
+        if len(nx.nodes(self.tree)) < 3:
+            return
+
         bridges = {}
         horizontal = {}
 
