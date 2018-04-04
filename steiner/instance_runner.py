@@ -33,6 +33,7 @@ def process_file(filename, solve, apply_reductions):
         print "{} nodes".format(len(nx.nodes(c.graph)))
 
     for steiner in components:
+        steiner.get_approximation()
         reducers = cfg.reducers()
         contractors = cfg.contractors()
 
@@ -67,6 +68,7 @@ def process_file(filename, solve, apply_reductions):
                 steiner._restricted_closest = None
                 steiner._approximation = None
                 steiner._radius = None
+                steiner._voronoi_areas = None
 
                 if cnt_changes == 0:
                     break
@@ -119,31 +121,33 @@ def process_file(filename, solve, apply_reductions):
         total_solution = ret[0]
         change = ret[1]
 
-    # Verify
-    f = open(filename, "r")
-    steiner2 = pp.parse_pace_file(f)
-    total_sum = 0
-    if not nx.is_connected(total_solution[0]):
-        print "*** Disconnected solution after unreduce"
+    if solve:
+        # Verify
+        f = open(filename, "r")
+        steiner2 = pp.parse_pace_file(f)
+        total_sum = 0
 
-    for (u, v, d) in total_solution[0].edges(data='weight'):
-        total_sum = total_sum + d
-        if not steiner2.graph.has_edge(u, v) or steiner2.graph[u][v]['weight'] != d:
-            print "*** Unknown edge {}-{} in solution after unreduce".format(u, v)
+        if not nx.is_connected(total_solution[0]):
+            print "*** Disconnected solution after unreduce"
 
-    if total_sum != total_solution[1]:
-        print "*** Total sum {} does not match expected {} after unreduce".format(total_sum, total_solution[1])
+        for (u, v, d) in total_solution[0].edges(data='weight'):
+            total_sum = total_sum + d
+            if not steiner2.graph.has_edge(u, v) or steiner2.graph[u][v]['weight'] != d:
+                print "*** Unknown edge {}-{} in solution after unreduce".format(u, v)
 
-    for t in steiner2.terminals:
-        if not total_solution[0].has_node(t):
-            print "*** Missing terminal {} in solution after unreduce".format(t)
+        if total_sum != total_solution[1]:
+            print "*** Total sum {} does not match expected {} after unreduce".format(total_sum, total_solution[1])
 
-    print "Final solution: {}".format(total_solution[1])
-    return total_solution[1]
+        for t in steiner2.terminals:
+            if not total_solution[0].has_node(t):
+                print "*** Missing terminal {} in solution after unreduce".format(t)
+
+        print "Final solution: {}".format(total_solution[1])
+        return total_solution[1]
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(1,2):
+for i in range(101, 102):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)

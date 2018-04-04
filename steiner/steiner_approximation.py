@@ -122,16 +122,12 @@ class SteinerApproximation:
                 self.cost = result[1]
                 self.tree = result[0]
 
-        print "Original {}".format(self.cost)
         prev = 0
         while prev != self.cost:
             prev = self.cost
             self.keyvertex_deletion(steiner)
-            print "VD {}".format(self.cost)
             self.path_exchange(steiner, False)
-            print "PE {}".format(self.cost)
             self.vertex_insertion(steiner)
-            print "VI {}".format(self.cost)
 
             # Remove non-terminal leafs
             old = sys.maxint

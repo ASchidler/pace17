@@ -38,6 +38,7 @@ for steiner in components:
         steiner._restricted_lengths = {}
         steiner._restricted_closest = None
         steiner._radius = None
+        steiner._voronoi_areas = None
 
         if cnt == 0:
             break

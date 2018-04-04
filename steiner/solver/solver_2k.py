@@ -5,7 +5,6 @@ import set_storage as st
 import itertools as it
 
 
-# TODO: Upon kill signal return the currently best solution, no matter if marked permanent or not
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
