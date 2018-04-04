@@ -447,10 +447,7 @@ class SteinerApproximation:
                 child_solutions.append(kv_rec(n2, new_last))
 
             # Non-Key?
-            if len(child_solutions) <= 1:
-                subset = set() if len(child_solutions) == 0 else child_solutions[0][0]
-                intermediaries = [] if len(child_solutions) == 0 else child_solutions[0][1]
-
+            if node in steiner.terminals or len(child_solutions) <= 1:
                 # Move border nodes up
                 if node != root:
                     parent = d_tree.predecessors(node).next()
@@ -458,25 +455,33 @@ class SteinerApproximation:
 
                 # If terminal, node is critical. Therefore update subset and clear intermediary list
                 if node in steiner.terminals:
+                    subset = set()
                     subset.add(node)
-                    [subset.add(x) for x in intermediaries]
+
+                    for (ss, inter, lst) in child_solutions:
+                        [subset.add(x) for x in ss]
+                        [subset.add(x) for x in inter]
+
                     return subset, [], node
                 # Otherwise add self to intermediary list
                 else:
-                    intermediaries.append(node)
-                    return subset, intermediaries, child_solutions[0][2]
+                    child_solutions[0][1].append(node)
+                    return child_solutions[0]
             # Key?
             else:
                 parent_intermediaries = set()
-                c_node = d_tree.predecessors(node).next()
-                parent_path = [(node, c_node)]
-                while c_node != last:
-                    parent_intermediaries.add(c_node)
-                    nxt = d_tree.predecessors(c_node).next()
-                    parent_path.append((nxt, c_node))
-                    c_node = nxt
+                if node == root:
+                    parent_path = []
+                else:
+                    c_node = d_tree.predecessors(node).next()
+                    parent_path = [(node, c_node)]
+                    while c_node != last:
+                        parent_intermediaries.add(c_node)
+                        nxt = d_tree.predecessors(c_node).next()
+                        parent_path.append((nxt, c_node))
+                        c_node = nxt
 
-                    # Create list of intermediaries. Treat current node as such and "repair" voronoi
+                # Create list of intermediaries. Treat current node as such and "repair" voronoi
                 child_intermediaries = set(x for l in child_solutions for x in l[1])
                 child_subsets = dict((tn, ss) for ss, se, tn in child_solutions)
                 intermediaries = parent_intermediaries.union(child_intermediaries)
@@ -518,8 +523,21 @@ class SteinerApproximation:
                             candidate_edges.append((x, y, dist))
                             break
 
+                def find_component(target_node):
+                    cp = [cpt for (cpt, ss) in child_subsets.items() if target_node in ss]
+                    cp = cp[0] if len(cp) > 0 else last
+                    return cp
+
+                # Check intermediary bridges
+                for c_int in intermediaries:
+                    for total, (x, y, dist) in bridges[c_int]:
+                        c1 = find_component(vor.closest(x))
+                        c2 = find_component(vor.closest(y))
+                        if c1 != c2:
+                            candidate_edges.append((x, y, dist))
+
                 # Ok now we have all potential edges, calculate the MST
-                shortest_edges = defaultdict(lambda: (sys.maxint, None))
+                shortest_edges = dict()
 
                 # Find shortest paths
                 for (x, y, dist) in candidate_edges:
@@ -528,17 +546,15 @@ class SteinerApproximation:
                     tp2 = vor.closest(y)
 
                     # Find component
-                    c1 = [cx for (cx, ss) in child_subsets.items() if tp1 in ss]
-                    c1 = c1[0] if len(c1) > 0 else last
-                    c2 = [cx for (cx, ss) in child_subsets.items() if tp2 in ss]
-                    c2 = c2[0] if len(c2) > 0 else last
+                    c1 = find_component(tp1)
+                    c2 = find_component(tp2)
 
                     if c1 > c2:
                         c1, c2 = c2, c1
 
                     total_cost = vor.dist(x) + vor.dist(y) + dist
                     # It may happen that c1 == c2 since the edges in bridges[last] have not been cleaned up
-                    if c1 != c2 and shortest_edges[(c1, c2)][0] > total_cost:
+                    if (c1, c2) not in shortest_edges or shortest_edges[(c1, c2)][0] > total_cost:
                         p1 = vor.extract_path(x)
                         p2 = vor.extract_path(y)
 
@@ -589,7 +605,7 @@ class SteinerApproximation:
 
                         if not nx.is_connected(self.tree) or not nx.is_tree(self.tree) or len(
                                 [x for x in steiner.terminals if not self.tree.has_node(x)]) > 0:
-                            print "Error"
+                            print "*** Error"
 
                         [forbidden.add(x) for x in subsets]
                         [forbidden.add(x) for x in intermediaries]
@@ -608,3 +624,4 @@ class SteinerApproximation:
                 return subsets, [], node
 
         kv_rec(root, root)
+        self.cost = sum(d for (u, v, d) in self.tree.edges(data='weight'))
