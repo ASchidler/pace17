@@ -1,6 +1,99 @@
 import sys
 import networkx as nx
 import heapq
+from collections import defaultdict
+
+
+class VoronoiPartition:
+    def __init__(self, source, target):
+        self.regions = {}
+        self.closest = {}
+        self.source = source
+        self._tmp_regions = defaultdict(lambda: {})
+        self._tmp_closest = {}
+
+        queue = []
+        visited = set()
+
+        # Find voronoi regions. Initialize with tree nodes as voronoi centers
+        for n in nx.nodes(target):
+            self.regions[n] = {}
+            # Queue format is: cost, current node, original start, previous node
+            heapq.heappush(queue, [0, n, n, n])
+
+        node_count = len(nx.nodes(source))
+        while len(visited) != node_count:
+            el = heapq.heappop(queue)
+
+            if el[1] not in visited:
+                visited.add(el[1])
+                self.regions[el[2]][el[1]] = (el[0], el[3])
+                self.closest[el[1]] = el[2]
+
+                for n in nx.neighbors(source, el[1]):
+                    if n not in visited:
+                        cost = el[0] + source[el[1]][n]['weight']
+                        heapq.heappush(queue, [cost, n, el[2], el[1]])
+
+    def reset(self):
+        self._tmp_regions = defaultdict(lambda: {})
+        self._tmp_closest = {}
+
+    def repair(self, intermediaries):
+        self._tmp_regions = defaultdict(lambda: {})
+        self._tmp_closest = {}
+
+        if len(intermediaries) == 0:
+            return
+
+        repair_nodes = set()
+        visited_repair = set()
+        queue = []
+
+        # Find all nodes in the deleted regions
+        for p in intermediaries:
+            repair_nodes = repair_nodes.union(self.regions[p].keys())
+
+        # Initialize dijkstra s.t. the boundary nodes are added with the distance to the adjacent center
+        for rep in repair_nodes:
+            for nb in nx.neighbors(self.source, rep):
+                c_closest = self.closest[nb]
+                if c_closest not in intermediaries:
+                    cost = self.regions[c_closest][nb][0] + self.source[rep][nb]['weight']
+                    heapq.heappush(queue, [cost, rep, c_closest, nb])
+
+        # Run dijkstra, limit to dangling nodes
+        while len(visited_repair) != len(repair_nodes):
+            el = heapq.heappop(queue)
+            if el[1] not in visited_repair:
+                visited_repair.add(el[1])
+                self._tmp_closest[el[1]] = el[2]
+                self._tmp_regions.setdefault(el[2], {})[el[1]] = (el[0], el[3])
+
+                for nb in nx.neighbors(self.source, el[1]):
+                    if nb not in visited_repair and nb in repair_nodes:
+                        cost = el[0] + self.source[el[1]][nb]['weight']
+                        heapq.heappush(queue, [cost, nb, el[2], el[1]])
+
+    def extract_path(self, n):
+        t = self._tmp_closest[n] if n in self._tmp_closest else self.closest[n]
+        vor = self._tmp_regions[t] if t in self._tmp_regions else self.regions[t]
+
+        while n != t:
+            # This is the switch from the "new" assignment back into assigned territory
+            if n not in vor:
+                vor = self.regions[t]
+
+            prev = vor[n][1]
+            yield prev, n, self.source[n][prev]['weight']
+            n = prev
+
+    def dist(self, n):
+        if n in self._tmp_closest:
+            return self._tmp_regions[self._tmp_closest[n]][n][0]
+        else:
+            return self.regions[self.closest[n]][n][0]
+
 
 class SteinerApproximation:
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
@@ -17,10 +110,10 @@ class SteinerApproximation:
                 self.tree = result[0]
 
         print "Original {}".format(self.cost)
+        self.path_exchange(steiner, False)
+        print "PE {}".format(self.cost)
         self.vertex_insertion(steiner)
         print "VI {}".format(self.cost)
-        self.path_exchange(steiner)
-        print "PE {}".format(self.cost)
 
     def calculate(self, steiner, start):
         # Solution init
@@ -124,43 +217,25 @@ class SteinerApproximation:
                         self.cost = new_cost
                         self.tree = g
 
-    def path_exchange(self, steiner):
+    def path_exchange(self, steiner, favor_new):
         if len(nx.nodes(self.tree)) < 5:
             return
 
-        voronoi = {}
-        queue = []
-        visited = set()
-        closest = {}
         bridges = {}
 
         # Find voronoi regions
         for n in nx.nodes(self.tree):
-            voronoi[n] = {}
             bridges[n] = []
-            heapq.heappush(queue, [0, n, n])
 
-        nodecount = len(nx.nodes(steiner.graph))
-        while len(visited) != nodecount:
-            el = heapq.heappop(queue)
-
-            if el[1] not in visited:
-                visited.add(el[1])
-                voronoi[el[2]][el[1]] = el[0]
-                closest[el[1]] = el[2]
-
-                for n in nx.neighbors(steiner.graph, el[1]):
-                    if n not in visited:
-                        cost = el[0] + steiner.graph[el[1]][n]['weight']
-                        heapq.heappush(queue, [cost, n, el[2]])
+        vor = VoronoiPartition(steiner.graph, self.tree)
 
         # Find bridging edges
         for (u, v, d) in steiner.graph.edges(data='weight'):
-            t1 = closest[u]
-            t2 = closest[v]
+            t1 = vor.closest[u]
+            t2 = vor.closest[v]
 
             if t1 != t2:
-                cost = d + voronoi[t1][u] + voronoi[t2][v]
+                cost = d + vor.regions[t1][u][0] + vor.regions[t2][v][0]
                 bridges[t1].append([cost, (u, v, d)])
                 bridges[t2].append([cost, (u, v, d)])
 
@@ -190,8 +265,9 @@ class SteinerApproximation:
             c_path.pop()
             subset.add(node)
 
+            # Is start of a key path and not the root?
             if node in key_nodes and parent is not None:
-                # Find intermediary nodes
+                # Find intermediary nodes and cost of the current key path
                 intermediaries = set()
                 idx = len(c_path) - 1
                 c_path_cost = steiner.graph[node][parent]['weight']
@@ -200,80 +276,74 @@ class SteinerApproximation:
                     c_path_cost += steiner.graph[c_path[idx]][c_path[idx - 1]]['weight']
                     idx -= 1
 
-                tmp_voronoi = {}
-                tmp_closest = {}
-                tmp_voronoi[node] = {}
+                # "Repair" Voronoi, i.e. assign the nodes associated with the intermediaries to new nodes
+                vor.repair(intermediaries)
 
-                # If any intermediary nodes exist, remove than and repair the voronoi regions
-                if len(intermediaries) > 0:
-                    repair_nodes = set()
-                    visited_repair = set()
-                    queue = []
+                min_bound = (None, None, sys.maxint, None)
+                while True and len(bridges[node]) > 0:
+                    c_cost, (x, y, dist) = bridges[node][0]
+                    u_in = any(x in vor.regions[n2] for n2 in subset)
+                    v_in = any(y in vor.regions[n2] for n2 in subset)
+                    u_in = u_in or any(x in vor._tmp_regions[n2] for n2 in subset)
+                    v_in = v_in or any(y in vor._tmp_regions[n2] for n2 in subset)
+                    u_in = u_in or (x in intermediaries)
+                    v_in = v_in or (y in intermediaries)
 
-                    # Find all nodes in the deleted regions
-                    for p in intermediaries:
-                        repair_nodes = repair_nodes.union(voronoi[p].keys())
+                    if u_in and v_in:
+                        bridges[node].pop(0)
+                    else:
+                        min_bound = (x, y, c_cost, dist)
+                        break
 
-                    # Initialize dijkstra s.t. the boundary nodes are added with the distance to the adjacent center
-                    for rep in repair_nodes:
-                        for nb in nx.neighbors(steiner.graph, rep):
-                            c_closest = closest[nb]
-                            if c_closest not in intermediaries:
-                                cost = voronoi[c_closest][nb] + steiner.graph[rep][nb]['weight']
-                                heapq.heappush(queue, [cost, rep, c_closest])
-
-                    # Run dijkstra, limit to dangling nodes
-                    while len(visited_repair) != len(repair_nodes):
-                        el = heapq.heappop(queue)
-                        if el[1] not in visited_repair:
-                            visited_repair.add(el[1])
-                            tmp_closest[el[1]] = el[2]
-                            tmp_voronoi.setdefault(el[2], {})[el[1]] = el[0]
-
-                            for nb in nx.neighbors(steiner.graph, el[1]):
-                                if nb not in visited_repair and nb in repair_nodes:
-                                    cost = el[0] + steiner.graph[el[1]][nb]['weight']
-                                    heapq.heappush(queue, [cost, nb, el[2]])
-
-                    # Clean up bridges and find cheapest edge
-                    min_bound = (None, None, sys.maxint)
-                    while True and len(bridges[node]) > 0:
-                        (c_cost, (u, v, d)) = bridges[node][0]
-                        u_in = (u in subset or u in intermediaries or u in voronoi[node])
-                        v_in = (v in subset or v in intermediaries or v in voronoi[node])
-
-                        if u_in and v_in:
-                            bridges[node].pop(0)
-                        else:
-                            min_bound = (u, v, c_cost)
+                # Find cheapest edge in intermediaries
+                # TODO: The costs don't match, i.e. since one of the nodes is no longer in the voronoi region
+                # of the intermediary, the distance calculation used in the bridge entries no longer matches...
+                # This is also true of the path calculation
+                for p in intermediaries:
+                    for c, (x, y, dist) in bridges[p]:
+                        if c >= min_bound[2]:
                             break
+                        else:
+                            u_in = any(x in vor.regions[n2] for n2 in subset)
+                            v_in = any(y in vor.regions[n2] for n2 in subset)
+                            u_in = u_in or any(x in vor._tmp_regions[n2] for n2 in subset)
+                            v_in = v_in or any(y in vor._tmp_regions[n2] for n2 in subset)
 
-                        # Find cheapest edge in intermediaries
-                        for p in intermediaries:
-                            for c, (u, v, d) in bridges[p]:
-                                if c >= min_bound[2]:
-                                    break
-                                else:
-                                    u_in = (u in subset or u in intermediaries or u in voronoi[node])
-                                    v_in = (v in subset or v in intermediaries or v in voronoi[node])
+                            if u_in ^ v_in:
+                                min_bound = (x, y, c, dist)
+                                break
 
-                                    if u_in ^ v_in:
-                                        min_bound = (u, v, c)
-                                        break
+                # Found a better key path
+                if min_bound[2] <= c_path_cost:
+                    # Remove old path
+                    idx = len(c_path) - 1
+                    g_prime.remove_edge(parent, node)
+                    while c_path[idx] != last:
+                        g_prime.remove_edge(c_path[idx], c_path[idx - 1])
+                        idx -= 1
 
-                    # Found a better key path
-                    if min_bound[2] < c_path_cost:
+                    p1 = list(vor.extract_path(min_bound[0]))
+                    p2 = list(vor.extract_path(min_bound[1]))
+                    # Add new path
+                    for (x, y, dist) in vor.extract_path(min_bound[0]):
+                        g_prime.add_edge(x, y, weight=dist)
+                    for (x, y, dist) in vor.extract_path(min_bound[1]):
+                        g_prime.add_edge(x, y, weight=dist)
 
-                        print "Found cheaper version"
+                    g_prime.add_edge(min_bound[0], min_bound[1], weight=min_bound[3])
 
-                # No intermediaries, simply pick best boundary edge from node to node
-                else:
-                    g_prime.remove_edge(node, parent)
-                    (c, (u, v, d)) = bridges[node][0]
-                    g_prime.add_edge(u, v, weight=d)
+                    # Remove intermediaries, if orphaned
+                    [g_prime.remove_node(x) for x in intermediaries if g_prime.degree[x] == 0]
+                if not nx.is_connected(g_prime) or not nx.is_tree(g_prime) or len(
+                        [x for x in steiner.terminals if not g_prime.has_node(x)]) > 0:
+                    print "Error"
 
                 # Merge bridge list with parent
                 bridges[last] = list(heapq.merge(bridges[last], bridges[node]))
+                for p in intermediaries:
+                    bridges[last] = list(heapq.merge(bridges[last], bridges[p]))
+
+                vor.reset()
 
             return subset
 
@@ -282,10 +352,3 @@ class SteinerApproximation:
 
         self.tree = g_prime
         self.cost = sum([d for (u, v, d) in g_prime.edges(data='weight')])
-
-
-
-
-
-
-
