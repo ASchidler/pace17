@@ -46,22 +46,24 @@ def process_file(filename, solve, apply_reductions):
                 cnt_changes = 0
 
                 for r in reducers:
-                    local_start = time.time()
-                    reduced = r.reduce(steiner)
-                    cnt_changes = cnt_changes + reduced
-                    print "Reduced {} needing {} in {}" \
-                        .format(reduced, str(time.time() - local_start), str(r.__class__))
+                    if len(nx.nodes(steiner.graph)) > 1:
+                        local_start = time.time()
+                        reduced = r.reduce(steiner)
+                        cnt_changes = cnt_changes + reduced
+                        print "Reduced {} needing {} in {}" \
+                            .format(reduced, str(time.time() - local_start), str(r.__class__))
 
                 steiner._lengths = {}
                 steiner._restricted_lengths = {}
                 steiner._restricted_closest = None
 
                 for c in contractors:
-                    local_start = time.time()
-                    reduced = c.reduce(steiner)
-                    cnt_changes = cnt_changes + reduced
-                    print "Contracted {} needing {} in {}" \
-                        .format(reduced, str(time.time() - local_start), str(c.__class__))
+                    if len(nx.nodes(steiner.graph)) > 1:
+                        local_start = time.time()
+                        reduced = c.reduce(steiner)
+                        cnt_changes = cnt_changes + reduced
+                        print "Contracted {} needing {} in {}" \
+                            .format(reduced, str(time.time() - local_start), str(c.__class__))
 
                 steiner._lengths = {}
                 steiner._restricted_lengths = {}
@@ -113,6 +115,8 @@ def process_file(filename, solve, apply_reductions):
             results.append(solution)
             print "Solution found: " + str(solution[1])
 
+        print "\n\n"
+
     total_solution = c_finder.build_solutions(results)
 
     change = True
@@ -147,7 +151,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(101, 102):
+for i in range(125, 126):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
@@ -155,8 +159,8 @@ for i in range(101, 102):
         print current_file
         start = time.time()
         e1 = process_file(current_file, True, True)
-        e2 = process_file(current_file, True, False)
-        if e1 != e2:
-            print "*************** Difference in instance "+ str(i)
+        # e2 = process_file(current_file, True, False)
+        # if e1 != e2:
+        #     print "*************** Difference in instance "+ str(i)
         print "Done in " + str(time.time() - start)
         print ""
