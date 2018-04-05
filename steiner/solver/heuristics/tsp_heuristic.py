@@ -15,6 +15,7 @@ class TspHeuristic:
             return self.steiner.get_lengths(ts[0], n)
 
         # So we know that smaller terminals always are first
+        ts = list(ts)
         ts.sort()
 
         cost = self.get_tsp_for_set(set_id, ts)

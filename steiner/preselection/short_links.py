@@ -10,6 +10,9 @@ class ShortLinkPreselection:
         self._done = False
 
     def reduce(self, steiner):
+        if len(steiner.terminals) <= 1:
+            return 0
+
         track = 0
         vor = steiner.get_voronoi()
 
@@ -34,34 +37,33 @@ class ShortLinkPreselection:
                     elif d < min2[2]:
                         min2 = (u, v, d)
 
-            # TODO: If there is no min2, contract?
-            if min1[2] < sys.maxint and min2[2] < sys.maxint:
-                other_t, dist = steiner.get_closest(min1[1])[0]
-                total = steiner.get_lengths(t, min1[0]) + min1[2] + dist
+            # There always exists a boundary edge. If there is no second largest edge, we can contract
+            other_t, dist = steiner.get_closest(min1[1])[0]
+            total = steiner.get_lengths(t, min1[0]) + min1[2] + dist
 
-                if min2[2] >= total:
-                    track = track + 1
+            if min2[2] >= total:
+                track = track + 1
 
-                    # Store
-                    self.deleted.append((min1[0], min1[1], min1[2]))
+                # Store
+                self.deleted.append((min1[0], min1[1], min1[2]))
 
-                    # Contract, prefer to contract into a terminal
-                    n1, n2 = (min1[0], min1[1]) if min1[0] in steiner.terminals else (min1[1], min1[0])
+                # Contract, prefer to contract into a terminal
+                n1, n2 = (min1[0], min1[1]) if min1[0] in steiner.terminals else (min1[1], min1[0])
 
-                    for e in steiner.contract_edge(n1, n2):
-                        self.merged.append(e)
+                for e in steiner.contract_edge(n1, n2):
+                    self.merged.append(e)
 
-                    # Fix voronoi if terminals are not merged
-                    if t != n1 and t != n2 and other_t != n1 and other_t != n2:
-                        for n in list(vor[t]):
-                            if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
-                                vor[t].remove(n)
-                                vor[other_t].add(n)
+                # Fix voronoi if terminals are not merged
+                if t != n1 and t != n2 and other_t != n1 and other_t != n2:
+                    for n in list(vor[t]):
+                        if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
+                            vor[t].remove(n)
+                            vor[other_t].add(n)
 
-                        for n in list(vor[other_t]):
-                            if steiner.get_lengths(other_t, n) > steiner.get_lengths(t, n):
-                                vor[other_t].remove(n)
-                                vor[t].add(n)
+                    for n in list(vor[other_t]):
+                        if steiner.get_lengths(other_t, n) > steiner.get_lengths(t, n):
+                            vor[other_t].remove(n)
+                            vor[t].add(n)
 
         return track
 

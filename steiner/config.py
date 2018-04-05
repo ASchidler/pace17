@@ -11,26 +11,28 @@ def reducers():
     return [
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
-        terminal_distance.CostVsTerminalDistanceReduction(),
-        long_edges.LongEdgeReduction(),
         degree.DegreeReduction(),
-        voronoi_nodes.VoronoiNodeReduction(),
-        voronoi.VoronoiReduction(),
+        terminal_distance.CostVsTerminalDistanceReduction(),
         sdc.SdcReduction(),
+        degree.DegreeReduction(),
+        long_edges.LongEdgeReduction(),
+        component.ComponentReduction(),
+        #voronoi_nodes.VoronoiNodeReduction(),
+        #voronoi.VoronoiReduction(),
         ntdk.NtdkReduction(),
-        cut_reachability.CutReachabilityReduction(),
-        cut_reachability_edge.CutReachabilityEdgeReduction(),
-        reachability.ReachabilityReduction(),
-        bound_reductions.BoundNodeReduction(),
-        bound_reductions.BoundEdgeReduction(),
-        bound_reductions.BoundGraphReduction(),
-        bound_reductions.BoundNtdkReduction(),
+        #cut_reachability.CutReachabilityReduction(),
+        #cut_reachability_edge.CutReachabilityEdgeReduction(),
+        #reachability.ReachabilityReduction(),
+        # bound_reductions.BoundNodeReduction(),
+        # bound_reductions.BoundEdgeReduction(),
+        # bound_reductions.BoundGraphReduction(),
+        # bound_reductions.BoundNtdkReduction(),
     ]
 
 
 def contractors():
     return [
-        terminals.TerminalReduction(),
+        #terminals.TerminalReduction(),
         nearest_vertex.NearestVertex(),
         short_links.ShortLinkPreselection(),
     ]
@@ -40,7 +42,7 @@ def solver(steiner):
     """Creates a solver"""
     heuristics = [
             mst_heuristic.MstHeuristic(steiner),
-            #smt_heuristic.SmtHeuristic(steiner, 3),
-            #tsp_heuristic.TspHeuristic(steiner)
+            # smt_heuristic.SmtHeuristic(steiner, 3),
+            # tsp_heuristic.TspHeuristic(steiner)
     ]
     return sv.Solver2k(steiner, steiner.terminals, heuristics)
