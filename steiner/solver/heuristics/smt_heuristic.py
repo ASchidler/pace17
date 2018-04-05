@@ -9,6 +9,7 @@ class SmtHeuristic:
         self.results = {}
 
     def calculate(self, n, set_id, ts):
+        ts = list(ts)
         # Last node is the root node
         root_node = ts[len(ts)-1]
 

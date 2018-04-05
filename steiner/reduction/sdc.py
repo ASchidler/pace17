@@ -11,7 +11,7 @@ class SdcReduction:
         for (u, v, d) in steiner.graph.edges(data='weight'):
             edge_count += 1
             # Iteration limit
-            if edge_count > 1000:
+            if edge_count > 2000:
                 break
 
             result = self.modified_dijkstra(steiner, u, v, d)
@@ -54,7 +54,7 @@ class SdcReduction:
             elif n in steiner.terminals and n != u:
                 return None, scanned
             # Do not search too far
-            elif len(visited) > 20:
+            elif len(visited) > 10:
                 return False, None
 
             if n in visited:
