@@ -6,7 +6,7 @@ class ComponentReduction:
 
     def reduce(self, steiner):
         track = len(nx.nodes(steiner.graph))
-        if not nx.is_connected(steiner.graph):
+        if len(nx.nodes(steiner.graph)) > 1 and not nx.is_connected(steiner.graph):
             for c in list(nx.connected_components(steiner.graph)):
                 found = False
                 for n in c:
