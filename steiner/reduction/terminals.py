@@ -23,32 +23,37 @@ class TerminalReduction:
                 if t not in steiner.terminals:
                     continue
 
-                min_val = sys.maxint
-                min_node = None
-                min_single = False
                 neighbors = list(nx.neighbors(steiner.graph, t))
 
-                for n in neighbors:
-                    w = steiner.graph[t][n]['weight']
+                if len(neighbors) == 1:
+                    self._removed.append((t, neighbors[0], steiner.graph[t][neighbors[0]]['weight']))
+                    steiner.move_terminal(t, neighbors[0])
+                    steiner.remove_node(t)
+                    change = True
+                else:
+                    contract_edge = None
 
-                    if w < min_val:
-                        min_node = n
-                        min_val = w
-                        min_single = True
-                    elif w == min_val:
-                        min_single = False
+                    if len(neighbors) == 2:
+                        l1, l2 = steiner.graph[t][neighbors[0]]['weight'], steiner.graph[t][neighbors[1]]['weight']
+                        if neighbors[0] in steiner.terminals and l1 <= l2:
+                            contract_edge = (neighbors[0], l1)
+                        elif neighbors[1] in steiner.terminals and l2 <= l1:
+                            contract_edge = (neighbors[1], l2)
+                    else:
+                        min_val = (sys.maxint, None)
+                        for n in neighbors:
+                            w = steiner.graph[t][n]['weight']
 
-                if min_node in steiner.terminals or len(neighbors) == 1:
-                    # Only one neighbor? The edge has to be selected, so we can treat the neighbor as a terminal
-                    if len(neighbors) == 1:
-                        self._removed.append((t, min_node, w))
-                        steiner.move_terminal(t, min_node)
-                        steiner.remove_node(t)
-                        change = True
-                    # The closest node is a terminal? The edge is viable in any optimal solution -> contract edge
-                    elif min_node in steiner.terminals and min_single:
-                        self._removed.append((t, min_node, min_val))
-                        for e in steiner.contract_edge(min_node, t):
+                            # TODO: Is equal really correct? Taken from SCIP Jack code
+                            if w < min_val[0] or (w == min_val[0] and n in steiner.terminals):
+                                min_val = (w, n)
+
+                        if min_val[1] in steiner.terminals and 1 == len([x for x in neighbors if steiner.graph[t][x]['weight'] == min_val[0]]):
+                            contract_edge = (min_val[1], min_val[0])
+
+                    if contract_edge is not None:
+                        self._removed.append((t, contract_edge[0], contract_edge[1]))
+                        for e in steiner.contract_edge(contract_edge[0], t):
                             self._selected.append(e)
 
                         change = True
@@ -62,7 +67,7 @@ class TerminalReduction:
         if not self._done:
             for (n1, n2, w) in self._removed:
                 solution[0].add_edge(n1, n2, weight=w)
-                cost = cost + w
+                cost += w
                 change = True
             self._done = True
 
