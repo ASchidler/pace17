@@ -12,11 +12,11 @@ class NearestVertex:
         cnt = 0
         steiner._voronoi_areas = None
         steiner._closest_terminals = None
+        steiner._lengths = {}
 
         for t in list(steiner.terminals):
             # t may have been deleted before
             if t in steiner.terminals and steiner.graph.degree[t] >= 2:
-                t_val = steiner.get_closest(t)[1][1]
                 e1 = (None, sys.maxint, sys.maxint)
                 e2 = (None, sys.maxint)
                 e3 = (None, sys.maxint)
@@ -24,13 +24,14 @@ class NearestVertex:
                 # Find three smallest incident edges
                 for n in nx.neighbors(steiner.graph, t):
                     d = steiner.graph[t][n]['weight']
-                    cmp_val = t_val if n in steiner.get_voronoi()[t] else d + steiner.get_closest(n)[0][1]
+
+                    cmp_val = d + steiner.get_closest(n)[1][1] if n in steiner.get_voronoi()[t] else d + steiner.get_closest(n)[0][1]
 
                     if d < e1[1] or (d == e1[1] and cmp_val < e1[2]):
                         e3, e2, e1 = e2, e1, (n, d, cmp_val)
-                    elif d < e2[1]:
+                    elif d <= e2[1]:
                         e3, e2 = e2, (n, d)
-                    elif d < e3[1]:
+                    elif d <= e3[1]:
                         e3 = n, d
 
                 cmp_val = e1[2]
@@ -38,22 +39,12 @@ class NearestVertex:
                 contract = False
                 if e2[1] >= cmp_val:
                     contract = True
-                elif steiner.graph.degree[t] == 2 or e3[1] >= e1[2]:
-                    true_forall = True
-                    for n2 in nx.neighbors(steiner.graph, t):
-                        if n2 != e1[0] and n2 != e2[0]:
-                            if steiner.graph[t][n2]['weight'] < e1[2]:
-                                true_forall = False
-                                break
-
-                    if true_forall:
-                        for n2 in nx.neighbors(steiner.graph, e2[0]):
-                            if n2 != t and n2 != e1[0]:
-                                if steiner.graph[e2[0]][n2]['weight'] < e1[2]:
-                                    true_forall = False
-                                    break
-
-                    contract = true_forall
+                elif e2[1] < sys.maxint and e3[1] >= e1[2] and e2[0] not in steiner.terminals:
+                    contract = True
+                    for n2 in nx.neighbors(steiner.graph, e2[0]):
+                        if n2 != t and steiner.graph[e2[0]][n2]['weight'] < e1[2]:
+                            contract = False
+                            break
 
                 if contract:
                     # Store
@@ -88,3 +79,7 @@ class NearestVertex:
                     change = True
 
         return (solution[0], cost), change
+
+
+
+
