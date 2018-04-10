@@ -72,6 +72,7 @@ class SteinerGraph:
     def refresh_steiner_lengths(self):
         """ Calculates the steiner distances"""
 
+        self._steiner_lengths = {}
         g = nx.Graph()
 
         [g.add_edge(t1, t2, weight=self.get_lengths(t1, t2))

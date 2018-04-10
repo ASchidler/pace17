@@ -53,7 +53,8 @@ class TerminalReduction:
 
                     if contract_edge is not None:
                         self._removed.append((t, contract_edge[0], contract_edge[1]))
-                        for e in steiner.contract_edge(contract_edge[0], t):
+
+                        for e in steiner.contract_edge(t, contract_edge[0]):
                             self._selected.append(e)
 
                         change = True

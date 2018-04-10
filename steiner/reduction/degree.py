@@ -26,8 +26,8 @@ class DegreeReduction:
 
                     if steiner.add_edge(nb[0], nb[1], w1+w2):
                         self._removed[(nb[0], nb[1], w1 + w2)] = [(nb[0], n, w1), (nb[1], n, w2)]
-                        steiner.remove_node(n)
-                        break
+                    steiner.remove_node(n)
+                    break
 
         return track - len(nx.nodes(steiner.graph))
 

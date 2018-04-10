@@ -8,13 +8,16 @@ from collections import defaultdict
 class NtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self):
+    def __init__(self, restricted):
         self._removed = {}
+        self._restricted = restricted
 
     def reduce(self, steiner):
         track = len(nx.nodes(steiner.graph))
 
-        for n in list(nx.nodes(steiner.graph)):
+        ns = list(nx.nodes(steiner.graph))
+        ns.sort()
+        for n in ns:
             nb = list(nx.all_neighbors(steiner.graph, n))
             degree = len(nb)
             true_for_all = True
@@ -24,7 +27,9 @@ class NtdkReduction:
                 total_edge_sum = sum(steiner.graph[n][b]['weight'] for b in nb)
 
                 # Calc distances, more memory efficient than calculating it all beforehand
-                dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum) for x in nb for y in nb if y > x}
+                dist2 = {(x, y): nx.dijkstra_path_length(steiner.graph, x, y) for x in nb for
+                        y in nb if y > x}
+                dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._restricted) for x in nb for y in nb if y > x}
 
                 # Powersets
                 for power_set in xrange(1, 1 << degree):
@@ -32,20 +37,22 @@ class NtdkReduction:
                     power_graph = nx.Graph()
                     edge_sum = 0
 
-                    for i in xrange(0, degree):
-                        if ((1 << i) & power_set) > 0:
-                            n1 = nb[i]
-                            edge_sum = edge_sum + steiner.graph[n][n1]['weight']
+                    # Sets of size at least 3
+                    if bin(power_set).count("1") >= 3:
+                        for i in xrange(0, degree):
+                            if ((1 << i) & power_set) > 0:
+                                n1 = nb[i]
+                                edge_sum = edge_sum + steiner.graph[n][n1]['weight']
 
-                            for j in xrange(i + 1, degree):
-                                if ((1 << j) & power_set) > 0:
-                                    n2 = nb[j]
-                                    w = dist[(n1, n2)]
-                                    power_graph.add_edge(n1, n2, weight=w)
+                                for j in xrange(i + 1, degree):
+                                    if ((1 << j) & power_set) > 0:
+                                        n2 = nb[j]
+                                        w = dist[(n1, n2)]
+                                        power_graph.add_edge(n1, n2, weight=w)
 
-                    mst = nx.minimum_spanning_tree(power_graph)
-                    mst_sum = mst.size(weight='weight')
-                    true_for_all = true_for_all and mst_sum <= edge_sum
+                        mst = nx.minimum_spanning_tree(power_graph)
+                        mst_sum = mst.size(weight='weight')
+                        true_for_all = true_for_all and mst_sum <= edge_sum
 
                 if true_for_all:
                     nb = list(nx.neighbors(steiner.graph, n))
