@@ -14,6 +14,8 @@ class ShortLinkPreselection:
             return 0
 
         track = 0
+        steiner._voronoi_areas = None
+        steiner._closest_terminals = None
         vor = steiner.get_voronoi()
 
         for (t, r) in vor.items():
@@ -31,15 +33,14 @@ class ShortLinkPreselection:
 
                 # Bridges region?
                 if u_in ^ v_in:
-                    if d < min1[2]:
+                    if d <= min1[2]:
                         min2 = min1
                         min1 = (u, v, d)
                     elif d < min2[2]:
                         min2 = (u, v, d)
 
             # There always exists a boundary edge. If there is no second largest edge, we can contract
-            other_t, dist = steiner.get_closest(min1[1])[0]
-            total = steiner.get_lengths(t, min1[0]) + min1[2] + dist
+            total = steiner.get_closest(min1[0])[0][1] + min1[2] + steiner.get_closest(min1[1])[0][1]
 
             if min2[2] >= total:
                 track = track + 1
@@ -54,6 +55,7 @@ class ShortLinkPreselection:
                     self.merged.append(e)
 
                 # Fix voronoi if terminals are not merged
+                t, other_t = steiner.get_closest(min1[0])[0][0], steiner.get_closest(min1[1])[0][0]
                 if t != n1 and t != n2 and other_t != n1 and other_t != n2:
                     for n in list(vor[t]):
                         if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
