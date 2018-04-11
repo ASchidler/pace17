@@ -133,7 +133,7 @@ class NtdkReduction:
             elif n in steiner.terminals and n != u:
                 continue
             # Do not search too far
-            elif len(visited) > 400:
+            elif len(visited) > 40:
                 break
 
             for n2 in nx.neighbors(steiner.graph, n):

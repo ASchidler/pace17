@@ -19,21 +19,18 @@ def process_file(filename, solve, apply_reductions):
 
     f = open(filename, "r")
     steinerx = pp.parse_pace_file(f)
-    dr = dg.DegreeReduction()
-    dr.reduce(steinerx)
 
     c_finder = cf.ComponentFinder()
 
     components = [steinerx]
     results = []
 
-    components = c_finder.decompose(components)
+    #components = c_finder.decompose(components)
     print "Split into {} components".format(len(components))
     for c in components:
         print "{} nodes".format(len(nx.nodes(c.graph)))
 
     for steiner in components:
-        steiner.get_approximation()
         reducers = cfg.reducers()
         contractors = cfg.contractors()
 
@@ -117,13 +114,8 @@ def process_file(filename, solve, apply_reductions):
 
         print "\n\n"
 
-    total_solution = c_finder.build_solutions(results)
-
-    change = True
-    while change:
-        ret = dr.post_process(total_solution)
-        total_solution = ret[0]
-        change = ret[1]
+   # total_solution = c_finder.build_solutions(results)
+    total_solution = solution
 
     if solve:
         # Verify
@@ -151,7 +143,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(125, 126):
+for i in range(5, 6):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
