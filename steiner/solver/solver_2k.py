@@ -2,7 +2,6 @@ import networkx as nx
 import sys
 import heapq
 import set_storage as st
-import itertools as it
 
 
 class Solver2k:
