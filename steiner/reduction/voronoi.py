@@ -5,6 +5,9 @@ import networkx as nx
 class VoronoiReduction:
     """Approximates the maximum edge length using distances between voronoi areas"""
 
+    def __init__(self):
+        self.enabled = True
+
     def find_exit_sum(self, steiner):
         """ Find exit node, i.e. those nodes closest but not in the current area and calculate the total distance """
         exit_sum = 0
@@ -29,7 +32,10 @@ class VoronoiReduction:
 
         return exit_sum - exit_max1 - exit_max2
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
+        if not self.enabled and not last_run:
+            return 0
+
         track = len(nx.edges(steiner.graph))
         exit_sum = self.find_exit_sum(steiner)
 
@@ -62,7 +68,10 @@ class VoronoiReduction:
             if d + total + exit_sum > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
 
-        return track - len(nx.edges(steiner.graph))
+        result = track - len(nx.edges(steiner.graph))
+        self.enabled = result > 0
+
+        return result
 
     def post_process(self, solution):
         return solution, False

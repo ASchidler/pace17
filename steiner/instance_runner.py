@@ -8,8 +8,8 @@ import reduction.terminals as terminals
 import solver.label_store as ls
 import steiner_graph as sg
 import component_finder as cf
-import reduction.degree as dg
 import sys
+import reduction.dual_ascent as da
 
 """ This runner runs all the public instances with debug oparser """
 
@@ -19,7 +19,6 @@ def process_file(filename, solve, apply_reductions):
 
     f = open(filename, "r")
     steinerx = pp.parse_pace_file(f)
-
     c_finder = cf.ComponentFinder()
 
     components = [steinerx]
@@ -38,6 +37,7 @@ def process_file(filename, solve, apply_reductions):
             cnt_edge = len(nx.edges(steiner.graph))
             cnt_nodes = len(nx.nodes(steiner.graph))
             cnt_terminals = len(steiner.terminals)
+            last_run = False
 
             while True:
                 cnt_changes = 0
@@ -45,7 +45,7 @@ def process_file(filename, solve, apply_reductions):
                 for r in reducers:
                     if len(nx.nodes(steiner.graph)) > 1:
                         local_start = time.time()
-                        reduced = r.reduce(steiner)
+                        reduced = r.reduce(steiner, cnt_changes, last_run)
                         cnt_changes = cnt_changes + reduced
                         print "Reduced {} needing {} in {}" \
                             .format(reduced, str(time.time() - local_start), str(r.__class__))
@@ -57,7 +57,7 @@ def process_file(filename, solve, apply_reductions):
                 for c in contractors:
                     if len(nx.nodes(steiner.graph)) > 1:
                         local_start = time.time()
-                        reduced = c.reduce(steiner)
+                        reduced = c.reduce(steiner, cnt_changes, last_run)
                         cnt_changes = cnt_changes + reduced
                         print "Contracted {} needing {} in {}" \
                             .format(reduced, str(time.time() - local_start), str(c.__class__))
@@ -70,7 +70,11 @@ def process_file(filename, solve, apply_reductions):
                 steiner._voronoi_areas = None
 
                 if cnt_changes == 0:
-                    break
+                    if last_run:
+                        break
+                    last_run = True
+                else:
+                    last_run = False
 
             print "{} nodes, {} edges and {} terminals removed " \
                 .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)),
@@ -143,7 +147,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(5, 6):
+for i in range(181, 182):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)

@@ -8,7 +8,7 @@ class NearestVertex:
         self.merged = []
         self._done = False
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         cnt = 0
         steiner._voronoi_areas = None
         steiner._closest_terminals = None

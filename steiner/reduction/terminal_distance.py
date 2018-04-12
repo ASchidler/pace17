@@ -6,7 +6,7 @@ class CostVsTerminalDistanceReduction:
     def __init__(self):
         self.val = None
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         # Edge case, only one terminal
         if len(steiner.terminals) == 1:
             return 0
