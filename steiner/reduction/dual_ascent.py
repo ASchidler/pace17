@@ -5,6 +5,9 @@ import heapq as hq
 
 class DualAscent:
     def reduce(self, steiner):
+        if len(steiner.terminals) < 4:
+            return 0
+
         ts = list(steiner.terminals)
         max_r = (None, None, 0)
         track = 0
@@ -76,22 +79,19 @@ class DualAscent:
         while len(t_cuts) > 0:
             old_size, c_cut = hq.heappop(t_cuts)
             cut_add = set()
-            cut_rm = set()
 
             delta = sys.maxint
             for n in c_cut:
                 for n2 in dg.predecessors(n):
                     if n2 not in c_cut:
                         delta = min(delta, dg[n2][n]['weight'])
+
             bound += delta
 
             remove = False
             for n in c_cut:
-                any_in = False
                 for n2 in dg.predecessors(n):
                     if n2 not in c_cut:
-                        any_in = True
-
                         dg[n2][n]['weight'] -= delta
 
                         if dg[n2][n]['weight'] == 0:
@@ -120,12 +120,8 @@ class DualAscent:
                                     else:
                                         t_cuts[i][1].update(connected_nodes)
 
-                if not any_in and n not in steiner.terminals:
-                    cut_rm.add(n)
-
             if not remove:
                 c_cut |= cut_add
-                #c_cut -= cut_rm
                 hq.heappush(t_cuts, [len(c_cut), c_cut])
 
         return bound, dg
