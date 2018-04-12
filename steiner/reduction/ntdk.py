@@ -1,5 +1,4 @@
 import networkx as nx
-import itertools
 import sys
 import heapq as hq
 from collections import defaultdict
@@ -16,6 +15,9 @@ class NtdkReduction:
         if len(nx.edges(steiner.graph)) / len(nx.nodes(steiner.graph)) >= 3:
             return 0
 
+        if self._restricted:
+            steiner.refresh_steiner_lengths()
+
         track = len(nx.nodes(steiner.graph))
 
         ns = list(nx.nodes(steiner.graph))
@@ -30,9 +32,10 @@ class NtdkReduction:
                 total_edge_sum = sum(steiner.graph[n][b]['weight'] for b in nb)
 
                 # Calc distances, more memory efficient than calculating it all beforehand
-                dist2 = {(x, y): nx.dijkstra_path_length(steiner.graph, x, y) for x in nb for
-                        y in nb if y > x}
-                dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._restricted) for x in nb for y in nb if y > x}
+                if not self._restricted:
+                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._restricted) for x in nb for y in nb if y > x}
+                else:
+                    dist = {(x, y): steiner.get_steiner_lengths(x, y, 0) for x in nb for y in nb if y > x}
 
                 # Powersets
                 for power_set in xrange(1, 1 << degree):
