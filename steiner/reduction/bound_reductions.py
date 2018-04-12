@@ -6,15 +6,15 @@ class BoundNodeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
     def __init__(self):
-        self.runs = 0
+        self.enabled = True
 
-    def reduce(self, steiner):
-        if len(steiner.terminals) < 2:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) < 2 or not (self.enabled or last_run):
             return 0
 
         t_weight = 0
         radius = steiner.get_radius()
-        cnt = 0
+        track = 0
 
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]
@@ -30,9 +30,11 @@ class BoundNodeReduction:
                             (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.has_node(
                                 n)):
                         steiner.remove_node(n)
-                        cnt += 1
+                        track += 1
 
-        return cnt
+        self.enabled = track > 0
+
+        return track
 
     def post_process(self, solution):
         return solution, False
@@ -42,15 +44,15 @@ class BoundEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
     def __init__(self):
-        self.runs = 0
+        self.enabled = True
 
-    def reduce(self, steiner):
-        if len(steiner.terminals) < 2:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) < 2 or not (self.enabled or last_run):
             return 0
 
         t_weight = 0
         radius = steiner.get_radius()
-        cnt = 0
+        track = 0
 
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]
@@ -71,9 +73,10 @@ class BoundEdgeReduction:
 
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
-                cnt += 1
+                track += 1
 
-        return cnt
+        self.enabled = track > 0
+        return track
 
     def post_process(self, solution):
         return solution, False
@@ -84,12 +87,13 @@ class BoundNtdkReduction:
 
     def __init__(self):
         self._removed = {}
+        self.enabled = True
 
-    def reduce(self, steiner):
-        if len(steiner.terminals) < 3:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) < 3 or not (self.enabled or last_run):
             return 0
 
-        cnt = 0
+        track = 0
         t_weight = 0
         radius = steiner.get_radius()
 
@@ -115,9 +119,10 @@ class BoundNtdkReduction:
                                 self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
 
                         steiner.remove_node(n)
-                        cnt += 1
+                        track += 1
 
-        return cnt
+        self.enabled = track > 0
+        return track
 
     def post_process(self, solution):
         change = False
@@ -135,13 +140,13 @@ class BoundGraphReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
     def __init__(self):
-        self.runs = 0
+        self.enabled = True
 
-    def reduce(self, steiner):
-        if len(steiner.terminals) < 2:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) < 2 or cnt > 0 or (not self.enabled and not last_run):
             return 0
 
-        cnt = 0
+        track = 0
         g_prime = nx.Graph()
         vor = steiner.get_voronoi()
         lg = steiner.get_lengths
@@ -175,15 +180,16 @@ class BoundGraphReduction:
                 total = dists[0][1] + dists[1][1] + mst_sum
                 if total > steiner.get_approximation().cost:
                     steiner.remove_node(n)
-                    cnt += 1
+                    track += 1
 
         for (u, v, d) in steiner.graph.edges(data='weight'):
             total = steiner.get_restricted_closest(u)[0][1] + steiner.get_restricted_closest(v)[0][1] + mst_sum
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
-                cnt += 1
+                track += 1
 
-        return cnt
+        self.enabled = track > 0
+        return track
 
     def post_process(self, solution):
         return solution, False

@@ -4,6 +4,8 @@ import sys
 
 
 class VoronoiNodeReduction(voronoi.VoronoiReduction):
+    def __init__(self):
+        self.enabled = True
 
     def find_mst(self, steiner):
         vor = steiner.get_voronoi()
@@ -36,8 +38,8 @@ class VoronoiNodeReduction(voronoi.VoronoiReduction):
 
         return mst_cost - max_edge
 
-    def reduce(self, steiner):
-        if len(steiner.terminals) == 1:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) == 1 or not (self.enabled or last_run):
             return 0
 
         track = 0
@@ -62,5 +64,7 @@ class VoronoiNodeReduction(voronoi.VoronoiReduction):
             if comp + min1 + min2 > steiner.get_approximation().cost:
                 track = track + 1
                 steiner.remove_node(n)
+
+        self.enabled = track > 0
 
         return track

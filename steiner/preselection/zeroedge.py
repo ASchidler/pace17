@@ -4,16 +4,20 @@ class ZeroEdgeReduction:
     """Reduction that automatically contracts edges with weight 0"""
     def __init__(self):
         self.merged = []
+        self.enabled = True
 
-    def reduce(self, steiner):
-        cnt = 0
+    def reduce(self, steiner, cnt, last_run):
+        track = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
             if d == 0:
                 for e in steiner.contract_edge(u, v):
                     self.merged.append(e)
-                cnt = cnt + 1
+                track += 1
 
-        return cnt
+        if track == 0:
+            self.enabled = False
+
+        return track
 
     def post_process(self, solution):
         change = False

@@ -9,7 +9,7 @@ class LongEdgeReduction:
         self.runs = 0
         self._delete_equal = delete_equal
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         track = len(nx.edges(steiner.graph))
 
         # if self.runs > 0:

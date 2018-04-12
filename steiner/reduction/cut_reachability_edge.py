@@ -4,7 +4,7 @@ import sys
 
 class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
 
-    def reduce_edge(self, steiner):
+    def reduce_edge(self, steiner, cnt, last_run):
         if len(steiner.graph.nodes) == 1:
             return 0
 

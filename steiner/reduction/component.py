@@ -4,7 +4,7 @@ import networkx as nx
 class ComponentReduction:
     """ Checks if the graph has several components and removes unnecessary ones"""
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         track = len(nx.nodes(steiner.graph))
         if len(nx.nodes(steiner.graph)) > 1 and not nx.is_connected(steiner.graph):
             for c in list(nx.connected_components(steiner.graph)):

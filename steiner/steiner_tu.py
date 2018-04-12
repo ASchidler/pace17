@@ -11,7 +11,7 @@ import signal
 
 steinerx = pp.parse_pace_file(sys.stdin)
 dr = dg.DegreeReduction()
-dr.reduce(steinerx)
+dr.reduce(steinerx, 0, False)
 finder = cf.ComponentFinder()
 
 components = finder.decompose([steinerx])
@@ -21,17 +21,18 @@ results = []
 for steiner in components:
     reducers = cfg.reducers()
     contractors = cfg.contractors()
+    last_run = False
 
     while True:
         cnt = 0
         for r in reducers:
-            cnt = cnt + r.reduce(steiner)
+            cnt = cnt + r.reduce(steiner, cnt, last_run)
 
         steiner._lengths = {}
         steiner._approximation = None
 
         for c in contractors:
-            cnt = cnt + c.reduce(steiner)
+            cnt = cnt + c.reduce(steiner, cnt, last_run)
 
         steiner._lengths = {}
         steiner._approximation = None
@@ -41,7 +42,11 @@ for steiner in components:
         steiner._voronoi_areas = None
 
         if cnt == 0:
-            break
+            if last_run:
+                break
+            last_run = True
+        else:
+            last_run = False
 
     # Solve
     # Distance matrix may be incorrect due to preprocessing, restore

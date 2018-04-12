@@ -6,7 +6,7 @@ class ReachabilityReduction:
     def __init__(self):
         self._removed = {}
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         if len(steiner.graph.nodes) == 1:
             return 0
 

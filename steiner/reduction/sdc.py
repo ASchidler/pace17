@@ -3,7 +3,7 @@ import networkx as nx
 
 
 class SdcReduction:
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         if len(nx.edges(steiner.graph)) > 1000 and len(nx.edges(steiner.graph)) / len(nx.nodes(steiner.graph)) > 4:
             return 0
 

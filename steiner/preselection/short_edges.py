@@ -11,7 +11,7 @@ class ShortEdgeReduction:
         self.merged = []
         self._done = False
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         track = len(nx.nodes(steiner.graph))
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1

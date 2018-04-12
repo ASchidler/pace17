@@ -8,7 +8,7 @@ class DegreeReduction:
     def __init__(self):
         self._removed = {}
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         track = len(nx.nodes(steiner.graph))
 
         old = sys.maxint

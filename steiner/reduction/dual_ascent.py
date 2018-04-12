@@ -4,8 +4,8 @@ import heapq as hq
 
 
 class DualAscent:
-    def reduce(self, steiner):
-        if len(steiner.terminals) < 4:
+    def reduce(self, steiner, cnt, last_run):
+        if len(steiner.terminals) < 4 or cnt > 0:
             return 0
 
         ts = list(steiner.terminals)

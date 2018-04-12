@@ -12,7 +12,7 @@ class TerminalReduction:
         self._selected_merge = []
         self._done = False
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         track = len(nx.nodes(steiner.graph))
         change = True
 

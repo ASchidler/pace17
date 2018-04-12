@@ -23,19 +23,20 @@ def reducers():
         terminals.TerminalReduction(),
         component.ComponentReduction(),
         degree.DegreeReduction(),
-        # voronoi_nodes.VoronoiNodeReduction(),
-        # voronoi.VoronoiReduction(),
+        ntdk.NtdkReduction(False),
+        voronoi_nodes.VoronoiNodeReduction(),
+        voronoi.VoronoiReduction(),
         bound_reductions.BoundNodeReduction(),
         bound_reductions.BoundEdgeReduction(),
         bound_reductions.BoundGraphReduction(),
         bound_reductions.BoundNtdkReduction(),
-        ntdk.NtdkReduction(False),
+        dual_ascent.DualAscent(),
         degree.DegreeReduction(),
         terminals.TerminalReduction(),
         component.ComponentReduction(),
-        cut_reachability.CutReachabilityReduction(),
-        cut_reachability_edge.CutReachabilityEdgeReduction(),
-        reachability.ReachabilityReduction(),
+        # cut_reachability.CutReachabilityReduction(),
+        # cut_reachability_edge.CutReachabilityEdgeReduction(),
+        # reachability.ReachabilityReduction(),
         long_edges.LongEdgeReduction(True)
     ]
 
@@ -44,7 +45,7 @@ def contractors():
     return [
         #terminals.TerminalReduction(),
         nearest_vertex.NearestVertex(),
-        short_links.ShortLinkPreselection(),
+        short_links.ShortLinkPreselection()
     ]
 
 

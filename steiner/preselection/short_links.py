@@ -9,7 +9,7 @@ class ShortLinkPreselection:
         self.merged = []
         self._done = False
 
-    def reduce(self, steiner):
+    def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) <= 1:
             return 0
 
