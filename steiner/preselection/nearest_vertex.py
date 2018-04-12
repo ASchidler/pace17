@@ -16,7 +16,7 @@ class NearestVertex:
 
         for t in list(steiner.terminals):
             # t may have been deleted before
-            if t in steiner.terminals and steiner.graph.degree[t] >= 2:
+            if t in steiner.terminals and steiner.graph.degree[t] >= 2 and len(steiner.terminals) > 2:
                 e1 = (None, sys.maxint, sys.maxint)
                 e2 = (None, sys.maxint)
                 e3 = (None, sys.maxint)
