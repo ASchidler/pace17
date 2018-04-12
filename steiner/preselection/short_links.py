@@ -39,6 +39,10 @@ class ShortLinkPreselection:
                     elif d < min2[2]:
                         min2 = (u, v, d)
 
+            # This can happen if terminals get deleted during the loop
+            if min1[2] == sys.maxint:
+                return track
+
             # There always exists a boundary edge. If there is no second largest edge, we can contract
             total = steiner.get_closest(min1[0])[0][1] + min1[2] + steiner.get_closest(min1[1])[0][1]
 
