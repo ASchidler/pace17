@@ -78,7 +78,7 @@ class SteinerGraph:
         [g.add_edge(t1, t2, weight=self.get_lengths(t1, t2))
          for t1 in self.terminals for t2 in self.terminals if t2 > t1]
 
-        mst = nx.maximum_spanning_tree(g)
+        mst = nx.minimum_spanning_tree(g)
 
         for (t1, t2) in [(t1, t2) for t1 in self.terminals for t2 in self.terminals if t2 > t1]:
             p = nx.shortest_path(mst, t1, t2)
@@ -88,6 +88,7 @@ class SteinerGraph:
 
             self._steiner_lengths.setdefault(t1, {})[t2] = max_l
 
+    # TODO: Use bound
     def get_steiner_lengths(self, n1, n2, bound):
         if self._steiner_lengths is None:
             self.calculate_steiner_length()
@@ -95,39 +96,32 @@ class SteinerGraph:
         if n1 > n2:
             n1, n2 = n2, n1
 
-        # Two terminals? Directly use value
-        if n1 in self.terminals and n2 in self.terminals:
-            return self._steiner_lengths[n1][n2]
-
         # The distances to the closest terminal are a lower bound
         cls1 = self.get_closest(n1)
         cls2 = self.get_closest(n2)
 
-        lb = max(self.get_lengths(cls1[0][0], n1), self.get_lengths(cls2[0][0], n2))
+        # Current bound is the edge length (if it exists)
+        sd = self.graph[n1][n2]['weight'] if self.graph.has_edge(n1, n2) else sys.maxint
+        closest1 = [cls1[0]] if n1 in self.terminals \
+            else [cls1[i] for i in xrange(min(3, len(self.terminals))) if cls1[i][1] < sd]
+        closest2 = [cls2[0]] if n2 in self.terminals \
+            else [cls2[i] for i in xrange(min(3, len(self.terminals))) if cls2[i][1] < sd]
 
-        # In case the voronoi region is the same, the lower bound is equal to the upper bound
-        # If the lower bound is larger than the bound -> Cannot be satisfied
-        if lb > bound or cls1[0][0] == cls2[0][0]:
-            return lb
+        if len(closest1) == 0 or len(closest2) == 0:
+            return sd
 
-        iterations = range(0, min(len(self.terminals), 3))
+        for ct1 in closest1:
+            for ct2 in closest2:
+                val = max(ct1[1], ct2[1])
 
-        for i, j in ((i, j) for i in iterations for j in iterations):
-            t1 = self.get_restricted_closest(n1)[i]
-            t2 = self.get_restricted_closest(n2)[j]
+                if ct1[0] == ct2[0]:
+                    sd = min(sd, val)
+                else:
+                    t1 = min(ct1[0], ct2[0])
+                    t2 = max(ct1[0], ct2[0])
+                    sd = min(sd, max(val, self._steiner_lengths[t1][t2]))
 
-            if t1[1] < sys.maxint and t2[1] < sys.maxint:
-                if t1[0] > t2[0]:
-                    t1, t2 = t2, t1
-
-                val3 = 0 if t1[0] == t2[0] else self._steiner_lengths[t1[0]][t2[0]]
-                result = max([t1[1], t2[1], val3])
-
-                if result < bound:
-                    return result
-
-        # Since nothing below the bound could be found...
-        return sys.maxint
+        return sd
 
     def path_contains(self, n1, n2, u, v, c):
         path_dist = self.get_lengths(n1, n2)
