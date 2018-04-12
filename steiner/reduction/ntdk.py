@@ -13,6 +13,9 @@ class NtdkReduction:
         self._restricted = restricted
 
     def reduce(self, steiner):
+        if len(nx.edges(steiner.graph)) / len(nx.nodes(steiner.graph)) >= 3:
+            return 0
+
         track = len(nx.nodes(steiner.graph))
 
         ns = list(nx.nodes(steiner.graph))
@@ -120,6 +123,7 @@ class NtdkReduction:
         queue = [[0, u]]
         visited = set()
         scanned = defaultdict(lambda: sys.maxint)
+        scanned_edges = 0
 
         while len(queue) > 0:
             c_val = hq.heappop(queue)
@@ -133,11 +137,12 @@ class NtdkReduction:
             elif n in steiner.terminals and n != u:
                 continue
             # Do not search too far
-            elif len(visited) > 40:
+            elif scanned_edges > 100:
                 break
 
             for n2 in nx.neighbors(steiner.graph, n):
                 cost = c_val[0] + steiner.graph[n][n2]['weight']
+                scanned_edges += 1
 
                 # Do not use current edge
                 if (min(n, n2) != min(u, v) or max(n, n2) != max(u, v)) and cost < scanned[n2]:

@@ -1,8 +1,12 @@
 import ntdk
+import networkx as nx
 
 
 class SdcReduction:
     def reduce(self, steiner):
+        if len(nx.edges(steiner.graph)) > 1000 and len(nx.edges(steiner.graph)) / len(nx.nodes(steiner.graph)) > 4:
+            return 0
+
         count = 0
         edge_count = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
