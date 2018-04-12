@@ -75,7 +75,8 @@ class DualAscent:
 
         while len(t_cuts) > 0:
             old_size, c_cut = hq.heappop(t_cuts)
-            new_cut = set(c_cut)
+            cut_add = set()
+            cut_rm = set()
 
             delta = sys.maxint
             for n in c_cut:
@@ -84,41 +85,48 @@ class DualAscent:
                         delta = min(delta, dg[n2][n]['weight'])
             bound += delta
 
-            hq.heappush(t_cuts, [len(new_cut), new_cut])
-
+            remove = False
             for n in c_cut:
                 any_in = False
                 for n2 in dg.predecessors(n):
-                    any_in = True
                     if n2 not in c_cut:
-                        d = dg[n2][n]['weight']
-                        d = max(0, d - delta)
-                        dg[n2][n]['weight'] = d
+                        any_in = True
 
-                        if d <= 0:
-                            all_containing = []
+                        dg[n2][n]['weight'] -= delta
+
+                        if dg[n2][n]['weight'] == 0:
+                            # Find connected nodes
+                            queue = [n2]
+                            connected_nodes = set()
+                            while len(queue) > 0:
+                                c_node = queue.pop()
+                                connected_nodes.add(c_node)
+
+                                for c_p in dg.predecessors(c_node):
+                                    if dg[c_p][c_node]['weight'] == 0 and c_p not in connected_nodes:
+                                        queue.append(c_p)
+
+                            new_ts = connected_nodes.intersection(steiner.terminals)
+
+                            cut_add.update(connected_nodes)
+                            remove = remove or len(new_ts) > 0
+
+                            # This loop is probably a huge performance drain...
                             for i in reversed(range(0, len(t_cuts))):
                                 if n in t_cuts[i][1]:
-                                    all_containing.append(t_cuts.pop(i)[1])
+                                    if any(x not in t_cuts[i][1] for x in new_ts):
+                                        t_cuts.pop(i)
+                                        hq.heapify(t_cuts)
+                                    else:
+                                        t_cuts[i][1].update(connected_nodes)
 
-                            for c_con in all_containing:
-                                queue = [n2]
-                                remove = False
+                if not any_in and n not in steiner.terminals:
+                    cut_rm.add(n)
 
-                                while len(queue) > 0:
-                                    c_elem = queue.pop()
-                                    if c_elem in steiner.terminals:
-                                        remove = True
-                                        break
-
-                                    c_con.add(c_elem)
-                                    [queue.append(x) for x in dg.predecessors(c_elem) if x not in c_con and
-                                                   dg[x][c_elem]['weight'] == 0]
-
-                                if not remove:
-                                    t_cuts.append([len(c_con), c_con])
-
-            hq.heapify(t_cuts)
+            if not remove:
+                c_cut |= cut_add
+                #c_cut -= cut_rm
+                hq.heappush(t_cuts, [len(c_cut), c_cut])
 
         return bound, dg
 
