@@ -104,6 +104,7 @@ class NtdkReduction:
         scanned1 = NtdkReduction.modified_dijkstra_sub(steiner, u, v, cut_off)
         scanned2 = NtdkReduction.modified_dijkstra_sub(steiner, v, u, cut_off)
 
+        # If we found the other node use this dist. Scanned != Visited, therefore values may differ!
         sd = scanned1[v] if v in scanned1 else sys.maxint
         if u in scanned2:
             sd = min(sd, scanned2[u])
@@ -121,35 +122,38 @@ class NtdkReduction:
         return sd
 
     @staticmethod
-    # TODO: You can actually stop at already scanned nodes from the first run
     def modified_dijkstra_sub(steiner, u, v, cut_off):
         queue = [[0, u]]
-        visited = set()
+        visited = {u}
         scanned = defaultdict(lambda: sys.maxint)
         scanned_edges = 0
 
-        while len(queue) > 0:
+        # Expand first node explicitly here, so no check in the loop is required to exclude edge
+        for n2 in nx.neighbors(steiner.graph, u):
+            if n2 != v:
+                c = steiner.graph[u][n2]['weight']
+                hq.heappush(queue, [c, n2])
+                scanned[n2] = c
+
+        while len(queue) > 0 and scanned_edges < 40:
             c_val = hq.heappop(queue)
             n = c_val[1]
 
             if n in visited:
                 continue
-            if n == v or c_val[0] > cut_off:
+            if c_val[0] > cut_off:
                 break
             # Do not skip the first node, even if it is a terminal
-            elif n in steiner.terminals and n != u:
+            elif n in steiner.terminals or n == v:
                 continue
-            # Do not search too far
-            elif scanned_edges > 100:
-                break
 
             for n2 in nx.neighbors(steiner.graph, n):
-                cost = c_val[0] + steiner.graph[n][n2]['weight']
                 scanned_edges += 1
+                if n2 not in visited:
+                    cost = c_val[0] + steiner.graph[n][n2]['weight']
 
-                # Do not use current edge
-                if (min(n, n2) != min(u, v) or max(n, n2) != max(u, v)) and cost < scanned[n2]:
-                    scanned[n2] = cost
-                    hq.heappush(queue, [cost, n2])
+                    if cost < scanned[n2] and cost <= cut_off:
+                        scanned[n2] = cost
+                        hq.heappush(queue, [cost, n2])
 
         return scanned
