@@ -31,7 +31,8 @@ class LongEdgeReduction:
 
         if self._delete_equal:
             for (u, v, d) in equal_edges:
-                if d >= ntdk.NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, True):
+                if steiner.graph.has_edge(u, v) and \
+                        d >= ntdk.NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, True):
                     steiner.remove_edge(u, v)
 
         self.runs = self.runs + 1
