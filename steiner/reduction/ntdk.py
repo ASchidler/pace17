@@ -20,9 +20,7 @@ class NtdkReduction:
 
         track = len(nx.nodes(steiner.graph))
 
-        ns = list(nx.nodes(steiner.graph))
-        ns.sort()
-        for n in ns:
+        for n in list(nx.nodes(steiner.graph)):
             nb = list(nx.all_neighbors(steiner.graph, n))
             degree = len(nb)
             true_for_all = True

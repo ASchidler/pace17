@@ -111,6 +111,7 @@ class BoundNtdkReduction:
                     if total > steiner.get_approximation().cost or (total == steiner.get_approximation().cost and
                                                                     not steiner.get_approximation().tree.has_node(n)):
                         nb = list(nx.neighbors(steiner.graph, n))
+                        nb.sort()
                         for (n1, n2) in ((x, y) for x in nb for y in nb if y > x):
                             c1 = steiner.graph[n][n1]['weight']
                             c2 = steiner.graph[n][n2]['weight']
