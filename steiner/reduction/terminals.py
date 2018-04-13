@@ -1,5 +1,4 @@
-import networkx as nx
-import sys
+from sys import maxint
 
 
 class TerminalReduction:
@@ -13,7 +12,7 @@ class TerminalReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
         change = True
 
         while change:
@@ -23,7 +22,7 @@ class TerminalReduction:
                 if t not in steiner.terminals:
                     continue
 
-                neighbors = list(nx.neighbors(steiner.graph, t))
+                neighbors = list(steiner.graph.neighbors(t))
 
                 # One neighbor... Simply contract
                 if len(neighbors) == 1:
@@ -43,7 +42,7 @@ class TerminalReduction:
                             contract_edge = (neighbors[1], l2)
                     # More? Contract if smallest edge leads to a terminal
                     else:
-                        min_val = (sys.maxint, None)
+                        min_val = (maxint, None)
                         for n in neighbors:
                             w = steiner.graph[t][n]['weight']
 
@@ -61,7 +60,7 @@ class TerminalReduction:
 
                         change = True
 
-        return track - len(nx.nodes(steiner.graph))
+        return track - len(steiner.graph.nodes)
 
     def post_process(self, solution):
         cost = solution[1]

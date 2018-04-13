@@ -1,5 +1,3 @@
-import networkx as nx
-import sys
 import ntdk
 
 class LongEdgeReduction:
@@ -10,7 +8,7 @@ class LongEdgeReduction:
         self._delete_equal = delete_equal
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(nx.edges(steiner.graph))
+        track = len(steiner.graph.edges)
 
         # if self.runs > 0:
         steiner.refresh_steiner_lengths()
@@ -25,7 +23,7 @@ class LongEdgeReduction:
                 equal_edges.append((u, v, d))
 
         for t in steiner.terminals:
-            for n in list(nx.neighbors(steiner.graph, t)):
+            for n in list(steiner.graph.neighbors(t)):
                 if steiner.graph[n][t]['weight'] > steiner.get_lengths(n, t):
                     steiner.remove_edge(n, t)
 
@@ -36,7 +34,7 @@ class LongEdgeReduction:
                     steiner.remove_edge(u, v)
 
         self.runs = self.runs + 1
-        return track - len(nx.edges(steiner.graph))
+        return track - len(steiner.graph.edges)
 
     def post_process(self, solution):
         return solution, False

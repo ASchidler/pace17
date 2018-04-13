@@ -1,13 +1,14 @@
-import networkx as nx
-import sys
+from sys import maxint
 import heapq
 import set_storage as st
+from networkx import Graph
+from itertools import chain
 
 
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
-        self.max_node = max(nx.nodes(steiner.graph))
+        self.max_node = max(steiner.graph.nodes)
         self.terminals = list(terminals)
         self.terminals.sort()
         self.root_node = self.terminals.pop()
@@ -30,7 +31,7 @@ class Solver2k:
         steiner.closest_terminals = list([None] * (self.max_node + 1))
         length = steiner.get_lengths
 
-        for n in nx.nodes(self.steiner.graph):
+        for n in self.steiner.graph.nodes:
             self.labels[n] = st.SetStorage(len(self.terminals))
             s_id = 0
             if n in self.terminals:
@@ -45,7 +46,7 @@ class Solver2k:
         """Solves the instance of the steiner tree problem"""
         # Edge case, may also happen in case of a very efficient preprocessing
         if len(self.steiner.terminals) == 1:
-            ret = nx.Graph()
+            ret = Graph()
             ret.add_node(list(self.steiner.terminals)[0])
             self.result = ret, 0
             return ret, 0
@@ -72,14 +73,14 @@ class Solver2k:
                 self.process_labels(n, s, n_cost[0])
 
         # Process result
-        ret = nx.Graph()
+        ret = Graph()
         total = self.backtrack(self.root_node, self.max_set, ret)
 
         self.result = ret, total
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
-        for other_node in nx.neighbors(self.steiner.graph, n):
+        for other_node in self.steiner.graph.neighbors(n):
             other_node_cost = self.costs[other_node][n_set]
 
             # Not permanent
@@ -140,7 +141,7 @@ class Solver2k:
             if set_id2 is not None:
                 bound = self.prune2_combine(set_id, set_id2)
             else:
-                bound = (sys.maxint, [])
+                bound = (maxint, [])
         else:
             bound = self.prune_bounds[target_set]
 
@@ -193,7 +194,7 @@ class Solver2k:
 
         # Check if bounds for both sets exist
         if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
-            return sys.maxint, []
+            return maxint, []
 
         set1 = self.to_list(set_id1)
         set2 = self.to_list(set_id2)
@@ -203,11 +204,12 @@ class Solver2k:
         # To allow combination of the partial solutions at least one set must be disjoint from the other solutions
         # used nodes
         if any(e in set2 for e in set1_entry[1]) and any(e in set1 for e in set2_entry[1]):
-            return sys.maxint, []
+            return maxint, []
 
+        # TODO: This never gets challed, why?
         # Combine subset solutions
         val = set1_entry[0] + set2_entry[0]
-        s = [x for x in it.chain(set1_entry[1], set2_entry[1]) if x not in set1 and x not in set2]
+        s = [x for x in chain(set1_entry[1], set2_entry[1]) if x not in set1 and x not in set2]
 
         self.prune_bounds[set_id1 | set_id2] = (val, s)
         return val, s

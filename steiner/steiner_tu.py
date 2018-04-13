@@ -4,8 +4,6 @@ import iparser as pp
 import oparser as po
 import reduction.degree as dg
 import component_finder as cf
-import signal
-
 
 """ The real solver script that reads from stdin and outputs the solution """
 

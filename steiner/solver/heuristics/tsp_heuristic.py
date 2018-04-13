@@ -1,5 +1,5 @@
-import math
-import sys
+from sys import maxint
+from math import ceil
 
 
 class TspHeuristic:
@@ -21,7 +21,7 @@ class TspHeuristic:
         cost = self.get_tsp_for_set(set_id, ts)
 
         # Find the smallest tour, by adding the node to all possible hamiltonian paths
-        min_val = sys.maxint
+        min_val = maxint
         for i in range(0, len(ts)):
             t1 = ts[i]
             d1 = self.steiner.get_lengths(t1, n)
@@ -30,7 +30,7 @@ class TspHeuristic:
                 d2 = self.steiner.get_lengths(t2, n)
                 min_val = min(min_val, d1 + d2 + cost[(t1, t2)])
 
-        return int(math.ceil(min_val / 2.0))
+        return int(ceil(min_val / 2.0))
 
     def get_tsp_for_set(self, set_id, ts):
         """ Calculates the Hamiltonian paths for all possible endpoint pairs in the set"""
@@ -64,7 +64,7 @@ class TspHeuristic:
         if len(nodes) == 1:
             return self.steiner.get_lengths(s, l)
 
-        min_val = sys.maxint
+        min_val = maxint
         # Remove current element for recursive calls
         nodes.remove(l)
 

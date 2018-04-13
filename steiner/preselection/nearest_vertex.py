@@ -1,5 +1,4 @@
-import sys
-import networkx as nx
+from sys import maxint
 
 
 class NearestVertex:
@@ -17,12 +16,12 @@ class NearestVertex:
         for t in list(steiner.terminals):
             # t may have been deleted before
             if t in steiner.terminals and steiner.graph.degree[t] >= 2 and len(steiner.terminals) > 2:
-                e1 = (None, sys.maxint, sys.maxint)
-                e2 = (None, sys.maxint)
-                e3 = (None, sys.maxint)
+                e1 = (None, maxint, maxint)
+                e2 = (None, maxint)
+                e3 = (None, maxint)
 
                 # Find three smallest incident edges
-                for n in nx.neighbors(steiner.graph, t):
+                for n in steiner.graph.neighbors(t):
                     d = steiner.graph[t][n]['weight']
 
                     cmp_val = d + steiner.get_closest(n)[1][1] if n in steiner.get_voronoi()[t] else d + steiner.get_closest(n)[0][1]
@@ -39,9 +38,9 @@ class NearestVertex:
                 contract = False
                 if e2[1] >= cmp_val:
                     contract = True
-                elif e2[1] < sys.maxint and e3[1] >= e1[2] and e2[0] not in steiner.terminals:
+                elif e2[1] < maxint and e3[1] >= e1[2] and e2[0] not in steiner.terminals:
                     contract = True
-                    for n2 in nx.neighbors(steiner.graph, e2[0]):
+                    for n2 in steiner.graph.neighbors(e2[0]):
                         if n2 != t and steiner.graph[e2[0]][n2]['weight'] < e1[2]:
                             contract = False
                             break

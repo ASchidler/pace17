@@ -1,8 +1,8 @@
-import cut_reachability as cr
-import sys
+from cut_reachability import CutReachabilityReduction
+from sys import maxint
 
 
-class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
+class CutReachabilityEdgeReduction(CutReachabilityReduction):
 
     def reduce_edge(self, steiner, cnt, last_run):
         if len(steiner.graph.nodes) == 1:
@@ -12,12 +12,12 @@ class CutReachabilityEdgeReduction(cr.CutReachabilityReduction):
 
         for (u, v, d) in list(steiner.graph.edges(data='weight')):
             if not steiner.get_approximation().tree.has_edge(u, v):
-                min_u = sys.maxint
+                min_u = maxint
                 min_u_node = None
-                min_u_dist = sys.maxint
-                min_v = sys.maxint
+                min_u_dist = maxint
+                min_v = maxint
                 min_v_node = None
-                min_v_dist = sys.maxint
+                min_v_dist = maxint
 
                 for (t, s) in self._terminal_minimums.items():
                     if u != t:
