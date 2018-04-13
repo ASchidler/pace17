@@ -5,7 +5,7 @@ from networkx import single_source_dijkstra_path_length
 
 class DualAscent:
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 4 or cnt > 0 or len(steiner.grap.edges) / len(steiner.graph.nodes) > 10:
+        if len(steiner.terminals) < 4 or cnt > 0 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
             return 0
 
         ts = list(steiner.terminals)
