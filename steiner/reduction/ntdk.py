@@ -67,7 +67,6 @@ class NtdkReduction:
                         if c1 + c2 <= dist[(n1, n2)]:
                             if steiner.add_edge(n1, n2, c1 + c2):
                                 self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
-
                     steiner.remove_node(n)
 
         steiner._lengths = {}
