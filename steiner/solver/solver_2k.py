@@ -119,7 +119,7 @@ class Solver2k:
                         cst[combined] = (total, False, other_set, True)
 
                         h = heuristic(n, combined)
-                        if total + h <= approx and not prune(n, combined, total, other_set):
+                        if total + h <= approx and not prune(n, n_set, total, other_set):
                             push(q, [total + h, n, combined])
 
     def heuristic(self, n, set_id):
@@ -176,15 +176,21 @@ class Solver2k:
         if set_id in self.prune_dist:
             dist = self.prune_dist[set_id], None
         else:
-            lengths = self.steiner.get_lengths
-            dist = min(((lengths(t1, t2), t2) for t1 in t_in for t2 in t_out), key=lambda x: x[0])
+            dist = (maxint, None)
+            for t in t_in:
+                for t2, d in self.steiner.get_closest(t):
+                    if t2 in t_out:
+                        if d < dist[0]:
+                            dist = (d, t2)
+                        break
 
             self.prune_dist[set_id] = dist[0]
 
         # Find the minimum distance between n and R \ set
         for (t, l) in self.steiner.closest_terminals[n]:
             if t in t_out:
-                dist = (l, t)
+                if l < dist[0]:
+                    dist = (l, t)
                 break
 
         # Check if we can lower the bound
@@ -209,7 +215,6 @@ class Solver2k:
         if any(e in set2 for e in set1_entry[1]) and any(e in set1 for e in set2_entry[1]):
             return maxint, []
 
-        # TODO: This never gets challed, why?
         # Combine subset solutions
         val = set1_entry[0] + set2_entry[0]
         s = [x for x in chain(set1_entry[1], set2_entry[1]) if x not in set1 and x not in set2]
@@ -257,3 +262,4 @@ class SolverCosts(dict):
 
         # Otherwise infinity
         return self.max_val, [], None, False
+
