@@ -1,4 +1,4 @@
-import networkx as nx
+from networkx import Graph, minimum_spanning_edges
 
 
 class CostVsTerminalDistanceReduction:
@@ -12,10 +12,10 @@ class CostVsTerminalDistanceReduction:
             return 0
 
         # Find max distance
-        g = nx.Graph()
+        g = Graph()
         [g.add_edge(t1, t2, weight=steiner.get_lengths(t1, t2))
             for t1 in steiner.terminals for t2 in steiner.terminals if t2 > t1]
-        val = max([d for (u, v, d) in nx.minimum_spanning_edges(g)])
+        val = max([d for (u, v, d) in minimum_spanning_edges(g)])
 
         terminal_edges = 0
         for (u, v, d) in list(steiner.graph.edges(data='weight')):

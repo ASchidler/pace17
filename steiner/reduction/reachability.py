@@ -1,5 +1,4 @@
-import sys
-import networkx as nx
+from sys import maxint
 
 
 class ReachabilityReduction:
@@ -10,14 +9,14 @@ class ReachabilityReduction:
         if len(steiner.graph.nodes) == 1:
             return 0
 
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
 
-        approx_nodes = nx.nodes(steiner.get_approximation().tree)
+        approx_nodes = set(steiner.get_approximation().tree.nodes)
 
-        for n in list(nx.nodes(steiner.graph)):
+        for n in list(steiner.graph.nodes):
             if n not in approx_nodes:
-                min_val1 = sys.maxint
-                min_val2 = sys.maxint
+                min_val1 = maxint
+                min_val2 = maxint
                 max_val = 0
 
                 for t in steiner.terminals:
@@ -36,7 +35,7 @@ class ReachabilityReduction:
                     steiner.graph.remove_node(n)
                 # Otherwise introduce artificial edges
                 elif min_val1 + min_val2 + max_val >= steiner.get_approximation().cost:
-                    nb = list(nx.neighbors(steiner.graph, n))
+                    nb = list(steiner.graph.neighbors(n))
                     # Introduce artificial edges
                     # TODO: find good value. At some point (10 is known, 6 is also too high) this becomes extremely slow
                     if len(nb) <= 5:
@@ -52,7 +51,7 @@ class ReachabilityReduction:
 
                         steiner.remove_node(n)
 
-        return track - len(nx.nodes(steiner.graph))
+        return track - len(steiner.graph.nodes)
 
     def post_process(self, solution):
         change = False

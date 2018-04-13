@@ -1,5 +1,4 @@
-import sys
-import networkx as nx
+from sys import maxint
 
 
 class CutReachabilityReduction:
@@ -13,9 +12,9 @@ class CutReachabilityReduction:
         self._terminal_minimums = {}
 
         for t in steiner.terminals:
-            min_val = sys.maxint
+            min_val = maxint
 
-            for n in nx.neighbors(steiner.graph, t):
+            for n in steiner.graph.neighbors(t):
                 w = steiner.graph[t][n]['weight']
                 min_val = min(w, min_val)
 
@@ -31,13 +30,13 @@ class CutReachabilityReduction:
         # Always recalculate so that it adapts to changing terminal set
         self.find_minimums(steiner)
 
-        approx_nodes = nx.nodes(steiner.get_approximation().tree)
-        for n in list(nx.nodes(steiner.graph)):
+        approx_nodes = set(steiner.get_approximation().tree.nodes)
+        for n in list(steiner.graph.nodes):
             if n not in approx_nodes:
-                min_val1 = sys.maxint
-                min_val2 = sys.maxint
-                min_dist1 = sys.maxint
-                min_dist2 = sys.maxint
+                min_val1 = maxint
+                min_val2 = maxint
+                min_dist1 = maxint
+                min_dist2 = maxint
                 n1 = None
                 n2 = None
 
@@ -59,7 +58,7 @@ class CutReachabilityReduction:
                             n2 = t
 
                 # TODO: Is this correct
-                if min_val2 == sys.maxint:
+                if min_val2 == maxint:
                     min_val2 = min_val1
                     n2 = n1
                     min_dist2 = min_dist1

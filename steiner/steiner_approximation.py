@@ -1,8 +1,8 @@
-import sys
-import networkx as nx
+from sys import maxint
 import heapq
 from collections import defaultdict
 from itertools import chain
+from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree
 
 
 class VoronoiPartition:
@@ -17,12 +17,12 @@ class VoronoiPartition:
         visited = set()
 
         # Find voronoi regions. Initialize with tree nodes as voronoi centers
-        for n in nx.nodes(target):
+        for n in target.nodes:
             self.regions[n] = {}
             # Queue format is: cost, current node, original start, previous node
             heapq.heappush(queue, [0, n, n, n])
 
-        node_count = len(nx.nodes(source))
+        node_count = len(source.nodes)
         while len(visited) != node_count:
             el = heapq.heappop(queue)
 
@@ -31,7 +31,7 @@ class VoronoiPartition:
                 self.regions[el[2]][el[1]] = (el[0], el[3])
                 self._closest[el[1]] = el[2]
 
-                for n in nx.neighbors(source, el[1]):
+                for n in source.neighbors(el[1]):
                     if n not in visited:
                         cost = el[0] + source[el[1]][n]['weight']
                         heapq.heappush(queue, [cost, n, el[2], el[1]])
@@ -57,7 +57,7 @@ class VoronoiPartition:
 
         # Initialize dijkstra s.t. the boundary nodes are added with the distance to the adjacent center
         for rep in repair_nodes:
-            for nb in nx.neighbors(self.source, rep):
+            for nb in self.source.neighbors(rep):
                 c_closest = self._closest[nb]
                 if c_closest not in intermediaries:
                     cost = self.regions[c_closest][nb][0] + self.source[rep][nb]['weight']
@@ -71,7 +71,7 @@ class VoronoiPartition:
                 self._tmp_closest[el[1]] = el[2]
                 self._tmp_regions.setdefault(el[2], {})[el[1]] = (el[0], el[3])
 
-                for nb in nx.neighbors(self.source, el[1]):
+                for nb in self.source.neighbors(el[1]):
                     if nb not in visited_repair and nb in repair_nodes:
                         cost = el[0] + self.source[el[1]][nb]['weight']
                         heapq.heappush(queue, [cost, nb, el[2], el[1]])
@@ -91,7 +91,7 @@ class VoronoiPartition:
             path.append((n, prev, self.source[n][prev]['weight']))
             n = prev
 
-        #returns path and endpoint
+        # returns path and endpoint
         return path, n
 
     def dist(self, n):
@@ -110,7 +110,7 @@ class VoronoiPartition:
 class SteinerApproximation:
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
     def __init__(self, steiner):
-        self.cost = sys.maxint
+        self.cost = maxint
         self.tree = None
 
         limit = min(20, len(steiner.terminals))
@@ -130,17 +130,17 @@ class SteinerApproximation:
             self.vertex_insertion(steiner)
 
             # Remove non-terminal leafs
-            old = sys.maxint
-            while old != len(nx.nodes(self.tree)):
-                old = len(nx.nodes(self.tree))
+            old = maxint
+            while old != len(self.tree.nodes):
+                old = len(self.tree.nodes)
 
-                for (n, d) in list(nx.degree(self.tree)):
+                for (n, d) in self.tree.degree():
                     if d == 1 and n not in steiner.terminals:
                         self.tree.remove_node(n)
 
     def calculate(self, steiner, start_node):
         # Solution init
-        tree = nx.Graph()
+        tree = Graph()
         cost = 0
 
         # Queue -> all terminals must be in solutions and processed nodes
@@ -155,7 +155,7 @@ class SteinerApproximation:
 
         while len(queue) > 0:
             # Find terminal with minimal distance to tree
-            min_val = sys.maxint
+            min_val = maxint
             min_t = None
             min_n = None
 
@@ -173,7 +173,7 @@ class SteinerApproximation:
             queue.remove(min_t)
 
             # Find shortest path between
-            path = nx.dijkstra_path(steiner.graph, min_t, min_n)
+            path = dijkstra_path(steiner.graph, min_t, min_n)
 
             # Now backtrack edges
             prev_n = min_t
@@ -188,14 +188,14 @@ class SteinerApproximation:
                 prev_n = current_n
 
         # Improve solution by creating an MST and deleting non-terminal leafs
-        tree = nx.minimum_spanning_tree(tree)
+        tree = minimum_spanning_tree(tree)
 
         # Remove non-terminal leafs
-        old = sys.maxint
-        while old != len(nx.nodes(tree)):
-            old = len(nx.nodes(tree))
+        old = maxint
+        while old != len(tree.nodes):
+            old = len(tree.nodes)
 
-            for (n, d) in list(nx.degree(tree)):
+            for (n, d) in list(tree.degree()):
                 if d == 1 and n not in steiner.terminals:
                     tree.remove_node(n)
 
@@ -207,10 +207,10 @@ class SteinerApproximation:
         return tree, cost
 
     def vertex_insertion(self, steiner):
-        for n in nx.nodes(steiner.graph):
+        for n in steiner.graph.nodes:
             if not self.tree.has_node(n):
                 # Find neighbors that are in the solution
-                nb = [x for x in nx.neighbors(steiner.graph, n) if self.tree.has_node(x)]
+                nb = [x for x in steiner.graph.neighbors(n) if self.tree.has_node(x)]
 
                 # With only one intersecting neighbor there is no chance of improvement
                 if len(nb) > 1:
@@ -222,7 +222,7 @@ class SteinerApproximation:
                     # Try to insert edges and improve result
                     for i in xrange(1, len(nb)):
                         c = steiner.graph[n][nb[i]]['weight']
-                        p = list(nx.dijkstra_path(g, n, nb[i]))
+                        p = list(dijkstra_path(g, n, nb[i]))
 
                         # Find most expensive edge in path
                         c_max = (None, None, 0)
@@ -244,13 +244,13 @@ class SteinerApproximation:
                         self.tree = g
 
     def path_exchange(self, steiner, favor_new):
-        if len(nx.nodes(self.tree)) < 5:
+        if len(self.tree.nodes) < 5:
             return
 
         bridges = {}
 
         # Find voronoi regions
-        for n in nx.nodes(self.tree):
+        for n in self.tree.nodes:
             bridges[n] = []
 
         vor = VoronoiPartition(steiner.graph, self.tree)
@@ -269,7 +269,7 @@ class SteinerApproximation:
             e.sort(key=lambda x: x[0])
 
         # Critical nodes
-        key_nodes = set((x for x in nx.nodes(self.tree) if x in steiner.terminals or nx.degree(self.tree, x) > 2))
+        key_nodes = set((x for x in self.tree.nodes if x in steiner.terminals or self.tree.degree(x) > 2))
 
         # DFS into the tree
         root = next(iter(steiner.terminals))
@@ -286,7 +286,7 @@ class SteinerApproximation:
             new_last = node if node in key_nodes else last
 
             subset = set()
-            for n2 in nx.neighbors(self.tree, node):
+            for n2 in self.tree.neighbors(node):
                 if n2 != parent:
                     [subset.add(x) for x in (path_exchange_rec(n2, new_last, node))]
 
@@ -314,7 +314,7 @@ class SteinerApproximation:
                 # "Repair" Voronoi, i.e. assign the nodes associated with the intermediaries to new nodes
                 vor.repair(intermediaries)
 
-                min_bound = (sys.maxint, None, None, None)
+                min_bound = (maxint, None, None, None)
                 while True and len(bridges[node]) > 0:
                     c_cost, (x, y, dist) = bridges[node][0]
                     u_in = any(x in vor.regions[n2] for n2 in subset)
@@ -372,9 +372,6 @@ class SteinerApproximation:
 
                     # Remove intermediaries, if orphaned
                     [g_prime.remove_node(x) for x in intermediaries if g_prime.degree[x] == 0]
-                    if not nx.is_connected(g_prime) or not nx.is_tree(g_prime) or len(
-                            [x for x in steiner.terminals if not g_prime.has_node(x)]) > 0:
-                        print "Error"
 
                     # Add descendants and intermediaries as forbidden
                     [forbidden.add(x) for x in subset]
@@ -400,7 +397,7 @@ class SteinerApproximation:
         self.cost = sum([d for (u, v, d) in g_prime.edges(data='weight')])
 
     def keyvertex_deletion(self, steiner):
-        if len(nx.nodes(self.tree)) < 3:
+        if len(self.tree.nodes) < 3:
             return
 
         bridges = {}
@@ -408,13 +405,13 @@ class SteinerApproximation:
 
         # Pick root and create directed tree
         root = next(iter(steiner.terminals))
-        d_tree = nx.dfs_tree(self.tree, root)
+        d_tree = dfs_tree(self.tree, root)
 
         forbidden = set()
         pinned = set()
 
         # Find voronoi regions
-        for n in nx.nodes(self.tree):
+        for n in self.tree.nodes:
             bridges[n] = []
             horizontal[n] = []
 
@@ -431,7 +428,7 @@ class SteinerApproximation:
                 bridges[t2].append([cost, (u, v, d)])
 
                 # Find lowest common ancestor
-                anc = nx.ancestors(d_tree, t1)
+                anc = ancestors(d_tree, t1)
                 anc.add(t1)
                 c_n = t2
                 while c_n not in anc:
@@ -444,14 +441,14 @@ class SteinerApproximation:
         for k, e in bridges.items():
             e.sort(key=lambda x: x[0])
 
-        critical_nodes = set((x for x in nx.nodes(self.tree) if x in steiner.terminals or nx.degree(self.tree, x) > 2))
+        critical_nodes = set((x for x in self.tree.nodes if x in steiner.terminals or self.tree.degree(x) > 2))
 
         def kv_rec(node, last):
             new_last = node if node in critical_nodes else last
 
             # DFS
             child_solutions = []
-            for n2 in nx.neighbors(d_tree, node):
+            for n2 in d_tree.neighbors(node):
                 child_solutions.append(kv_rec(n2, new_last))
 
             # Non-Key?
@@ -570,12 +567,12 @@ class SteinerApproximation:
                             shortest_edges[(c1, c2)] = (total_cost, (x, y, dist), p1, p2)
 
                 # Create graph to calculate mst
-                super_graph = nx.Graph()
+                super_graph = Graph()
                 [super_graph.add_edge(tp1, tp2, weight=total) for ((tp1, tp2), (total, edge, p1, p2)) in shortest_edges.items()]
 
                 # Check if any node is not possibly connected
                 if all(super_graph.has_node(x) for x in child_subsets.keys()) and super_graph.has_node(last):
-                    mst_edges = list(nx.minimum_spanning_edges(super_graph))
+                    mst_edges = list(minimum_spanning_edges(super_graph))
                     mst_cost = sum((dist['weight'] for (x, y, dist) in mst_edges))
 
                     # Calculate original cost
@@ -610,10 +607,6 @@ class SteinerApproximation:
 
                         # Remove orphaned
                         [self.tree.remove_node(x) for x in intermediaries if self.tree.degree[x] == 0]
-
-                        if not nx.is_connected(self.tree) or not nx.is_tree(self.tree) or len(
-                                [x for x in steiner.terminals if not self.tree.has_node(x)]) > 0:
-                            print "*** Error"
 
                         [forbidden.add(x) for x in subsets]
                         [forbidden.add(x) for x in intermediaries]

@@ -1,7 +1,6 @@
-import networkx as nx
-import sys
+from sys import maxint
 import heapq as hq
-
+from networkx import single_source_dijkstra_path_length
 
 class DualAscent:
     def reduce(self, steiner, cnt, last_run):
@@ -19,7 +18,7 @@ class DualAscent:
             if result[0] > max_r[2]:
                 max_r = (result[1], root, result[0])
 
-        root_dist = nx.single_source_dijkstra_path_length(max_r[0], max_r[1])
+        root_dist = single_source_dijkstra_path_length(max_r[0], max_r[1])
         vor = self.voronoi(max_r[0], [t for t in ts if t != max_r[2]])
 
         edges = set()
@@ -31,7 +30,7 @@ class DualAscent:
                     steiner.remove_node(n)
                     track += 1
                 else:
-                    for n2 in list(nx.neighbors(steiner.graph, n)):
+                    for n2 in list(steiner.graph.neighbors(n)):
                         if root_dist[n2] + max_r[0][n2][n]['weight'] + d > limit:
                             if (n, n2) in edges:
                                 track += 1
@@ -47,7 +46,7 @@ class DualAscent:
         queue = [[0, t, t] for t in ts]
         visited = set()
 
-        while len(visited) != len(nx.nodes(dg)):
+        while len(visited) != len(dg.nodes):
             el = hq.heappop(queue)
 
             if el[1] in visited:
@@ -80,7 +79,7 @@ class DualAscent:
             old_size, c_cut = hq.heappop(t_cuts)
             cut_add = set()
 
-            delta = sys.maxint
+            delta = maxint
             for n in c_cut:
                 for n2 in dg.predecessors(n):
                     if n2 not in c_cut:

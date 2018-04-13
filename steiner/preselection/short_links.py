@@ -1,6 +1,4 @@
-import sys
-import networkx as nx
-
+from sys import maxint
 
 class ShortLinkPreselection:
 
@@ -24,8 +22,8 @@ class ShortLinkPreselection:
                 continue
 
             # Find shortest and second shortest edge out
-            min1 = (0, 0, sys.maxint)
-            min2 = (0, 0, sys.maxint)
+            min1 = (0, 0, maxint)
+            min2 = (0, 0, maxint)
 
             for (u, v, d) in steiner.graph.edges(data='weight'):
                 u_in = (u == t or u in r)
@@ -40,7 +38,7 @@ class ShortLinkPreselection:
                         min2 = (u, v, d)
 
             # This can happen if terminals get deleted during the loop
-            if min1[2] == sys.maxint:
+            if min1[2] == maxint:
                 return track
 
             # There always exists a boundary edge. If there is no second largest edge, we can contract

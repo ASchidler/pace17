@@ -1,5 +1,5 @@
 import networkx as nx
-import sys
+from sys import maxint
 import steiner_graph as sg
 
 
@@ -13,8 +13,8 @@ class ComponentFinder:
         # Since with larger instances the maximum recursion became a problem, this is now iterative
 
         visited = set()  # Do not visit a node twice
-        low = CmDictionary(sys.maxint)  # Minimum discovered time among the subnodes
-        discovered = CmDictionary(sys.maxint)  # "Time" a node has been expanded
+        low = CmDictionary(maxint)  # Minimum discovered time among the subnodes
+        discovered = CmDictionary(maxint)  # "Time" a node has been expanded
         parent = CmDictionary(-1)  # Order of processing
         edges = []  # Bridges
         stack = []  # Call stack for DFS
@@ -121,8 +121,10 @@ class ComponentFinder:
 
         return solution
 
+
 class CmDictionary(dict):
     def __init__(self, default):
+        super(CmDictionary, self).__init__()
         self.default = default
 
     def __missing__(self, key):

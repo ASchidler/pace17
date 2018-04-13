@@ -1,6 +1,5 @@
-import networkx as nx
-import sys
-
+from sys import maxint
+from networkx import minimum_spanning_tree
 
 # Useful with short links, therefore not in use
 class LengthTransformReduction:
@@ -13,14 +12,14 @@ class LengthTransformReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1
 
         sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
 
         # TODO: Calculate once and update...
-        mst = nx.minimum_spanning_tree(steiner.graph)
+        mst = minimum_spanning_tree(steiner.graph)
         done = set()
 
         # Check all edges in the spanning tree
@@ -31,11 +30,11 @@ class LengthTransformReduction:
                 v = tmp
 
             if u not in done and v in steiner.terminals:
-                for n in nx.neighbors(mst, u):
+                for n in mst.neighbors(u):
                     if n != v and n in steiner.terminals:
                         done.add(u)
-                        r1 = self._min_crossing(mst, u, v, sys.maxint, sorted_edges)
-                        r2 = self._min_crossing(mst, u, n, sys.maxint, sorted_edges)
+                        r1 = self._min_crossing(mst, u, v, maxint, sorted_edges)
+                        r2 = self._min_crossing(mst, u, n, maxint, sorted_edges)
                         c2 = mst[u][n]['weight']
 
                         alpha1 = max(c1, r2 - c2)
@@ -49,7 +48,6 @@ class LengthTransformReduction:
                             steiner.graph[u][n]['weight'] = c2 - alpha2
 
         return 0
-
 
     def post_process(self, solution):
         change = False

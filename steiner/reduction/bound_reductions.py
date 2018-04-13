@@ -1,5 +1,5 @@
-import networkx as nx
-import sys
+from sys import maxint
+from networkx import Graph, minimum_spanning_edges
 
 
 class BoundNodeReduction:
@@ -19,11 +19,11 @@ class BoundNodeReduction:
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]
 
-        for n in list(nx.nodes(steiner.graph)):
+        for n in list(steiner.graph.nodes):
             if n not in steiner.terminals:
                 dists = steiner.get_restricted_closest(n)
 
-                if dists[1][1] < sys.maxint:
+                if dists[1][1] < maxint:
                     total = dists[0][1] + dists[1][1] + t_weight
 
                     if total > steiner.get_approximation().cost or \
@@ -66,7 +66,7 @@ class BoundEdgeReduction:
             else:
                 d12 = steiner.get_restricted_closest(u)[1][1]
                 d22 = steiner.get_restricted_closest(v)[1][1]
-                if d12 < sys.maxint and d22 < sys.maxint:
+                if d12 < maxint and d22 < maxint:
                     total = d + min(dist1[1] + d22, dist2[1] + d12) + t_weight
                 else:
                     total = d + dist1[1] + dist2[1] + t_weight
@@ -100,17 +100,17 @@ class BoundNtdkReduction:
         for i in range(0, len(steiner.terminals) - 3):
             t_weight += radius[i][0]
 
-        for n in list(nx.nodes(steiner.graph)):
+        for n in list(steiner.graph.nodes):
             # TODO: Find a good upper bound for the degree
             if n not in steiner.terminals and 2 < steiner.graph.degree[n] <= 5:
                 closest = steiner.get_restricted_closest(n)
 
-                if closest[2][1] < sys.maxint:
+                if closest[2][1] < maxint:
                     total = closest[0][1] + closest[1][1] + closest[2][1] + t_weight
 
                     if total > steiner.get_approximation().cost or (total == steiner.get_approximation().cost and
                                                                     not steiner.get_approximation().tree.has_node(n)):
-                        nb = list(nx.neighbors(steiner.graph, n))
+                        nb = list(steiner.graph.neighbors(n))
                         nb.sort()
                         for (n1, n2) in ((x, y) for x in nb for y in nb if y > x):
                             c1 = steiner.graph[n][n1]['weight']
@@ -148,7 +148,7 @@ class BoundGraphReduction:
             return 0
 
         track = 0
-        g_prime = nx.Graph()
+        g_prime = Graph()
         vor = steiner.get_voronoi()
         lg = steiner.get_lengths
 
@@ -157,25 +157,25 @@ class BoundGraphReduction:
             t2_vor = list(vor[t2])
             t1_vor.append(t1)
             t2_vor.append(t2)
-            min_cost = sys.maxint
+            min_cost = maxint
 
             for n1 in t1_vor:
                 for n2 in t2_vor:
                     if steiner.graph.has_edge(n1, n2):
                         min_cost = min(min_cost, steiner.graph[n1][n2]['weight'] + min(lg(t1, n1), lg(t2, n2)))
 
-            if min_cost < sys.maxint:
+            if min_cost < maxint:
                 g_prime.add_edge(t1, t2, weight=min_cost)
 
         mst_sum = 0
         mst_max = 0
-        for (u, v, d) in nx.minimum_spanning_edges(g_prime):
+        for (u, v, d) in minimum_spanning_edges(g_prime):
             mst_sum += d['weight']
             mst_max = max(mst_max, d['weight'])
 
         mst_sum -= mst_max
 
-        for n in list(nx.nodes(steiner.graph)):
+        for n in list(steiner.graph.nodes):
             if n not in steiner.terminals:
                 dists = steiner.get_restricted_closest(n)
                 total = dists[0][1] + dists[1][1] + mst_sum

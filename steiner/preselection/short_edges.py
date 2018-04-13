@@ -1,5 +1,5 @@
-import networkx as nx
-import sys
+from sys import maxint
+from networkx import minimum_spanning_tree, bidirectional_dijkstra
 
 # According to Polzin 04 this test is more complicated than SL and NV and the difference negligible
 class ShortEdgeReduction:
@@ -12,14 +12,14 @@ class ShortEdgeReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1
 
         sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
 
         # TODO: Calculate once and update...
-        mst = nx.minimum_spanning_tree(steiner.graph)
+        mst = minimum_spanning_tree(steiner.graph)
         paths = self._min_paths(mst)
 
         # Check all edges in the spanning tree
@@ -47,7 +47,7 @@ class ShortEdgeReduction:
 
                     break
 
-        return track - len(nx.nodes(steiner.graph))
+        return track - len(steiner.graph.nodes)
 
     # Creates a single key for a combination of nodes, avoid nesting of dictionaries
     def _key(self, n1, n2):
@@ -62,7 +62,7 @@ class ShortEdgeReduction:
 
         # Find shortest paths between terminals
         for t1, t2 in ((x, y) for x in self.terminals for y in self.terminals if y > x):
-                l, path = nx.bidirectional_dijkstra(mst, t1, t2)
+                l, path = bidirectional_dijkstra(mst, t1, t2)
 
                 # Convert to edges
                 prev = path[0]
@@ -86,19 +86,19 @@ class ShortEdgeReduction:
             n = queue.pop()
             nodes.add(n)
 
-            for b in nx.neighbors(mst, n):
+            for b in mst.neighbors(n):
                 if b != n2 and b not in nodes:
                     queue.append(b)
 
         # Find minimum edge bridging the cut
         for (u, v, d) in sorted_edges:
             if d >= cutoff:
-                return sys.maxint
+                return maxint
 
             if (u in nodes and v not in nodes) or (v in nodes and u not in nodes):
                 return d
 
-        return sys.maxint
+        return maxint
 
     def post_process(self, solution):
         change = False

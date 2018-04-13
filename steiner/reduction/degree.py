@@ -1,5 +1,4 @@
-import networkx as nx
-import sys
+from sys import maxint
 
 
 class DegreeReduction:
@@ -9,18 +8,18 @@ class DegreeReduction:
         self._removed = {}
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
 
-        old = sys.maxint
+        old = maxint
 
-        while old > len(nx.nodes(steiner.graph)):
-            old = len(nx.nodes(steiner.graph))
-            for n, degree in nx.degree(steiner.graph):
+        while old > len(steiner.graph.nodes):
+            old = len(steiner.graph.nodes)
+            for n, degree in steiner.graph.degree():
                 if degree == 1 and n not in steiner.terminals:
                     steiner.remove_node(n)
                     break
                 elif degree == 2 and n not in steiner.terminals:
-                    nb = list(nx.neighbors(steiner.graph, n))
+                    nb = list(steiner.graph.neighbors(n))
                     w1 = steiner.graph[n][nb[0]]['weight']
                     w2 = steiner.graph[n][nb[1]]['weight']
 
@@ -29,7 +28,7 @@ class DegreeReduction:
                     steiner.remove_node(n)
                     break
 
-        return track - len(nx.nodes(steiner.graph))
+        return track - len(steiner.graph.nodes)
 
     def post_process(self, solution):
         change = False

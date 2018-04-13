@@ -1,5 +1,5 @@
 import networkx as nx
-import sys
+from sys import maxint
 import steiner_approximation as sa
 from collections import defaultdict
 
@@ -101,7 +101,7 @@ class SteinerGraph:
         cls2 = self.get_closest(n2)
 
         # Current bound is the edge length (if it exists)
-        sd = self.graph[n1][n2]['weight'] if self.graph.has_edge(n1, n2) else sys.maxint
+        sd = self.graph[n1][n2]['weight'] if self.graph.has_edge(n1, n2) else maxint
         closest1 = [cls1[0]] if n1 in self.terminals \
             else [cls1[i] for i in xrange(min(3, len(self.terminals))) if cls1[i][1] < sd]
         closest2 = [cls2[0]] if n2 in self.terminals \
@@ -236,7 +236,7 @@ class SteinerGraph:
 
             for n in nx.nodes(self.graph):
                 if n not in self.terminals:
-                    min_val = sys.maxint
+                    min_val = maxint
                     min_node = None
 
                     for t in self.terminals:
@@ -265,7 +265,7 @@ class SteinerGraph:
         # This can be included into voronoi generation for efficiency. It is not for readability
         if self._radius is None:
             vor = self.get_voronoi()
-            radius_tmp = defaultdict(lambda: sys.maxint)
+            radius_tmp = defaultdict(lambda: maxint)
 
             for t, l in vor.items():
                 for t2 in self.terminals:
@@ -291,14 +291,14 @@ class SteinerGraph:
             # Find shortest paths to other terminals
             for t_prime in self.terminals:
                 if t != t_prime:
-                    dist = sys.maxint
+                    dist = maxint
                     for n2 in nx.neighbors(self.graph, t_prime):
                         if (n2 == t or n2 not in self.terminals) and n2 in self._restricted_lengths[t]:
                             dist = min(dist, self._restricted_lengths[t][n2] + self.graph[n2][t_prime]['weight'])
 
                     self._restricted_lengths[t][t_prime] = dist
 
-        return self._restricted_lengths[t].setdefault(n, sys.maxint)
+        return self._restricted_lengths[t].setdefault(n, maxint)
 
     def get_restricted_closest(self, n):
         if self._restricted_closest is None:

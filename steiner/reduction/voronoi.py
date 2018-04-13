@@ -1,6 +1,4 @@
-import sys
-import networkx as nx
-
+from sys import maxint
 
 class VoronoiReduction:
     """Approximates the maximum edge length using distances between voronoi areas"""
@@ -16,8 +14,8 @@ class VoronoiReduction:
 
         for (t, r) in steiner.get_voronoi().items():
 
-            min_val = sys.maxint
-            for n in nx.nodes(steiner.graph):
+            min_val = maxint
+            for n in steiner.graph.nodes:
                 if n not in r:
                     min_val = min(min_val, steiner.get_lengths(t, n))
 
@@ -36,7 +34,7 @@ class VoronoiReduction:
         if not self.enabled and not last_run:
             return 0
 
-        track = len(nx.edges(steiner.graph))
+        track = len(steiner.graph.edges)
         exit_sum = self.find_exit_sum(steiner)
 
         # Check edges
@@ -68,7 +66,7 @@ class VoronoiReduction:
             if d + total + exit_sum > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
 
-        result = track - len(nx.edges(steiner.graph))
+        result = track - len(steiner.graph.edges)
         self.enabled = result > 0
 
         return result

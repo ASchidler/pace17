@@ -1,7 +1,7 @@
-import networkx as nx
-import sys
 import heapq as hq
 from collections import defaultdict
+from sys import maxint
+from networkx import minimum_spanning_edges, Graph
 
 
 class NtdkReduction:
@@ -12,20 +12,19 @@ class NtdkReduction:
         self._restricted = restricted
 
     def reduce(self, steiner, cnt, last_run):
-        if len(nx.edges(steiner.graph)) / len(nx.nodes(steiner.graph)) >= 3:
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
             return 0
 
         if self._restricted:
             steiner.refresh_steiner_lengths()
 
-        track = len(nx.nodes(steiner.graph))
+        track = len(steiner.graph.nodes)
 
-        for n in list(nx.nodes(steiner.graph)):
-            nb = list(nx.all_neighbors(steiner.graph, n))
-            degree = len(nb)
-            true_for_all = True
+        for n in list(steiner.graph.nodes):
+            if n not in steiner.terminals and 2 < steiner.graph.degree(n) <= 4:
+                nb = list(steiner.graph.neighbors(n))
+                true_for_all = True
 
-            if n not in steiner.terminals and 2 < degree <= 4:
                 nb.sort()
                 total_edge_sum = sum(steiner.graph[n][b]['weight'] for b in nb)
 
@@ -36,30 +35,29 @@ class NtdkReduction:
                     dist = {(x, y): steiner.get_steiner_lengths(x, y, 0) for x in nb for y in nb if y > x}
 
                 # Powersets
-                for power_set in xrange(1, 1 << degree):
+                # TODO: This could be done faster, i.e. don't create powersets of cardinality < 3
+                for power_set in xrange(1, 1 << len(nb)):
                     # Create complete graph
-                    power_graph = nx.Graph()
+                    power_graph = Graph()
                     edge_sum = 0
 
                     # Sets of size at least 3
                     if bin(power_set).count("1") >= 3:
-                        for i in xrange(0, degree):
+                        for i in xrange(0, len(nb)):
                             if ((1 << i) & power_set) > 0:
                                 n1 = nb[i]
                                 edge_sum = edge_sum + steiner.graph[n][n1]['weight']
 
-                                for j in xrange(i + 1, degree):
+                                for j in xrange(i + 1, len(nb)):
                                     if ((1 << j) & power_set) > 0:
                                         n2 = nb[j]
                                         w = dist[(n1, n2)]
                                         power_graph.add_edge(n1, n2, weight=w)
 
-                        mst = nx.minimum_spanning_tree(power_graph)
-                        mst_sum = mst.size(weight='weight')
+                        mst_sum = sum(d['weight'] for (u, v, d) in minimum_spanning_edges(power_graph))
                         true_for_all = true_for_all and mst_sum <= edge_sum
 
                 if true_for_all:
-                    nb = list(nx.neighbors(steiner.graph, n))
                     # Introduce artificial edges
                     for (n1, n2) in ((x, y) for x in nb for y in nb if y > x):
                         c1 = steiner.graph[n][n1]['weight']
@@ -70,7 +68,7 @@ class NtdkReduction:
                     steiner.remove_node(n)
 
         steiner._lengths = {}
-        return track - len(nx.nodes(steiner.graph))
+        return track - len(steiner.graph.nodes)
 
     def post_process(self, solution):
         change = False
@@ -102,7 +100,7 @@ class NtdkReduction:
         scanned2 = NtdkReduction.modified_dijkstra_sub(steiner, v, u, cut_off)
 
         # If we found the other node use this dist. Scanned != Visited, therefore values may differ!
-        sd = scanned1[v] if v in scanned1 else sys.maxint
+        sd = scanned1[v] if v in scanned1 else maxint
         if u in scanned2:
             sd = min(sd, scanned2[u])
 
@@ -122,11 +120,11 @@ class NtdkReduction:
     def modified_dijkstra_sub(steiner, u, v, cut_off):
         queue = [[0, u]]
         visited = {u}
-        scanned = defaultdict(lambda: sys.maxint)
+        scanned = defaultdict(lambda: maxint)
         scanned_edges = 0
 
         # Expand first node explicitly here, so no check in the loop is required to exclude edge
-        for n2 in nx.neighbors(steiner.graph, u):
+        for n2 in steiner.graph.neighbors(u):
             if n2 != v:
                 c = steiner.graph[u][n2]['weight']
                 hq.heappush(queue, [c, n2])
@@ -144,7 +142,7 @@ class NtdkReduction:
             elif n in steiner.terminals or n == v:
                 continue
 
-            for n2 in nx.neighbors(steiner.graph, n):
+            for n2 in steiner.graph.neighbors(n):
                 scanned_edges += 1
                 if n2 not in visited:
                     cost = c_val[0] + steiner.graph[n][n2]['weight']
