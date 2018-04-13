@@ -130,7 +130,8 @@ class NtdkReduction:
                 hq.heappush(queue, [c, n2])
                 scanned[n2] = c
 
-        while len(queue) > 0 and scanned_edges < 100:
+        # TODO: The limit constant has a big effect on the effectiveness of the reduction! SCIP uses valuee of up to 400
+        while len(queue) > 0 and scanned_edges < 40:
             c_val = hq.heappop(queue)
             n = c_val[1]
 
@@ -144,7 +145,7 @@ class NtdkReduction:
 
             for n2 in steiner.graph.neighbors(n):
                 scanned_edges += 1
-                if scanned_edges > 100:
+                if scanned_edges > 40:
                     break
 
                 if n2 not in visited:
