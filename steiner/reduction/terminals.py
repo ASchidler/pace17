@@ -25,6 +25,7 @@ class TerminalReduction:
 
                 neighbors = list(nx.neighbors(steiner.graph, t))
 
+                # One neighbor... Simply contract
                 if len(neighbors) == 1:
                     self._removed.append((t, neighbors[0], steiner.graph[t][neighbors[0]]['weight']))
                     steiner.move_terminal(t, neighbors[0])
@@ -33,22 +34,23 @@ class TerminalReduction:
                 else:
                     contract_edge = None
 
+                    # Two neighbors? Contract if the smaller one leads to a terminal
                     if len(neighbors) == 2:
                         l1, l2 = steiner.graph[t][neighbors[0]]['weight'], steiner.graph[t][neighbors[1]]['weight']
                         if neighbors[0] in steiner.terminals and l1 <= l2:
                             contract_edge = (neighbors[0], l1)
                         elif neighbors[1] in steiner.terminals and l2 <= l1:
                             contract_edge = (neighbors[1], l2)
+                    # More? Contract if smallest edge leads to a terminal
                     else:
                         min_val = (sys.maxint, None)
                         for n in neighbors:
                             w = steiner.graph[t][n]['weight']
 
-                            # TODO: Is equal really correct? Taken from SCIP Jack code
                             if w < min_val[0] or (w == min_val[0] and n in steiner.terminals):
                                 min_val = (w, n)
 
-                        if min_val[1] in steiner.terminals and 1 == len([x for x in neighbors if steiner.graph[t][x]['weight'] == min_val[0]]):
+                        if min_val[1] in steiner.terminals:
                             contract_edge = (min_val[1], min_val[0])
 
                     if contract_edge is not None:
