@@ -3,6 +3,7 @@ import heapq
 import set_storage as st
 from networkx import Graph
 from itertools import chain
+from reduction.dual_ascent import DualAscent
 
 
 class Solver2k:
@@ -11,7 +12,9 @@ class Solver2k:
         self.max_node = max(steiner.graph.nodes)
         self.terminals = list(terminals)
         self.terminals.sort()
-        self.root_node = self.terminals.pop()
+        # Use best root from approximations as base for the algorithm
+        target_root = DualAscent.root if DualAscent.root is not None else steiner.get_approximation().root
+        self.root_node = self.terminals.pop(self.terminals.index(target_root))
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}

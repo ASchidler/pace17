@@ -4,6 +4,9 @@ from networkx import single_source_dijkstra_path_length
 
 
 class DualAscent:
+    def __init__(self):
+        DualAscent.root = None
+
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 4 or cnt > 0 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
             return 0
@@ -20,7 +23,7 @@ class DualAscent:
                 max_r = (result[1], root, result[0])
 
         root_dist = single_source_dijkstra_path_length(max_r[0], max_r[1])
-        vor = self.voronoi(max_r[0], [t for t in ts if t != max_r[2]])
+        vor = self.voronoi(max_r[0], [t for t in ts if t != max_r[1]])
 
         edges = set()
         limit = steiner.get_approximation().cost - max_r[2]
@@ -39,6 +42,7 @@ class DualAscent:
                             else:
                                 edges.add((n2, n))
 
+        DualAscent.root = max_r[1]
         return track
 
     def voronoi(self, dg, ts):

@@ -112,6 +112,7 @@ class SteinerApproximation:
     def __init__(self, steiner):
         self.cost = maxint
         self.tree = None
+        self.root = None
 
         limit = min(20, len(steiner.terminals))
         ts = list(steiner.terminals)
@@ -121,6 +122,7 @@ class SteinerApproximation:
             if result[1] < self.cost:
                 self.cost = result[1]
                 self.tree = result[0]
+                self.root = start_node
 
         prev = 0
         while prev != self.cost:
