@@ -30,7 +30,7 @@ class NtdkReduction:
 
                 # Calc distances, more memory efficient than calculating it all beforehand
                 if not self._restricted:
-                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._restricted) for x in nb for y in nb if y > x}
+                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, False) for x in nb for y in nb if y > x}
                 else:
                     dist = {(x, y): steiner.get_steiner_lengths(x, y, 0) for x in nb for y in nb if y > x}
 
@@ -130,7 +130,7 @@ class NtdkReduction:
                 hq.heappush(queue, [c, n2])
                 scanned[n2] = c
 
-        while len(queue) > 0 and scanned_edges < 40:
+        while len(queue) > 0 and scanned_edges < 100:
             c_val = hq.heappop(queue)
             n = c_val[1]
 
@@ -144,6 +144,9 @@ class NtdkReduction:
 
             for n2 in steiner.graph.neighbors(n):
                 scanned_edges += 1
+                if scanned_edges > 100:
+                    break
+
                 if n2 not in visited:
                     cost = c_val[0] + steiner.graph[n][n2]['weight']
 

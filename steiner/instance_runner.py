@@ -118,10 +118,9 @@ def process_file(filename, solve, apply_reductions):
 
         print "\n\n"
 
-   # total_solution = c_finder.build_solutions(results)
-    total_solution = solution
-
     if solve:
+        # total_solution = c_finder.build_solutions(results)
+        total_solution = solution
         # Verify
         f = open(filename, "r")
         steiner2 = pp.parse_pace_file(f)
@@ -147,7 +146,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(181, 182):
+for i in range(25, 142):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
@@ -155,8 +154,8 @@ for i in range(181, 182):
         print current_file
         start = time.time()
         e1 = process_file(current_file, True, True)
-        # e2 = process_file(current_file, True, False)
-        # if e1 != e2:
-        #     print "*************** Difference in instance "+ str(i)
+        e2 = process_file(current_file, True, False)
+        if e1 != e2:
+            print "*************** Difference in instance "+ str(i)
         print "Done in " + str(time.time() - start)
         print ""
