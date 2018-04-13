@@ -1,5 +1,6 @@
 from sys import maxint
 
+
 class ShortLinkPreselection:
 
     def __init__(self):
@@ -14,6 +15,7 @@ class ShortLinkPreselection:
         track = 0
         steiner._voronoi_areas = None
         steiner._closest_terminals = None
+        steiner._lengths = {}
         vor = steiner.get_voronoi()
 
         for (t, r) in vor.items():
@@ -90,4 +92,3 @@ class ShortLinkPreselection:
                     change = True
 
         return (solution[0], cost), change
-

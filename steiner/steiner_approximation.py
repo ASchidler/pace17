@@ -134,7 +134,7 @@ class SteinerApproximation:
             while old != len(self.tree.nodes):
                 old = len(self.tree.nodes)
 
-                for (n, d) in self.tree.degree():
+                for (n, d) in list(self.tree.degree()):
                     if d == 1 and n not in steiner.terminals:
                         self.tree.remove_node(n)
 

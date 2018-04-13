@@ -25,6 +25,11 @@ class NvSlPack:
 
             total += this_run
 
+        if total > 0:
+            steiner._voronoi_areas = None
+            steiner._lengths = {}
+            steiner._closest_terminals = None
+
         return total
 
     def post_process(self, solution):
