@@ -33,7 +33,11 @@ class DualAscent:
             steiner._approximation = new_ap2
 
         root_dist = single_source_dijkstra_path_length(max_graph, max_root)
+        # Calculate the voronoi distances without root node (route should be arc disjoint from root paths)
+        root_edges = [(max_root, n, max_graph[max_root][n]['weight']) for n in max_graph.neighbors(max_root)]
+        max_graph.remove_node(max_root)
         vor = self.voronoi(max_graph, [t for t in ts if t != max_root])
+        [max_graph.add_edge(u, v, weight=d) for (u, v, d) in root_edges]
 
         edges = set()
 
