@@ -109,10 +109,11 @@ class VoronoiPartition:
 
 class SteinerApproximation:
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
-    def __init__(self, steiner):
+    def __init__(self, steiner, optimize=True):
         self.cost = maxint
         self.tree = None
         self.root = None
+        self.steiner = steiner
 
         limit = min(20, len(steiner.terminals))
         ts = list(steiner.terminals)
@@ -124,12 +125,17 @@ class SteinerApproximation:
                 self.tree = result[0]
                 self.root = start_node
 
+        if optimize:
+            self.optimize()
+
+    def optimize(self):
         prev = 0
+
         while prev != self.cost:
             prev = self.cost
-            self.keyvertex_deletion(steiner)
-            self.path_exchange(steiner, False)
-            self.vertex_insertion(steiner)
+            self.keyvertex_deletion(self.steiner)
+            self.path_exchange(self.steiner, False)
+            self.vertex_insertion(self.steiner)
 
             # Remove non-terminal leafs
             old = maxint
@@ -137,7 +143,7 @@ class SteinerApproximation:
                 old = len(self.tree.nodes)
 
                 for (n, d) in list(self.tree.degree()):
-                    if d == 1 and n not in steiner.terminals:
+                    if d == 1 and n not in self.steiner.terminals:
                         self.tree.remove_node(n)
 
     def calculate(self, steiner, start_node):
