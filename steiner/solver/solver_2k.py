@@ -14,7 +14,10 @@ class Solver2k:
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
         target_root = DualAscent.root if DualAscent.root is not None else steiner.get_approximation().root
-        self.root_node = self.terminals.pop(self.terminals.index(target_root))
+        try:
+            self.root_node = self.terminals.pop(self.terminals.index(target_root))
+        except ValueError:
+            self.root_node = self.terminals.pop()
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
@@ -60,6 +63,7 @@ class Solver2k:
             heapq.heappush(self.queue, [0, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
+        iterations = 0
         while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
             el = heapq.heappop(self.queue)
             n = el[1]
@@ -74,6 +78,23 @@ class Solver2k:
 
                 self.process_neighbors(n, s, n_cost[0])
                 self.process_labels(n, s, n_cost[0])
+            #
+            # iterations += 1
+            # if iterations % 10000:
+            #     seen = set()
+            #     changed = False
+            #     i = 0
+            #     while i < len(self.queue):
+            #         el = self.queue[i]
+            #         if not (el[1], el[2]) in seen:
+            #             seen.add((el[1], el[2]))
+            #             i += 1
+            #         else:
+            #             changed = True
+            #             self.queue.pop(i)
+            #
+            #     if changed:
+            #         heapq.heapify(self.queue)
 
         # Process result
         ret = Graph()
@@ -92,7 +113,7 @@ class Solver2k:
                 if total < other_node_cost[0]:
                     # Store costs. The second part of the tuple is backtracking info.
                     self.costs[other_node][n_set] = (total, False, n, False)
-                    h = self.heuristic(other_node, n_set)
+                    h = self.heuristic(other_node, n_set, total)
                     if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
                         heapq.heappush(self.queue, [total + h, other_node, n_set])
 
@@ -118,11 +139,11 @@ class Solver2k:
                     if total < combined_cost[0]:
                         cst[combined] = (total, False, other_set, True)
 
-                        h = heuristic(n, combined)
-                        if total + h <= approx and not prune(n, n_set, total, other_set):
+                        h = heuristic(n, combined, total)
+                        if total + h <= approx  and not prune(n, n_set, total, other_set):
                             push(q, [total + h, n, combined])
 
-    def heuristic(self, n, set_id):
+    def heuristic(self, n, set_id, total):
         if len(self.heuristics) == 0:
             return 0
 
@@ -132,21 +153,18 @@ class Solver2k:
 
         max_val = 0
         for h in self.heuristics:
-            max_val = max(max_val, h.calculate(n, set_id, ts))
+            max_val = max(max_val, h.calculate(n, set_id, ts, total))
 
         return max_val
 
-    def prune(self, n, set_id, c, set_id2=None):
-        target_set = set_id if set_id2 is None else set_id | set_id2
+    def prune(self, n, set_id, c, set_id2=0):
+        target_set = set_id | set_id2
 
-        # First check if there is a bound available
-        if target_set not in self.prune_bounds:
-            if set_id2 is not None:
-                bound = self.prune2_combine(set_id, set_id2)
-            else:
-                bound = (maxint, [])
-        else:
+        try:
             bound = self.prune_bounds[target_set]
+        # If no bound is known, try combining one, if the current set is a merge
+        except KeyError:
+            bound = self.prune2_combine(set_id, set_id2) if set_id2 > 0 else (maxint, [])
 
         # Check if pruning is applicable
         if c > bound[0]:
@@ -174,24 +192,21 @@ class Solver2k:
 
         # Find minimum distance between the terminals in the cut and outside the cut
         if set_id in self.prune_dist:
-            dist = self.prune_dist[set_id], None
+            dist = self.prune_dist[set_id]
         else:
             dist = (maxint, None)
             for t in t_in:
-                for t2, d in self.steiner.get_closest(t):
-                    if t2 in t_out:
-                        if d < dist[0]:
-                            dist = (d, t2)
-                        break
+                # Minimum dist from t to cut
+                t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if t2 in t_out)
+                if d < dist[0]:
+                    dist = (d, t2)
 
-            self.prune_dist[set_id] = dist[0]
+            self.prune_dist[set_id] = dist
 
         # Find the minimum distance between n and R \ set
-        for (t, l) in self.steiner.closest_terminals[n]:
-            if t in t_out:
-                if l < dist[0]:
-                    dist = (l, t)
-                break
+        n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if x in t_out)
+        if n_d < dist[0]:
+            dist = (n_d, n_t)
 
         # Check if we can lower the bound
         w = c + dist[0]
