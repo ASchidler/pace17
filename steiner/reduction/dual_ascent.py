@@ -4,6 +4,8 @@ from networkx import single_source_dijkstra_path_length, Graph
 import steiner_graph as sg
 import steiner_approximation as sa
 import networkx as nx
+from reduction import degree, long_edges, ntdk, sdc, terminal_distance
+from preselection import short_links, nearest_vertex
 
 class DualAscent:
 
@@ -14,22 +16,28 @@ class DualAscent:
         ts = list(steiner.terminals)
         max_r = (None, None, 0)
         track = 0
-
+        results = []
         for i in range(0, min(10, len(ts))):
             root = ts[i]
+            bnd, grph = self.calc(steiner, root)
+            results.append((bnd, root, grph))
 
-            result = self.calc(steiner, root)
-            if result[0] > max_r[2]:
-                max_r = (result[1], root, result[0])
+        max_result, max_root, max_graph = max(results, key=lambda x: x[0])
 
-        new_ap = self.approx_sol(steiner, max_r[0])
+        new_ap = self.approx_sol(steiner, max_graph)
+        if new_ap.cost < steiner.get_approximation().cost:
+            steiner._approximation = new_ap
 
-        root_dist = single_source_dijkstra_path_length(max_r[0], max_r[1])
-        vor = self.voronoi(max_r[0], [t for t in ts if t != max_r[1]])
+        new_ap2 = self.find_new(steiner, results)
+        if new_ap2.cost < steiner.get_approximation().cost:
+            steiner._approximation = new_ap
+
+        root_dist = single_source_dijkstra_path_length(max_graph, max_root)
+        vor = self.voronoi(max_graph, [t for t in ts if t != max_root])
 
         edges = set()
-        steiner._approximation = None
-        limit = steiner.get_approximation().cost - max_r[2]
+
+        limit = steiner.get_approximation().cost - max_result
         for (t, v) in vor.items():
             for (n, d) in v.items():
                 # Theoretically the paths should be arc-disjoint -> possible tighter bound
@@ -38,19 +46,62 @@ class DualAscent:
                     track += 1
                 else:
                     for n2 in list(steiner.graph.neighbors(n)):
-                        if root_dist[n2] + max_r[0][n2][n]['weight'] + d > limit:
+                        if root_dist[n2] + max_graph[n2][n]['weight'] + d > limit:
                             if (n, n2) in edges:
                                 track += 1
                                 steiner.remove_edge(n, n2)
                             else:
                                 edges.add((n2, n))
 
-        DualAscent.root = max_r[1]
-        DualAscent.graph = max_r[0]
-        DualAscent.value = max_r[2]
-
+        DualAscent.root = max_root
+        DualAscent.graph = max_graph
+        DualAscent.value = max_result
 
         return track
+
+    def find_new(self, steiner, results):
+        rs = self.reducers()
+        alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
+        dg = sg.SteinerGraph()
+        dg.terminals = {x for x in steiner.terminals}
+
+        for (bnd, r, g) in results:
+            for (u, v, d) in g.edges(data='weight'):
+                if d == 0:
+                    u, v = min(u, v), max(u, v)
+                    dg.add_edge(u, v, steiner.graph[u][v]['weight'])
+                    alpha[(u, v)] += 1
+
+        cnt = 1
+        while cnt > 0:
+            cnt = 0
+            for r in rs:
+                cnt += r.reduce(dg, cnt, False)
+
+            dg._lengths = {}
+            dg._approximation = None
+            dg._restricted_lengths = {}
+            dg._restricted_closest = None
+            dg._radius = None
+            dg._voronoi_areas = None
+
+        app = sa.SteinerApproximation(dg)
+
+        c_result = (app.tree, app.cost)
+
+        while True:
+            change = False
+            for r in rs:
+                ret = r.post_process(c_result)
+                c_result = ret[0]
+                change = change or ret[1]
+
+            if not change:
+                break
+
+        app.tree = c_result[0]
+        app.cost = c_result[1]
+        return app
 
     def approx_sol(self, steiner, g):
         ag = sg.SteinerGraph()
@@ -178,6 +229,22 @@ class DualAscent:
 
     def post_process(self, solution):
         return solution, False
+
+    def reducers(self):
+        """Creates the set of reducing preprocessing tests"""
+        return [
+            degree.DegreeReduction(),
+            terminal_distance.CostVsTerminalDistanceReduction(),
+            degree.DegreeReduction(),
+            long_edges.LongEdgeReduction(True),
+            ntdk.NtdkReduction(True),
+            sdc.SdcReduction(),
+            degree.DegreeReduction(),
+            ntdk.NtdkReduction(False),
+            degree.DegreeReduction(),
+            terminal_distance.CostVsTerminalDistanceReduction(),
+            degree.DegreeReduction(),
+        ]
 
 
 DualAscent.root = None
