@@ -30,7 +30,7 @@ class DualAscent:
 
         new_ap2 = self.find_new(steiner, results)
         if new_ap2.cost < steiner.get_approximation().cost:
-            steiner._approximation = new_ap
+            steiner._approximation = new_ap2
 
         root_dist = single_source_dijkstra_path_length(max_graph, max_root)
         vor = self.voronoi(max_graph, [t for t in ts if t != max_root])
@@ -41,6 +41,7 @@ class DualAscent:
         for (t, v) in vor.items():
             for (n, d) in v.items():
                 # Theoretically the paths should be arc-disjoint -> possible tighter bound
+                # approximate -> Remove root, every node not in a voronoi region -> delete, no route to any other terminal
                 if root_dist[n] + d > limit:
                     steiner.remove_node(n)
                     track += 1
@@ -85,8 +86,22 @@ class DualAscent:
             dg._radius = None
             dg._voronoi_areas = None
 
-        app = sa.SteinerApproximation(dg)
+        for ((u, v), d) in alpha.items():
+            if d > 0 and dg.graph.has_edge(u, v):
+                c = dg.graph[u][v]['weight']
+                val = min(c-1, d/3)
+                alpha[(u, v)] = val
 
+                dg.graph[u][v]['weight'] -= val
+
+        app = sa.SteinerApproximation(dg, False)
+        for ((u, v), d) in alpha.items():
+            if d > 0 and dg.graph.has_edge(u, v):
+                dg.graph[u][v]['weight'] += d
+                if app.tree.has_edge(u, v):
+                    app.tree[u][v]['weight'] += d
+
+        app.optimize()
         c_result = (app.tree, app.cost)
 
         while True:
@@ -203,23 +218,6 @@ class DualAscent:
 
                             if changed:
                                 hq.heapify(t_cuts)
-
-                            # new_ts = connected_nodes.intersection(steiner.terminals)
-                            # remove = remove or len(new_ts) > 0
-                            # cut_add.update(connected_nodes)
-                            #
-                            # # This loop is probably a huge performance drain...
-                            # changed = False
-                            # for i in reversed(range(0, len(t_cuts))):
-                            #     if n in t_cuts[i][1]:
-                            #         if any(x not in t_cuts[i][1] for x in new_ts):
-                            #             changed = True
-                            #             t_cuts.pop(i)
-                            #         else:
-                            #             t_cuts[i][1].update(connected_nodes)
-                            #
-                            # if changed:
-                            #     hq.heapify(t_cuts)
 
             if not remove:
                 c_cut |= cut_add
