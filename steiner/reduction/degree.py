@@ -65,7 +65,7 @@ class DegreeReduction:
         cost = solution[1]
 
         if not self._done:
-            for (n1, n2, w) in self._removed:
+            for (n1, n2, w) in self._contracted:
                 solution[0].add_edge(n1, n2, weight=w)
                 cost += w
                 change = True
