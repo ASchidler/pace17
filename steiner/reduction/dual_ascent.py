@@ -7,6 +7,7 @@ import networkx as nx
 from reduction import degree, long_edges, ntdk, sdc, terminal_distance
 from preselection import short_links, nearest_vertex
 
+
 class DualAscent:
 
     def reduce(self, steiner, cnt, last_run):
@@ -93,7 +94,7 @@ class DualAscent:
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
                 c = dg.graph[u][v]['weight']
-                val = min(c-1, d/3)
+                val = min(c-1, d/6)
                 alpha[(u, v)] = val
 
                 dg.graph[u][v]['weight'] -= val
@@ -246,6 +247,8 @@ class DualAscent:
             degree.DegreeReduction(),
             terminal_distance.CostVsTerminalDistanceReduction(),
             degree.DegreeReduction(),
+            short_links.ShortLinkPreselection(),
+            nearest_vertex.NearestVertex()
         ]
 
 
