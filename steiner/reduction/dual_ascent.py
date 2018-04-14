@@ -1,11 +1,11 @@
 from sys import maxint
 import heapq as hq
-from networkx import single_source_dijkstra_path_length
-
+from networkx import single_source_dijkstra_path_length, Graph
+import steiner_graph as sg
+import steiner_approximation as sa
+import networkx as nx
 
 class DualAscent:
-    def __init__(self):
-        DualAscent.root = None
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 4 or cnt > 0 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
@@ -22,10 +22,13 @@ class DualAscent:
             if result[0] > max_r[2]:
                 max_r = (result[1], root, result[0])
 
+        new_ap = self.approx_sol(steiner, max_r[0])
+
         root_dist = single_source_dijkstra_path_length(max_r[0], max_r[1])
         vor = self.voronoi(max_r[0], [t for t in ts if t != max_r[1]])
 
         edges = set()
+        steiner._approximation = None
         limit = steiner.get_approximation().cost - max_r[2]
         for (t, v) in vor.items():
             for (n, d) in v.items():
@@ -43,9 +46,28 @@ class DualAscent:
                                 edges.add((n2, n))
 
         DualAscent.root = max_r[1]
+        DualAscent.graph = max_r[0]
+        DualAscent.value = max_r[2]
+
+
         return track
 
-    def voronoi(self, dg, ts):
+    def approx_sol(self, steiner, g):
+        ag = sg.SteinerGraph()
+
+        for (u, v, d) in g.edges(data='weight'):
+            if d == 0:
+                ag.add_edge(u, v, steiner.graph[u][v]['weight'])
+
+        ag.terminals = {x for x in steiner.terminals}
+
+        app = sa.SteinerApproximation(ag)
+
+        return app
+
+
+    @staticmethod
+    def voronoi(dg, ts):
         voronoi = {t: {} for t in ts}
 
         queue = [[0, t, t] for t in ts]
@@ -68,7 +90,8 @@ class DualAscent:
 
         return voronoi
 
-    def calc(self, steiner, root):
+    @staticmethod
+    def calc(steiner, root):
         dg = steiner.graph.to_directed()
         main_cut = set()
         main_cut.add(root)
@@ -93,9 +116,12 @@ class DualAscent:
             bound += delta
 
             remove = False
+            i_edges = 0
+
             for n in c_cut:
                 for n2 in dg.predecessors(n):
                     if n2 not in c_cut:
+                        i_edges += 1
                         dg[n2][n]['weight'] -= delta
 
                         if dg[n2][n]['weight'] == 0:
@@ -110,26 +136,50 @@ class DualAscent:
                                     if dg[c_p][c_node]['weight'] == 0 and c_p not in connected_nodes:
                                         queue.append(c_p)
 
-                            new_ts = connected_nodes.intersection(steiner.terminals)
-
+                            root_found = root in connected_nodes
+                            remove = remove or root_found
                             cut_add.update(connected_nodes)
-                            remove = remove or len(new_ts) > 0
 
                             # This loop is probably a huge performance drain...
+                            changed = False
                             for i in reversed(range(0, len(t_cuts))):
                                 if n in t_cuts[i][1]:
-                                    if any(x not in t_cuts[i][1] for x in new_ts):
+                                    if root_found:
+                                        changed = True
                                         t_cuts.pop(i)
-                                        hq.heapify(t_cuts)
                                     else:
                                         t_cuts[i][1].update(connected_nodes)
 
+                            if changed:
+                                hq.heapify(t_cuts)
+
+                            # new_ts = connected_nodes.intersection(steiner.terminals)
+                            # remove = remove or len(new_ts) > 0
+                            # cut_add.update(connected_nodes)
+                            #
+                            # # This loop is probably a huge performance drain...
+                            # changed = False
+                            # for i in reversed(range(0, len(t_cuts))):
+                            #     if n in t_cuts[i][1]:
+                            #         if any(x not in t_cuts[i][1] for x in new_ts):
+                            #             changed = True
+                            #             t_cuts.pop(i)
+                            #         else:
+                            #             t_cuts[i][1].update(connected_nodes)
+                            #
+                            # if changed:
+                            #     hq.heapify(t_cuts)
+
             if not remove:
                 c_cut |= cut_add
-                hq.heappush(t_cuts, [len(c_cut), c_cut])
+                hq.heappush(t_cuts, [i_edges, c_cut])
 
         return bound, dg
 
     def post_process(self, solution):
         return solution, False
 
+
+DualAscent.root = None
+DualAscent.graph = None
+DualAscent.value = None
