@@ -11,25 +11,35 @@ from preselection import short_links, nearest_vertex
 class DualAscent:
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 4 or cnt > 0 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
+        if len(steiner.terminals) < 4 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
             return 0
 
         ts = list(steiner.terminals)
-        max_r = (None, None, 0)
         track = 0
         results = []
-        for i in range(0, min(10, len(ts))):
-            root = ts[i]
+
+        # Spread chosen roots a little bit, as they are usually close
+        num_results = min(10, len(ts))
+        target_roots = (ts[max(len(ts) / num_results, 1) * i] for i in xrange(0, num_results))
+        
+        for root in target_roots:
             bnd, grph = self.calc(steiner, root)
             results.append((bnd, root, grph))
 
-        max_result, max_root, max_graph = max(results, key=lambda x: x[0])
+        results.sort(key=lambda x: x[0], reverse=True)
+        max_result, max_root, max_graph = results[0]
 
+        # Optimize based on best result
         new_ap = self.approx_sol(steiner, max_graph)
         if new_ap.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap
 
+        # idx_list = [[0, 1], [2, 3], [4, 5], [0, 1, 2], [0, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
+        # idx_list = [[0, 1], [2, 3], [0, 1, 2, 3, 4]]
+        #aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
+        #new_ap2 = min(aps, key=lambda x: x.cost)
         new_ap2 = self.find_new(steiner, results)
+
         if new_ap2.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap2
 
