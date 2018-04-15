@@ -1,9 +1,8 @@
-from sys import maxint
 import heapq
-import set_storage as st
-from networkx import Graph
 from itertools import chain
-from reduction.dual_ascent import DualAscent
+from sys import maxint
+from networkx import Graph
+import set_storage as st
 
 
 class Solver2k:
@@ -13,7 +12,7 @@ class Solver2k:
         self.terminals = list(terminals)
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
-        target_root = DualAscent.root if DualAscent.root is not None else steiner.get_approximation().root
+        target_root = steiner.get_approximation().root
         try:
             self.root_node = self.terminals.pop(self.terminals.index(target_root))
         except ValueError:
