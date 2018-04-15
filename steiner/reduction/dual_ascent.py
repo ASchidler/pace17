@@ -1,9 +1,8 @@
 from sys import maxint
 import heapq as hq
-from networkx import single_source_dijkstra_path_length, Graph
+from networkx import single_source_dijkstra_path_length, single_source_dijkstra_path
 import steiner_graph as sg
 import steiner_approximation as sa
-import networkx as nx
 from reduction import degree, long_edges, ntdk, sdc, terminal_distance
 from preselection import short_links, nearest_vertex
 
@@ -82,11 +81,18 @@ class DualAscent:
         dg.terminals = {x for x in steiner.terminals}
 
         for (bnd, r, g) in results:
-            for (u, v, d) in g.edges(data='weight'):
-                if d == 0:
-                    u, v = min(u, v), max(u, v)
+            # 0 length paths
+            pths = single_source_dijkstra_path(g, r, cutoff=1)
+            for t in (t for t in steiner.terminals if t != r):
+                for i in range(1, len(pths[t])):
+                    u, v = min(pths[t][i-1], pths[t][i]), max(pths[t][i-1], pths[t][i])
                     dg.add_edge(u, v, steiner.graph[u][v]['weight'])
                     alpha[(u, v)] += 1
+            # for (u, v, d) in g.edges(data='weight'):
+            #     if d == 0:
+            #         u, v = min(u, v), max(u, v)
+            #         dg.add_edge(u, v, steiner.graph[u][v]['weight'])
+            #         alpha[(u, v)] += 1
 
         cnt = 1
         while cnt > 0:
