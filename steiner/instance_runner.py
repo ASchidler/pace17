@@ -68,6 +68,7 @@ def process_file(filename, solve, apply_reductions):
                 steiner._approximation = None
                 steiner._radius = None
                 steiner._voronoi_areas = None
+                steiner._closest_terminals = None
 
                 if cnt_changes == 0:
                     if last_run:
@@ -82,7 +83,6 @@ def process_file(filename, solve, apply_reductions):
 
         if solve:
             steiner._lengths = {}
-            steiner._approximation = None
             # Reset lengths as they may not reflect reality after the reductions
             solver = cfg.solver(steiner)
             solution = solver.solve()
@@ -145,8 +145,14 @@ def process_file(filename, solve, apply_reductions):
         return total_solution[1]
 
 
-# Exceptionally slow instances: 101, 123, 125 (125 is currently the maximum)
-for i in range(25, 142):
+# Instances that are not solvable yet
+hard_instances = [141, 149, 153, 161, 163, 165, 167, 169, 171, 173, 175, 177, 187, 193, 195]
+# Instances that are stuck (either forever or too long) in reduction mode
+long_reduction = [113, 129, 151, 181, 189]#, 197, 199]
+# All other instances are solvable in a feasible amount of time
+easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_reduction]
+
+for i in (x for x in easy_instances if x > 39):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
@@ -154,8 +160,8 @@ for i in range(25, 142):
         print current_file
         start = time.time()
         e1 = process_file(current_file, True, True)
-        e2 = process_file(current_file, True, False)
-        if e1 != e2:
-            print "*************** Difference in instance "+ str(i)
+        # e2 = process_file(current_file, True, False)
+        # if e1 != e2:
+        #     print "*************** Difference in instance "+ str(i)
         print "Done in " + str(time.time() - start)
         print ""

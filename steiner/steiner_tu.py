@@ -23,6 +23,12 @@ for steiner in components:
 
     while True:
         cnt = 0
+        steiner._lengths = {}
+        steiner._approximation = None
+        steiner._restricted_lengths = {}
+        steiner._restricted_closest = None
+        steiner._radius = None
+        steiner._voronoi_areas = None
         for r in reducers:
             cnt = cnt + r.reduce(steiner, cnt, last_run)
 
@@ -31,13 +37,6 @@ for steiner in components:
 
         for c in contractors:
             cnt = cnt + c.reduce(steiner, cnt, last_run)
-
-        steiner._lengths = {}
-        steiner._approximation = None
-        steiner._restricted_lengths = {}
-        steiner._restricted_closest = None
-        steiner._radius = None
-        steiner._voronoi_areas = None
 
         if cnt == 0:
             if last_run:
@@ -49,7 +48,6 @@ for steiner in components:
     # Solve
     # Distance matrix may be incorrect due to preprocessing, restore
     steiner._lengths = {}
-    steiner._approximation = None
     solver = cfg.solver(steiner)
 
     solver.solve()

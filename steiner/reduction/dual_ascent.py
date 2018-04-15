@@ -8,11 +8,17 @@ from preselection import short_links, nearest_vertex
 
 
 class DualAscent:
+    def __init__(self):
+        self.runs = 0
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 4 or len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
             return 0
 
+        if self.runs > 0 and cnt > 0:
+            return 0
+
+        self.runs += 1
         ts = list(steiner.terminals)
         track = 0
         results = []

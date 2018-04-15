@@ -78,23 +78,6 @@ class Solver2k:
 
                 self.process_neighbors(n, s, n_cost[0])
                 self.process_labels(n, s, n_cost[0])
-            #
-            # iterations += 1
-            # if iterations % 10000:
-            #     seen = set()
-            #     changed = False
-            #     i = 0
-            #     while i < len(self.queue):
-            #         el = self.queue[i]
-            #         if not (el[1], el[2]) in seen:
-            #             seen.add((el[1], el[2]))
-            #             i += 1
-            #         else:
-            #             changed = True
-            #             self.queue.pop(i)
-            #
-            #     if changed:
-            #         heapq.heapify(self.queue)
 
         # Process result
         ret = Graph()
