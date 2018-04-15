@@ -7,7 +7,10 @@ class MstHeuristic:
         self.mst = {}
 
     """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
-    def calculate(self, n, set_id, ts):
+    def calculate(self, n, set_id, ts, cost):
+        if n in self.steiner.get_approximation().get_descendants() and all(t in self.steiner.get_approximation().get_descendants()[n] for t in ts):
+            return 0
+
         length = self.steiner.get_lengths
 
         # Only one terminal

@@ -114,6 +114,7 @@ class SteinerApproximation:
         self.tree = None
         self.root = None
         self.steiner = steiner
+        self._descendants = None
 
         limit = min(20, len(steiner.terminals))
         ts = list(steiner.terminals)
@@ -634,3 +635,29 @@ class SteinerApproximation:
 
         kv_rec(root, root)
         self.cost = sum(d for (u, v, d) in self.tree.edges(data='weight'))
+
+    def get_descendants(self):
+        if self._descendants is not None:
+            return self._descendants
+
+        self._descendants = {}
+
+        # DFS
+        queue = [(self.root, {self.root})]
+
+        while len(queue) > 0:
+            n, s = queue.pop()
+
+            self._descendants[n] = set()
+            if n in self.steiner.terminals:
+                for n2 in s:
+                    self._descendants[n2].add(n)
+                self._descendants[n].add(n)
+
+            s2 = set(s)
+            s2.add(n)
+            for n2 in self.tree.neighbors(n):
+                if n2 not in s:
+                    queue.append((n2, s2))
+
+        return self._descendants
