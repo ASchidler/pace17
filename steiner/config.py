@@ -12,36 +12,26 @@ def reducers():
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         degree.DegreeReduction(),
-        terminals.TerminalReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
-        terminals.TerminalReduction(),
-        component.ComponentReduction(),
         long_edges.LongEdgeReduction(True),
         ntdk.NtdkReduction(True),
         sdc.SdcReduction(),
         degree.DegreeReduction(),
-        terminals.TerminalReduction(),
         ntdk.NtdkReduction(False),
-        #nearest_vertex.NearestVertex(),
-        #short_links.ShortLinkPreselection(),
         degree.DegreeReduction(),
-        terminals.TerminalReduction(),
         preselection_pack.NvSlPack(),
-        degree.DegreeReduction(),
-        terminals.TerminalReduction(),
+        # Run before the others, as this might produce a tighter upper bound!
+        dual_ascent.DualAscent(),
         bound_reductions.BoundNodeReduction(),
         bound_reductions.BoundEdgeReduction(),
         bound_reductions.BoundGraphReduction(),
         bound_reductions.BoundNtdkReduction(),
-        dual_ascent.DualAscent(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
-        terminals.TerminalReduction(),
-        component.ComponentReduction(),
-        # cut_reachability.CutReachabilityReduction(),
-        # cut_reachability_edge.CutReachabilityEdgeReduction(),
-        # reachability.ReachabilityReduction(),
+        #cut_reachability.CutReachabilityReduction(),
+        #cut_reachability_edge.CutReachabilityEdgeReduction(),
+        #reachability.ReachabilityReduction(),
     ]
 
 
@@ -59,6 +49,7 @@ def solver(steiner):
     heuristics = [
             mst_heuristic.MstHeuristic(steiner),
             # smt_heuristic.SmtHeuristic(steiner, 3),
-            # tsp_heuristic.TspHeuristic(steiner)
+            # tsp_heuristic.TspHeuristic(steiner),
+            #da_heuristic.DaHeuristic(steiner)
     ]
     return sv.Solver2k(steiner, steiner.terminals, heuristics)
