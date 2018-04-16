@@ -5,6 +5,7 @@ class CostVsTerminalDistanceReduction:
     """ Removes all edges that are longer than the maximum distance between two terminals """
     def __init__(self):
         self.enabled = True
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         # Edge case, only one terminal

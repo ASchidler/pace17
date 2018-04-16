@@ -7,6 +7,7 @@ class BoundNodeReduction:
 
     def __init__(self):
         self.enabled = True
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
@@ -45,6 +46,7 @@ class BoundEdgeReduction:
 
     def __init__(self):
         self.enabled = True
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
@@ -88,6 +90,7 @@ class BoundNtdkReduction:
     def __init__(self):
         self._removed = {}
         self.enabled = True
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 3 or not (self.enabled or last_run):
@@ -142,6 +145,7 @@ class BoundGraphReduction:
 
     def __init__(self):
         self.enabled = True
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or cnt > 0 or (not self.enabled and not last_run):

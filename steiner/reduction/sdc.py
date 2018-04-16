@@ -2,6 +2,9 @@ from ntdk import NtdkReduction
 
 
 class SdcReduction:
+    def __init__(self):
+        self._done = False
+
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.graph.edges) > 1000 and len(steiner.graph.edges) / len(steiner.graph.nodes) > 4:
             return 0

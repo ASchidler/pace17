@@ -4,6 +4,7 @@ from sys import maxint
 class ReachabilityReduction:
     def __init__(self):
         self._removed = {}
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.graph.nodes) == 1:

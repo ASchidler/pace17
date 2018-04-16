@@ -109,14 +109,14 @@ class VoronoiPartition:
 
 class SteinerApproximation:
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
-    def __init__(self, steiner, optimize=True):
+    def __init__(self, steiner, optimize=True, limit=20):
         self.cost = maxint
         self.tree = None
         self.root = None
         self.steiner = steiner
         self._descendants = None
 
-        limit = min(20, len(steiner.terminals))
+        limit = min(limit, len(steiner.terminals))
         ts = list(steiner.terminals)
         for i in xrange(0, limit):
             start_node = ts[max(len(steiner.terminals) / limit, 1) * i]
