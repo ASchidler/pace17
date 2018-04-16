@@ -10,6 +10,7 @@ class NtdkReduction:
     def __init__(self, restricted):
         self._removed = {}
         self._restricted = restricted
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:

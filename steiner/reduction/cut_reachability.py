@@ -6,6 +6,7 @@ class CutReachabilityReduction:
     def __init__(self):
         self._terminal_minimums = None
         self._terminal_sum = 0
+        self._done = False
 
     # Find smallest neighbours
     def find_minimums(self, steiner):

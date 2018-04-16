@@ -6,6 +6,7 @@ class LongEdgeReduction:
     def __init__(self, delete_equal):
         self.runs = 0
         self._delete_equal = delete_equal
+        self._done = False
 
     def reduce(self, steiner, cnt, last_run):
         track = len(steiner.graph.edges)
