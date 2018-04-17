@@ -10,15 +10,16 @@ import time
 
 
 class DualAscent:
-    def __init__(self):
+    def __init__(self, run_once=False):
         self.runs = 0
         self._done = False
+        self._run_once = run_once
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 4:
+        if len(steiner.terminals) < 4 or (self._run_once and self.runs > 0):
             return 0
 
-        steiner.requires_approx(0)
+        steiner.invalidate_approx(-2)
 
         da_limit = 10 if len(steiner.graph.edges) / len(steiner.graph.nodes) <= 10 else 1
 
@@ -48,20 +49,16 @@ class DualAscent:
         #aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
         #new_ap2 = min(aps, key=lambda x: x.cost)
         new_ap2 = self.find_new(steiner, results)
-        bla = [self.prune_ascent(steiner, x) for x in results]
+        # bla = [self.prune_ascent(steiner, x) for x in results]
         if new_ap2.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap2
 
-        for x in bla:
-            if x.cost < steiner.get_approximation().cost:
-                steiner._approximation = x
+        # for x in bla:
+        #     if x.cost < steiner.get_approximation().cost:
+        #         steiner._approximation = x
 
         root_dist = single_source_dijkstra_path_length(max_graph, max_root)
-        # Calculate the voronoi distances without root node (route should be arc disjoint from root paths)
-        root_edges = [(max_root, n, max_graph[max_root][n]['weight']) for n in max_graph.neighbors(max_root)]
-        max_graph.remove_node(max_root)
         vor = self.voronoi(max_graph, [t for t in ts if t != max_root])
-        [max_graph.add_edge(u, v, weight=d) for (u, v, d) in root_edges]
 
         edges = set()
 
@@ -185,13 +182,6 @@ class DualAscent:
             cnt = 0
             for r in rs:
                 cnt += r.reduce(dg, cnt, False)
-
-            dg._lengths = {}
-            dg._approximation = None
-            dg._restricted_lengths = {}
-            dg._restricted_closest = None
-            dg._radius = None
-            dg._voronoi_areas = None
 
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
