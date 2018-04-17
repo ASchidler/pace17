@@ -23,20 +23,13 @@ for steiner in components:
 
     while True:
         cnt = 0
-        steiner._lengths = {}
-        steiner._approximation = None
-        steiner._restricted_lengths = {}
-        steiner._restricted_closest = None
-        steiner._radius = None
-        steiner._voronoi_areas = None
         for r in reducers:
             cnt = cnt + r.reduce(steiner, cnt, last_run)
 
-        steiner._lengths = {}
-        steiner._approximation = None
-
         for c in contractors:
             cnt = cnt + c.reduce(steiner, cnt, last_run)
+
+        steiner.reset_all()
 
         if cnt == 0:
             if last_run:

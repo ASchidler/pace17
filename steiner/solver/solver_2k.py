@@ -13,6 +13,10 @@ class Solver2k:
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
         target_root = steiner.get_approximation().root
+        # This may happen in a pruned tree since the tree is reduced...
+        if target_root not in steiner.terminals:
+            target_root = steiner.get_closest(target_root)[0][0]
+
         self.root_node = self.terminals.pop(self.terminals.index(target_root))
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
@@ -46,6 +50,7 @@ class Solver2k:
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
+
         # Edge case, may also happen in case of a very efficient preprocessing
         if len(self.steiner.terminals) == 1:
             ret = Graph()
@@ -119,7 +124,7 @@ class Solver2k:
                         cst[combined] = (total, False, other_set, True)
 
                         h = heuristic(n, combined, total)
-                        if total + h <= approx  and not prune(n, n_set, total, other_set):
+                        if total + h <= approx and not prune(n, n_set, total, other_set):
                             push(q, [total + h, n, combined])
 
     def heuristic(self, n, set_id, total):
