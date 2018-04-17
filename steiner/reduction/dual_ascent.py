@@ -1,6 +1,6 @@
 from sys import maxint
 import heapq as hq
-from networkx import single_source_dijkstra_path_length, single_source_dijkstra_path
+from networkx import single_source_dijkstra_path_length, single_source_dijkstra_path, is_connected
 import steiner_graph as sg
 import steiner_approximation as sa
 from reduction import degree, long_edges, ntdk, sdc, terminal_distance
@@ -35,11 +35,9 @@ class DualAscent:
         num_results = min(da_limit, len(ts))
         target_roots = (ts[max(len(ts) / num_results, 1) * i] for i in xrange(0, num_results))
 
-        tm = time.time()
         for root in target_roots:
             bnd, grph = self.calc(steiner, root)
             results.append((bnd, root, grph))
-        print "Dual Ascent found results in {}".format(time.time() - tm)
 
         results.sort(key=lambda x: x[0], reverse=True)
         max_result, max_root, max_graph = results[0]
@@ -49,10 +47,15 @@ class DualAscent:
         #aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
         #new_ap2 = min(aps, key=lambda x: x.cost)
         new_ap2 = self.find_new(steiner, results)
-        # bla = [self.prune_ascent(steiner, x) for x in results]
+
         if new_ap2.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap2
 
+        pruned = self.prune_ascent(steiner, results[0])
+        if pruned.cost < steiner.get_approximation().cost:
+            steiner._approximation = pruned
+
+        # bla = [self.prune_ascent(steiner, results[i]) for i in range(1, 5)]
         # for x in bla:
         #     if x.cost < steiner.get_approximation().cost:
         #         steiner._approximation = x
@@ -101,11 +104,12 @@ class DualAscent:
         red = Reducer(self.reducers())
 
         for i in xrange(0, 3):
-            tm = time.time()
             red.reduce(og)
 
-            print "Reduced {}".format(time.time() - tm)
             sol2 = self.prune(og, max(1, len(og.graph.edges)) / 10, sol.tree)
+            if sol2 is None:
+                break
+
             red.reset()
             sol2.tree, sol2.cost = red.unreduce(sol2.tree, sol2.cost)
 
@@ -154,6 +158,9 @@ class DualAscent:
 
                     if total > bnd:
                         g.remove_node(n)
+
+        if not is_connected(g.graph):
+            return None
 
         g.invalidate_steiner(-2)
         g.invalidate_dist(-2)

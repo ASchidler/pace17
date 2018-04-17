@@ -10,6 +10,7 @@ def reducers():
     """Creates the set of reducing preprocessing tests"""
     return [
         component.ComponentReduction(),
+        dual_ascent.DualAscent(run_once=True),
         zeroedge.ZeroEdgeReduction(),
         degree.DegreeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
@@ -29,9 +30,6 @@ def reducers():
         bound_reductions.BoundNtdkReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
-        #cut_reachability.CutReachabilityReduction(),
-        #cut_reachability_edge.CutReachabilityEdgeReduction(),
-        #reachability.ReachabilityReduction(),
     ]
 
 
