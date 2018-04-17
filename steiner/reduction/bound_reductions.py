@@ -66,7 +66,7 @@ class BoundEdgeReduction:
 
         t_weight = 0
         radius = steiner.get_radius()
-        track = len(steiner.graph.edge)
+        track = len(steiner.graph.edges)
 
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]

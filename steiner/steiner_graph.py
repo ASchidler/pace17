@@ -191,14 +191,14 @@ class SteinerGraph:
                     else:
                         self._closest_terminals[i] = None
 
-        if self._restricted_closest is not None:
+        if self._restricted_closest is not None and self._restricted_validity != -2:
             for i in xrange(0, len(self._restricted_closest)):
                 if self._restricted_closest[i] is not None:
                     if self.graph.has_node(i):
                         self._restricted_closest[i] = [x for x in self._restricted_closest[i] if x[0] != tsource]
                         if ttarget not in self.terminals:
                             self._restricted_closest[i].append((ttarget, self.get_restricted(ttarget, i)))
-                            self._restricted_closest[i].sort(key=lambda x: x[1])
+                            self._restricted_closest[i].sort(key=lambda e: e[1])
                     else:
                         self._restricted_closest[i] = None
 
@@ -280,6 +280,8 @@ class SteinerGraph:
     def get_restricted(self, t, n):
         if self._restricted_validity == -2:
             self._restricted_lengths = {}
+            max_node = max(nx.nodes(self.graph))
+            self._restricted_closest = list([None] * (max_node + 1))
             self._restricted_validity = 0
 
         if t not in self._restricted_lengths:
@@ -303,9 +305,11 @@ class SteinerGraph:
         return self._restricted_lengths[t].setdefault(n, maxint)
 
     def get_restricted_closest(self, n):
-        if self._restricted_closest is None or self._restricted_validity == -2:
+        if self._restricted_validity == -2:
+            self._restricted_lengths = {}
             max_node = max(nx.nodes(self.graph))
             self._restricted_closest = list([None] * (max_node + 1))
+            self._restricted_validity = 0
 
         if self._restricted_closest[n] is None:
             self._restricted_closest[n] = [(t, self.get_restricted(t, n)) for t in self.terminals]

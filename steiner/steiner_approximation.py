@@ -5,6 +5,7 @@ from itertools import chain
 from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree
 
 
+# TODO: Optimize the whole thing
 class VoronoiPartition:
     def __init__(self, source, target):
         self.regions = {}
@@ -15,6 +16,7 @@ class VoronoiPartition:
 
         queue = []
         visited = set()
+        nb = source._adj
 
         # Find voronoi regions. Initialize with tree nodes as voronoi centers
         for n in target.nodes:
@@ -31,9 +33,9 @@ class VoronoiPartition:
                 self.regions[el[2]][el[1]] = (el[0], el[3])
                 self._closest[el[1]] = el[2]
 
-                for n in source.neighbors(el[1]):
+                for n, dta in nb[el[1]].items():
                     if n not in visited:
-                        cost = el[0] + source[el[1]][n]['weight']
+                        cost = el[0] + dta['weight']
                         heapq.heappush(queue, [cost, n, el[2], el[1]])
 
     def reset(self):
@@ -115,6 +117,8 @@ class SteinerApproximation:
         self.root = None
         self.steiner = steiner
         self._descendants = None
+
+        steiner.requires_dist(0)
 
         limit = min(limit, len(steiner.terminals))
         ts = list(steiner.terminals)
