@@ -123,6 +123,7 @@ class NtdkReduction:
         visited = {u}
         scanned = defaultdict(lambda: maxint)
         scanned_edges = 0
+        nb = steiner.graph._adj
 
         # Expand first node explicitly here, so no check in the loop is required to exclude edge
         for n2 in steiner.graph.neighbors(u):
@@ -144,13 +145,13 @@ class NtdkReduction:
             elif n in steiner.terminals or n == v:
                 continue
 
-            for n2 in steiner.graph.neighbors(n):
+            for n2, dta in nb[n].items():
                 scanned_edges += 1
                 if scanned_edges > 40:
                     break
 
                 if n2 not in visited:
-                    cost = c_val[0] + steiner.graph[n][n2]['weight']
+                    cost = c_val[0] + dta['weight']
 
                     if cost < scanned[n2] and cost <= cut_off:
                         scanned[n2] = cost
