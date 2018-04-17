@@ -50,9 +50,7 @@ def process_file(filename, solve, apply_reductions):
                         print "Reduced {} needing {} in {}" \
                             .format(reduced, str(time.time() - local_start), str(r.__class__))
 
-                steiner._lengths = {}
-                steiner._restricted_lengths = {}
-                steiner._restricted_closest = None
+                steiner.reset_all()
 
                 for c in contractors:
                     if len(nx.nodes(steiner.graph)) > 1:
@@ -61,14 +59,6 @@ def process_file(filename, solve, apply_reductions):
                         cnt_changes = cnt_changes + reduced
                         print "Contracted {} needing {} in {}" \
                             .format(reduced, str(time.time() - local_start), str(c.__class__))
-
-                steiner._lengths = {}
-                steiner._restricted_lengths = {}
-                steiner._restricted_closest = None
-                steiner._approximation = None
-                steiner._radius = None
-                steiner._voronoi_areas = None
-                steiner._closest_terminals = None
 
                 if cnt_changes == 0:
                     if last_run:

@@ -8,8 +8,12 @@ class NearestVertex:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        cnt = 0
+        if len(steiner.terminals) <= 2:
+            return 0
 
+        steiner.requires_dist(1)
+
+        cnt = 0
         for t in list(steiner.terminals):
             # t may have been deleted before
             if t in steiner.terminals and steiner.graph.degree[t] >= 2 and len(steiner.terminals) > 2:
@@ -57,6 +61,7 @@ class NearestVertex:
         if cnt > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)
+            steiner.invalidate_approx(-1)
 
         return cnt
 

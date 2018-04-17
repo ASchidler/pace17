@@ -16,6 +16,9 @@ class NtdkReduction:
         if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
             return 0
 
+        if self._restricted:
+            steiner.requires_steiner_dist(1)
+
         track = len(steiner.graph.nodes)
 
         for n in list(steiner.graph.nodes):

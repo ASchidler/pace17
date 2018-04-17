@@ -12,6 +12,8 @@ class ShortEdgeReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
+        steiner.requires_dist(1)
+
         track = len(steiner.graph.nodes)
         self.terminals = list(steiner.terminals)
         self.max_terminal = max(self.terminals) + 1
@@ -51,6 +53,7 @@ class ShortEdgeReduction:
         if cnt > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)
+            steiner.invalidate_approx(-1)
 
         return result
 

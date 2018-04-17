@@ -9,8 +9,10 @@ class ShortLinkPreselection:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) <= 1:
+        if len(steiner.terminals) <= 2:
             return 0
+
+        steiner.requires_dist(1)
 
         track = 0
         vor = steiner.get_voronoi()
@@ -71,6 +73,8 @@ class ShortLinkPreselection:
         if track > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)
+            steiner.invalidate_approx(-1)
+
         return track
 
     def post_process(self, solution):
