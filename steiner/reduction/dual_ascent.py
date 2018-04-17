@@ -255,6 +255,7 @@ class DualAscent:
         main_cut.add(root)
         bound = 0
         t_cuts = []
+        nb = dg._pred
 
         for t in (t for t in steiner.terminals if t != root):
             c = set()
@@ -290,8 +291,8 @@ class DualAscent:
                                 c_node = queue.pop()
                                 connected_nodes.add(c_node)
 
-                                for c_p in dg.predecessors(c_node):
-                                    if dg[c_p][c_node]['weight'] == 0 and c_p not in connected_nodes:
+                                for c_p, dta in nb[c_node].items():
+                                    if dta['weight'] == 0 and c_p not in connected_nodes:
                                         queue.append(c_p)
 
                             root_found = root in connected_nodes
