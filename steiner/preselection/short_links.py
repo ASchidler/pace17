@@ -13,9 +13,6 @@ class ShortLinkPreselection:
             return 0
 
         track = 0
-        steiner._voronoi_areas = None
-        steiner._closest_terminals = None
-        steiner._lengths = {}
         vor = steiner.get_voronoi()
 
         for (t, r) in vor.items():
@@ -71,6 +68,9 @@ class ShortLinkPreselection:
                             vor[other_t].remove(n)
                             vor[t].add(n)
 
+        if track > 0:
+            steiner.invalidate_steiner(-1)
+            steiner.invalidate_dist(-1)
         return track
 
     def post_process(self, solution):

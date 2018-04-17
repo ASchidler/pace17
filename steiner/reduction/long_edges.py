@@ -1,5 +1,6 @@
 import ntdk
 
+
 class LongEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
@@ -10,9 +11,6 @@ class LongEdgeReduction:
 
     def reduce(self, steiner, cnt, last_run):
         track = len(steiner.graph.edges)
-
-        # if self.runs > 0:
-        steiner.refresh_steiner_lengths()
 
         equal_edges = []
 
@@ -34,8 +32,12 @@ class LongEdgeReduction:
                         d >= ntdk.NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, True):
                     steiner.remove_edge(u, v)
 
+        result = track - len(steiner.graph.edges)
+        if result > 0:
+            steiner.invalidate_dist(+1)
+
         self.runs = self.runs + 1
-        return track - len(steiner.graph.edges)
+        return result
 
     def post_process(self, solution):
         return solution, False

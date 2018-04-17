@@ -35,6 +35,10 @@ class BoundNodeReduction:
 
         self.enabled = track > 0
 
+        if track > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
+
         return track
 
     def post_process(self, solution):
@@ -76,6 +80,10 @@ class BoundEdgeReduction:
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
                 track += 1
+
+        if track > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
 
         self.enabled = track > 0
         return track
@@ -124,6 +132,10 @@ class BoundNtdkReduction:
 
                         steiner.remove_node(n)
                         track += 1
+
+        if track > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
 
         self.enabled = track > 0
         return track
@@ -192,6 +204,10 @@ class BoundGraphReduction:
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
                 track += 1
+
+        if track > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
 
         self.enabled = track > 0
         return track

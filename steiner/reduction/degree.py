@@ -12,6 +12,7 @@ class DegreeReduction:
 
     def reduce(self, steiner, cnt, last_run):
         track = len(steiner.graph.nodes)
+        t_cnt = 0
 
         old = maxint
 
@@ -32,6 +33,7 @@ class DegreeReduction:
                         self._contracted.append((n, nb, steiner.graph[n][nb]['weight']))
                         steiner.move_terminal(n, nb)
                         steiner.remove_node(n)
+                        t_cnt += 1
 
                 # Nodes of degree 2 => merge
                 elif dg == 2 and n not in steiner.terminals:
@@ -57,6 +59,11 @@ class DegreeReduction:
 
                         for e in steiner.contract_edge(n, min_nb):
                             self._selected.append(e)
+                        t_cnt += 1
+
+        if t_cnt > 0:
+            steiner.invalidate_steiner(-1)
+            steiner.invalidate_dist(-1)
 
         return track - len(steiner.graph.nodes)
 

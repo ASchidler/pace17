@@ -16,9 +16,6 @@ class NtdkReduction:
         if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
             return 0
 
-        if self._restricted:
-            steiner.refresh_steiner_lengths()
-
         track = len(steiner.graph.nodes)
 
         for n in list(steiner.graph.nodes):
@@ -68,8 +65,11 @@ class NtdkReduction:
                                 self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
                     steiner.remove_node(n)
 
-        steiner._lengths = {}
-        return track - len(steiner.graph.nodes)
+        result = track - len(steiner.graph.nodes)
+        if result > 0:
+            steiner.invalidate_approx(-2)
+
+        return result
 
     def post_process(self, solution):
         change = False

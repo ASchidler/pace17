@@ -18,6 +18,11 @@ class SteinerGraph:
         self._restricted_lengths = {}
         self._restricted_closest = None
 
+        self._dist_validity = -2
+        self._steiner_validity = -2
+        self._approx_validity = -2
+        self._restricted_validity = -2
+
     def add_edge(self, n1, n2, c):
         """Adds an edge to the graph. Distances are updated in case it replaces the same edge with higher costs."""
         if self.graph.has_edge(n1, n2):
@@ -25,7 +30,6 @@ class SteinerGraph:
             # Exists, but existing is more expensive
             if orig > c:
                 self.graph[n1][n2]['weight'] = c
-                self.refresh_distance_matrix(n1, n2, c)
                 return True
             # Cheaper edge exists
             else:
@@ -44,6 +48,10 @@ class SteinerGraph:
 
     def get_lengths(self, n1, n2=None):
         """Retrieve the length of the shortest path between n1 and n2. If n2 is empty all paths from n1 are returned"""
+        if self._dist_validity != 0:
+            self._lengths = {}
+            self._dist_validity = 0
+
         if n1 not in self._lengths:
             # If non-existing try the other way round. If still not existing calculate
             if n2 is not None and n2 in self._lengths:
@@ -59,19 +67,13 @@ class SteinerGraph:
 
     def get_approximation(self):
         """ Returns an approximation that can be used as an upper bound"""
-        if self._approximation is None:
+        if self._approximation is None or self._approx_validity != 0:
             self._approximation = sa.SteinerApproximation(self)
+            self._approx_validity = 0
 
         return self._approximation
 
     def calculate_steiner_length(self):
-        # Create 2-D dictionary
-        self._steiner_lengths = {}
-        self.refresh_steiner_lengths()
-
-    def refresh_steiner_lengths(self):
-        """ Calculates the steiner distances"""
-
         self._steiner_lengths = {}
         g = nx.Graph()
 
@@ -88,9 +90,11 @@ class SteinerGraph:
 
             self._steiner_lengths.setdefault(t1, {})[t2] = max_l
 
+        self._steiner_validity = 0
+
     # TODO: Use bound
     def get_steiner_lengths(self, n1, n2, bound):
-        if self._steiner_lengths is None:
+        if self._steiner_lengths is None or self._steiner_validity != 0:
             self.calculate_steiner_length()
 
         if n1 > n2:
@@ -143,14 +147,6 @@ class SteinerGraph:
                 d = self.graph[v][ng]['weight']
                 if self.add_edge(u, ng, d):
                     ret.append(((u, ng, d), (v, ng, d)))
-                else:
-                    # There exists an edge to u of equal or cheaper cost
-                    alt_c = self.graph[u][ng]['weight']
-                    if alt_c < d:
-                        self.refresh_distance_matrix(v, ng, alt_c)
-
-        # Refresh distance matrix
-        self.refresh_distance_matrix(u, v, 0)
 
         if v in self.terminals:
             self.move_terminal(v, u)
@@ -158,23 +154,6 @@ class SteinerGraph:
         self.remove_node(v)
 
         return ret
-
-    def refresh_distance_matrix(self, u, v, c):
-        """ Refreshes the distance matrix under the assumption that u/v has been contracted and has cost c"""
-        invalid = []
-        # This code really refreshes the distance matrix, but since it may be incomplete, a complete recalc
-        # might be necessary
-        # for (n1, p) in self._lengths.items():
-        #     for (n2, d) in p.items():
-        #         # In case of a non-existing node in the distance matrix, leave it to keep the iterator valid
-        #         if self.graph.has_node(n2):
-        #             # The length of the path under the assumption it is over u, v
-        #             dist1 = self.get_lengths(n2, v) + self.get_lengths(u, n1) + c
-        #             dist2 = self.get_lengths(n1, v) + self.get_lengths(u, n2) + c
-        #             dist = min(dist1, dist2)
-        #
-        #             if d > dist:
-        #                 p[n2] = dist
 
     def remove_node(self, n):
         if self.graph.has_node(n):
@@ -228,7 +207,7 @@ class SteinerGraph:
                     v.remove(ttarget)
 
     def get_voronoi(self):
-        if self._voronoi_areas is None:
+        if self._voronoi_areas is None or self._dist_validity != 0:
             self._voronoi_areas = {}
 
             for t in self.terminals:
@@ -251,7 +230,7 @@ class SteinerGraph:
         return self._voronoi_areas
 
     def get_closest(self, n):
-        if self._closest_terminals is None:
+        if self._closest_terminals is None or self._dist_validity != 0:
             max_node = max(nx.nodes(self.graph))
             self._closest_terminals = list([None] * (max_node + 1))
 
@@ -263,7 +242,7 @@ class SteinerGraph:
 
     def get_radius(self):
         # This can be included into voronoi generation for efficiency. It is not for readability
-        if self._radius is None:
+        if self._radius is None or self._dist_validity != 0:
             vor = self.get_voronoi()
             radius_tmp = defaultdict(lambda: maxint)
 
@@ -310,3 +289,26 @@ class SteinerGraph:
             self._restricted_closest[n].sort(key=lambda x: x[1])
 
         return self._restricted_closest[n]
+
+    def invalidate_dist(self, dir, target=None):
+        self._dist_validity = -2
+        self._restricted_validity = -2
+
+        self._restricted_closest = None
+        self._restricted_lengths = None
+
+    def invalidate_steiner(self, dir):
+        self._steiner_validity = -2
+
+    def invalidate_approx(self, dir):
+        self._approx_validity = -2
+
+    def reset_all(self):
+        if self._approx_validity != 0:
+            self.invalidate_approx(-2)
+
+        if self._dist_validity != 0:
+            self.invalidate_dist(-2)
+
+        if self._steiner_validity != 0:
+            self.invalidate_steiner(-2)

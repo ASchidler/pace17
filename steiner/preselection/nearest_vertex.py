@@ -9,9 +9,6 @@ class NearestVertex:
 
     def reduce(self, steiner, cnt, last_run):
         cnt = 0
-        steiner._voronoi_areas = None
-        steiner._closest_terminals = None
-        steiner._lengths = {}
 
         for t in list(steiner.terminals):
             # t may have been deleted before
@@ -56,6 +53,10 @@ class NearestVertex:
                     cnt += 1
                     steiner._voronoi_areas = None
                     steiner._closest_terminals = None
+
+        if cnt > 0:
+            steiner.invalidate_steiner(-1)
+            steiner.invalidate_dist(-1)
 
         return cnt
 
