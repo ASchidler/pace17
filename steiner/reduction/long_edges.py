@@ -10,6 +10,8 @@ class LongEdgeReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
+        steiner.requires_steiner_dist(1)
+
         track = len(steiner.graph.edges)
 
         equal_edges = []

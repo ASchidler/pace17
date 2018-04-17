@@ -13,6 +13,10 @@ class BoundNodeReduction:
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
             return 0
 
+        steiner.requires_restricted_dist(-1)
+        steiner.requires_dist(-1)
+        steiner.requires_approx(0)
+
         t_weight = 0
         radius = steiner.get_radius()
         track = 0
@@ -55,6 +59,10 @@ class BoundEdgeReduction:
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
             return 0
+
+        steiner.requires_restricted_dist(-1)
+        steiner.requires_dist(-1)
+        steiner.requires_approx(0)
 
         t_weight = 0
         radius = steiner.get_radius()
@@ -103,6 +111,10 @@ class BoundNtdkReduction:
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 3 or not (self.enabled or last_run):
             return 0
+
+        steiner.requires_restricted_dist(-1)
+        steiner.requires_dist(-1)
+        steiner.requires_approx(0)
 
         track = 0
         t_weight = 0
@@ -162,6 +174,10 @@ class BoundGraphReduction:
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or cnt > 0 or (not self.enabled and not last_run):
             return 0
+
+        steiner.requires_restricted_dist(-1)
+        steiner.requires_dist(-1)
+        steiner.requires_approx(0)
 
         track = 0
         g_prime = Graph()

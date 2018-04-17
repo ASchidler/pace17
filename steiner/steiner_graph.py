@@ -46,11 +46,17 @@ class SteinerGraph:
         if self.graph.degree[v] == 0:
             self.remove_node(v)
 
+    def _reset_lengths(self):
+        self._lengths = {}
+        self._closest_terminals = None
+        self._voronoi_areas = None
+        self._dist_validity = 0
+        self._radius = None
+
     def get_lengths(self, n1, n2=None):
         """Retrieve the length of the shortest path between n1 and n2. If n2 is empty all paths from n1 are returned"""
-        if self._dist_validity != 0:
-            self._lengths = {}
-            self._dist_validity = 0
+        if self._dist_validity == -2:
+            self._reset_lengths()
 
         if n1 not in self._lengths:
             # If non-existing try the other way round. If still not existing calculate
@@ -67,7 +73,7 @@ class SteinerGraph:
 
     def get_approximation(self):
         """ Returns an approximation that can be used as an upper bound"""
-        if self._approximation is None or self._approx_validity != 0:
+        if self._approximation is None or self._approx_validity == -2:
             self._approximation = sa.SteinerApproximation(self)
             self._approx_validity = 0
 
@@ -94,8 +100,10 @@ class SteinerGraph:
 
     # TODO: Use bound
     def get_steiner_lengths(self, n1, n2, bound):
-        if self._steiner_lengths is None or self._steiner_validity != 0:
+        if self._steiner_lengths is None or self._steiner_validity == -2:
             self.calculate_steiner_length()
+            self._voronoi_areas = None
+            self._closest_terminals = None
 
         if n1 > n2:
             n1, n2 = n2, n1
@@ -167,6 +175,9 @@ class SteinerGraph:
             self.terminals.remove(n)
 
     def move_terminal(self, tsource, ttarget):
+        if self._dist_validity == -2:
+            self._reset_lengths()
+
         self.terminals.remove(tsource)
 
         if self._closest_terminals is not None:
@@ -207,9 +218,11 @@ class SteinerGraph:
                     v.remove(ttarget)
 
     def get_voronoi(self):
-        if self._voronoi_areas is None or self._dist_validity != 0:
-            self._voronoi_areas = {}
+        if self._dist_validity == -2:
+            self._reset_lengths()
 
+        if self._voronoi_areas is None:
+            self._voronoi_areas = {}
             for t in self.terminals:
                 self._voronoi_areas[t] = set()
 
@@ -230,7 +243,10 @@ class SteinerGraph:
         return self._voronoi_areas
 
     def get_closest(self, n):
-        if self._closest_terminals is None or self._dist_validity != 0:
+        if self._dist_validity == -2:
+            self._reset_lengths()
+
+        if self._closest_terminals is None:
             max_node = max(nx.nodes(self.graph))
             self._closest_terminals = list([None] * (max_node + 1))
 
@@ -241,8 +257,11 @@ class SteinerGraph:
         return self._closest_terminals[n]
 
     def get_radius(self):
+        if self._dist_validity == -2:
+            self._reset_lengths()
+
         # This can be included into voronoi generation for efficiency. It is not for readability
-        if self._radius is None or self._dist_validity != 0:
+        if self._radius is None:
             vor = self.get_voronoi()
             radius_tmp = defaultdict(lambda: maxint)
 
@@ -259,6 +278,10 @@ class SteinerGraph:
         return self._radius
 
     def get_restricted(self, t, n):
+        if self._restricted_validity == -2:
+            self._restricted_lengths = {}
+            self._restricted_validity = 0
+
         if t not in self._restricted_lengths:
             g_prime = self.graph.copy()
             for t_prime in self.terminals:
@@ -280,7 +303,7 @@ class SteinerGraph:
         return self._restricted_lengths[t].setdefault(n, maxint)
 
     def get_restricted_closest(self, n):
-        if self._restricted_closest is None:
+        if self._restricted_closest is None or self._restricted_validity == -2:
             max_node = max(nx.nodes(self.graph))
             self._restricted_closest = list([None] * (max_node + 1))
 
@@ -290,25 +313,63 @@ class SteinerGraph:
 
         return self._restricted_closest[n]
 
-    def invalidate_dist(self, dir, target=None):
-        self._dist_validity = -2
-        self._restricted_validity = -2
+    def invalidate_dist(self, direction):
+        if self._dist_validity == 0:
+            self._dist_validity = direction
+        elif (self._dist_validity < 0 and direction > 0) or (self._dist_validity > 0 and direction < 0):
+            self._dist_validity = -2
 
-        self._restricted_closest = None
-        self._restricted_lengths = None
+        if self._restricted_validity == 0:
+            self._restricted_validity = direction
+        elif (self._restricted_validity < 0 and direction > 0) or (self._restricted_validity > 0 and direction < 0):
+            self._restricted_validity = -2
 
-    def invalidate_steiner(self, dir):
-        self._steiner_validity = -2
+    def invalidate_steiner(self, direction):
+        if self._steiner_validity == 0:
+            self._steiner_validity = direction
+        elif (self._steiner_validity < 0 and direction > 0) or (self._steiner_validity > 0 and direction < 0):
+            self._steiner_validity = -2
 
-    def invalidate_approx(self, dir):
-        self._approx_validity = -2
+    def invalidate_approx(self, direction):
+        if self._approx_validity == 0:
+            self._approx_validity = direction
+        elif (self._approx_validity < 0 and direction > 0) or (self._approx_validity > 0 and direction < 0):
+            self._approx_validity = -2
+
+    def requires_dist(self, direction):
+        if direction == 0 and self._dist_validity != 0:
+            self._dist_validity = -2
+        # I.e. either dir is positive and validity negative or the other way round
+        elif direction * self._dist_validity < 0:
+            self._dist_validity = -2
+
+    def requires_steiner_dist(self, direction):
+        if direction == 0 and self._steiner_validity != 0:
+            self._steiner_validity = -2
+        elif direction * self._steiner_validity < 0:
+            self._steiner_validity = -2
+
+    def requires_approx(self, direction):
+        if direction == 0 and self._approx_validity != 0:
+            self._approx_validity = -2
+        elif direction * self._approx_validity < 0:
+            self._approx_validity = -2
+
+    def requires_restricted_dist(self, direction):
+        if direction == 0 and self._restricted_validity != 0:
+            self._restricted_validity = -2
+        elif direction * self._restricted_validity < 0:
+            self._restricted_validity = -2
 
     def reset_all(self):
         if self._approx_validity != 0:
-            self.invalidate_approx(-2)
+            self._approx_validity = -2
 
         if self._dist_validity != 0:
-            self.invalidate_dist(-2)
+            self._dist_validity = -2
 
         if self._steiner_validity != 0:
-            self.invalidate_steiner(-2)
+            self._steiner_validity = -2
+
+        if self._restricted_validity != 0:
+            self._restricted_validity = -2

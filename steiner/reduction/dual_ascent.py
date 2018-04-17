@@ -18,6 +18,8 @@ class DualAscent:
         if len(steiner.terminals) < 4:
             return 0
 
+        steiner.requires_approx(0)
+
         da_limit = 10 if len(steiner.graph.edges) / len(steiner.graph.nodes) <= 10 else 1
 
         if self.runs > 0 and cnt > 0:
@@ -31,10 +33,12 @@ class DualAscent:
         # Spread chosen roots a little bit, as they are usually close
         num_results = min(da_limit, len(ts))
         target_roots = (ts[max(len(ts) / num_results, 1) * i] for i in xrange(0, num_results))
-        
+
+        tm = time.time()
         for root in target_roots:
             bnd, grph = self.calc(steiner, root)
             results.append((bnd, root, grph))
+        print "Dual Ascent found results in {}".format(time.time() - tm)
 
         results.sort(key=lambda x: x[0], reverse=True)
         max_result, max_root, max_graph = results[0]
@@ -102,13 +106,6 @@ class DualAscent:
         for i in xrange(0, 3):
             tm = time.time()
             red.reduce(og)
-            og._lengths = {}
-            og._restricted_lengths = {}
-            og._restricted_closest = None
-            og._approximation = None
-            og._radius = None
-            og._voronoi_areas = None
-            og._closest_terminals = None
 
             print "Reduced {}".format(time.time() - tm)
             sol2 = self.prune(og, max(1, len(og.graph.edges)) / 10, sol.tree)
@@ -160,6 +157,10 @@ class DualAscent:
 
                     if total > bnd:
                         g.remove_node(n)
+
+        g.invalidate_steiner(-2)
+        g.invalidate_dist(-2)
+        g.invalidate_approx(-2)
 
         result = sa.SteinerApproximation(g, limit=10)
         return result
@@ -231,6 +232,8 @@ class DualAscent:
         queue = [[0, t, t] for t in ts]
         visited = set()
 
+        pred = dg._pred
+
         while len(visited) != len(dg.nodes):
             el = hq.heappop(queue)
 
@@ -241,9 +244,9 @@ class DualAscent:
 
             voronoi[el[2]][el[1]] = el[0]
 
-            for n in dg.predecessors(el[1]):
+            for n, dta in pred[el[1]].items():
                 if n not in visited:
-                    d = dg[n][el[1]]['weight']
+                    d = dta['weight']
                     hq.heappush(queue, [el[0]+d, n, el[2]])
 
         return voronoi

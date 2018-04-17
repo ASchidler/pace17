@@ -1,3 +1,3 @@
-__all__ = ["component", "cut_reachability", "degree", "long_edges", "ntdk",
-           "reachability", "terminal_distance","terminals", "cut_reachability_edge","sdc",
+__all__ = ["component", "degree", "long_edges", "ntdk",
+           "terminal_distance", "terminals", "sdc",
            "bound_reductions", "dual_ascent"]

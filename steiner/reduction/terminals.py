@@ -64,6 +64,9 @@ class TerminalReduction:
         if result > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)
+            steiner.invalidate_approx(-1)
+
+        return result
 
     def post_process(self, solution):
         cost = solution[1]

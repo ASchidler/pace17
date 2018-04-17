@@ -12,6 +12,8 @@ class CostVsTerminalDistanceReduction:
         if len(steiner.terminals) == 1 or not (self.enabled or last_run):
             return 0
 
+        steiner.requires_dist(1)
+
         # Find max distance
         g = Graph()
         [g.add_edge(t1, t2, weight=steiner.get_lengths(t1, t2))
