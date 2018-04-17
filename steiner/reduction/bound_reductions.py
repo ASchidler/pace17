@@ -19,7 +19,7 @@ class BoundNodeReduction:
 
         t_weight = 0
         radius = steiner.get_radius()
-        track = 0
+        track = len(steiner.graph.edges)
 
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]
@@ -35,10 +35,10 @@ class BoundNodeReduction:
                             (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.has_node(
                                 n)):
                         steiner.remove_node(n)
-                        track += 1
 
         self.enabled = track > 0
 
+        track -= len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_dist(+1)
             steiner.invalidate_steiner(+1)
@@ -66,7 +66,7 @@ class BoundEdgeReduction:
 
         t_weight = 0
         radius = steiner.get_radius()
-        track = 0
+        track = len(steiner.graph.edge)
 
         for i in range(0, len(steiner.terminals) - 2):
             t_weight += radius[i][0]
@@ -87,7 +87,8 @@ class BoundEdgeReduction:
 
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
-                track += 1
+
+        track -= len(steiner.graph.edges)
 
         if track > 0:
             steiner.invalidate_dist(+1)
@@ -116,7 +117,7 @@ class BoundNtdkReduction:
         steiner.requires_dist(-1)
         steiner.requires_approx(0)
 
-        track = 0
+        track = len(steiner.graph.edges)
         t_weight = 0
         radius = steiner.get_radius()
 
@@ -143,8 +144,8 @@ class BoundNtdkReduction:
                                 self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
 
                         steiner.remove_node(n)
-                        track += 1
 
+        track -= len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_dist(+1)
             steiner.invalidate_steiner(+1)
@@ -179,7 +180,7 @@ class BoundGraphReduction:
         steiner.requires_dist(-1)
         steiner.requires_approx(0)
 
-        track = 0
+        track = len(steiner.graph.edges)
         g_prime = Graph()
         vor = steiner.get_voronoi()
         lg = steiner.get_lengths
@@ -213,14 +214,13 @@ class BoundGraphReduction:
                 total = dists[0][1] + dists[1][1] + mst_sum
                 if total > steiner.get_approximation().cost:
                     steiner.remove_node(n)
-                    track += 1
 
         for (u, v, d) in steiner.graph.edges(data='weight'):
             total = steiner.get_restricted_closest(u)[0][1] + steiner.get_restricted_closest(v)[0][1] + mst_sum
             if total > steiner.get_approximation().cost:
                 steiner.remove_edge(u, v)
-                track += 1
 
+        track = track - len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_dist(+1)
             steiner.invalidate_steiner(+1)

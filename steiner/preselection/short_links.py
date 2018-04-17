@@ -14,7 +14,7 @@ class ShortLinkPreselection:
 
         steiner.requires_dist(1)
 
-        track = 0
+        track = len(steiner.graph.edges)
         vor = steiner.get_voronoi()
 
         for (t, r) in vor.items():
@@ -46,8 +46,6 @@ class ShortLinkPreselection:
             total = steiner.get_closest(min1[0])[0][1] + min1[2] + steiner.get_closest(min1[1])[0][1]
 
             if min2[2] >= total:
-                track = track + 1
-
                 # Store
                 self.deleted.append((min1[0], min1[1], min1[2]))
 
@@ -70,6 +68,7 @@ class ShortLinkPreselection:
                             vor[other_t].remove(n)
                             vor[t].add(n)
 
+        track -= len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)

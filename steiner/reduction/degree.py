@@ -11,7 +11,7 @@ class DegreeReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(steiner.graph.nodes)
+        track = len(steiner.graph.edges)
         t_cnt = 0
 
         old = maxint
@@ -66,7 +66,7 @@ class DegreeReduction:
             steiner.invalidate_dist(-1)
             steiner.invalidate_approx(-1)
 
-        return track - len(steiner.graph.nodes)
+        return track - len(steiner.graph.edges)
 
     def post_process(self, solution):
         change = False

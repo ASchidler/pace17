@@ -12,8 +12,8 @@ class NearestVertex:
             return 0
 
         steiner.requires_dist(1)
+        track = len(steiner.graph.edges)
 
-        cnt = 0
         for t in list(steiner.terminals):
             # t may have been deleted before
             if t in steiner.terminals and steiner.graph.degree[t] >= 2 and len(steiner.terminals) > 2:
@@ -54,16 +54,17 @@ class NearestVertex:
                     for e in steiner.contract_edge(t, e1[0]):
                         self.merged.append(e)
 
-                    cnt += 1
                     steiner._voronoi_areas = None
                     steiner._closest_terminals = None
 
-        if cnt > 0:
+        track -= len(steiner.graph.edges)
+
+        if track > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)
             steiner.invalidate_approx(-1)
 
-        return cnt
+        return track
 
     def post_process(self, solution):
         cost = solution[1]
