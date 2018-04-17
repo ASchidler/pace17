@@ -28,7 +28,7 @@ class DualAscent:
 
         self.runs += 1
         ts = list(steiner.terminals)
-        track = 0
+        track = len(steiner.graph.edges)
         results = []
 
         # Spread chosen roots a little bit, as they are usually close
@@ -85,6 +85,7 @@ class DualAscent:
         DualAscent.graph = max_graph
         DualAscent.value = max_result
 
+        track = track - len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_steiner(-2)
             steiner.invalidate_dist(-2)

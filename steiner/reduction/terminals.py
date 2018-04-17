@@ -12,7 +12,7 @@ class TerminalReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        track = len(steiner.graph.nodes)
+        track = len(steiner.graph.edges)
         change = True
 
         while change:
@@ -60,7 +60,7 @@ class TerminalReduction:
 
                         change = True
 
-        result = track - len(steiner.graph.nodes)
+        result = track - len(steiner.graph.edges)
         if result > 0:
             steiner.invalidate_steiner(-1)
             steiner.invalidate_dist(-1)

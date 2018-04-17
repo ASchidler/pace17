@@ -13,6 +13,7 @@ class CostVsTerminalDistanceReduction:
             return 0
 
         steiner.requires_dist(1)
+        track = len(steiner.graph.edges)
 
         # Find max distance
         g = Graph()
@@ -20,15 +21,14 @@ class CostVsTerminalDistanceReduction:
             for t1 in steiner.terminals for t2 in steiner.terminals if t2 > t1]
         val = max([d for (u, v, d) in minimum_spanning_edges(g)])
 
-        terminal_edges = 0
         for (u, v, d) in list(steiner.graph.edges(data='weight')):
             if d > val:
                 steiner.remove_edge(u, v)
-                terminal_edges = terminal_edges + 1
 
-        self.enabled = terminal_edges > 0
+        result = track - len(steiner.graph.edges)
+        self.enabled = track > 0
 
-        return terminal_edges
+        return result
 
     def post_process(self, solution):
         return solution, False
