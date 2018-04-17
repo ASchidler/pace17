@@ -4,6 +4,7 @@ import iparser as pp
 import oparser as po
 import reduction.degree as dg
 import component_finder as cf
+from reducer import Reducer
 
 """ The real solver script that reads from stdin and outputs the solution """
 
@@ -17,26 +18,7 @@ components = finder.decompose([steinerx])
 results = []
 
 for steiner in components:
-    reducers = cfg.reducers()
-    contractors = cfg.contractors()
-    last_run = False
-
-    while True:
-        cnt = 0
-        for r in reducers:
-            cnt = cnt + r.reduce(steiner, cnt, last_run)
-
-        for c in contractors:
-            cnt = cnt + c.reduce(steiner, cnt, last_run)
-
-        steiner.reset_all()
-
-        if cnt == 0:
-            if last_run:
-                break
-            last_run = True
-        else:
-            last_run = False
+    reducer = Reducer(cfg.reducers())
 
     # Solve
     # Distance matrix may be incorrect due to preprocessing, restore
@@ -46,23 +28,7 @@ for steiner in components:
     solver.solve()
     solution = solver.result
 
-    reducers.reverse()
-
-    while True:
-        change = False
-        for r in reducers:
-            ret = r.post_process(solution)
-            solution = ret[0]
-            change = change or ret[1]
-        for c in contractors:
-            ret = c.post_process(solution)
-            solution = ret[0]
-            change = change or ret[1]
-
-        if not change:
-            break
-
-    results.append(solution)
+    results.append(reducer.unreduce(solution[0], solution[1]))
 
 final_result = finder.build_solutions(results)
 change = True
