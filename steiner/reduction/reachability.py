@@ -52,7 +52,12 @@ class ReachabilityReduction:
 
                         steiner.remove_node(n)
 
-        return track - len(steiner.graph.nodes)
+        result = track - len(steiner.graph.nodes)
+        if result > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
+
+        return result
 
     def post_process(self, solution):
         change = False

@@ -43,6 +43,10 @@ class CutReachabilityEdgeReduction(CutReachabilityReduction):
                     steiner.remove_edge(u, v)
                     cnt = cnt + 1
 
+        if cnt > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
+
         return cnt
 
     def post_process(self, solution):

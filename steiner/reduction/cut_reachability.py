@@ -74,6 +74,10 @@ class CutReachabilityReduction:
                     steiner.remove_node(n)
                     cut_cnt = cut_cnt + 1
 
+        if cut_cnt > 0:
+            steiner.invalidate_dist(+1)
+            steiner.invalidate_steiner(+1)
+
         return cut_cnt
 
     def post_process(self, solution):

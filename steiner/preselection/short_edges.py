@@ -47,7 +47,12 @@ class ShortEdgeReduction:
 
                     break
 
-        return track - len(steiner.graph.nodes)
+        result = track - len(steiner.graph.nodes)
+        if cnt > 0:
+            steiner.invalidate_steiner(-1)
+            steiner.invalidate_dist(-1)
+
+        return result
 
     # Creates a single key for a combination of nodes, avoid nesting of dictionaries
     def _key(self, n1, n2):

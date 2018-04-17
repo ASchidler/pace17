@@ -60,7 +60,10 @@ class TerminalReduction:
 
                         change = True
 
-        return track - len(steiner.graph.nodes)
+        result = track - len(steiner.graph.nodes)
+        if result > 0:
+            steiner.invalidate_steiner(-1)
+            steiner.invalidate_dist(-1)
 
     def post_process(self, solution):
         cost = solution[1]

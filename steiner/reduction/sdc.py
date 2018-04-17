@@ -18,6 +18,9 @@ class SdcReduction:
                 steiner.remove_edge(u, v)
                 count += 1
 
+        if count > 0:
+            steiner.invalidate_dist(+1)
+
         return count
 
     def post_process(self, solution):
