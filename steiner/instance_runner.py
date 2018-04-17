@@ -10,6 +10,7 @@ import steiner_graph as sg
 import component_finder as cf
 import sys
 import reduction.dual_ascent as da
+from reducer import DebugReducer
 
 """ This runner runs all the public instances with debug oparser """
 
@@ -30,46 +31,10 @@ def process_file(filename, solve, apply_reductions):
         print "{} nodes".format(len(nx.nodes(c.graph)))
 
     for steiner in components:
-        reducers = cfg.reducers()
-        contractors = cfg.contractors()
+        reducer = DebugReducer(cfg.reducers())
 
         if apply_reductions:
-            cnt_edge = len(nx.edges(steiner.graph))
-            cnt_nodes = len(nx.nodes(steiner.graph))
-            cnt_terminals = len(steiner.terminals)
-            last_run = False
-
-            while True:
-                cnt_changes = 0
-
-                for r in reducers:
-                    if len(nx.nodes(steiner.graph)) > 1:
-                        local_start = time.time()
-                        reduced = r.reduce(steiner, cnt_changes, last_run)
-                        cnt_changes = cnt_changes + reduced
-                        print "Reduced {} needing {} in {}" \
-                            .format(reduced, str(time.time() - local_start), str(r.__class__))
-
-                steiner.reset_all()
-
-                for c in contractors:
-                    if len(nx.nodes(steiner.graph)) > 1:
-                        local_start = time.time()
-                        reduced = c.reduce(steiner, cnt_changes, last_run)
-                        cnt_changes = cnt_changes + reduced
-                        print "Contracted {} needing {} in {}" \
-                            .format(reduced, str(time.time() - local_start), str(c.__class__))
-
-                if cnt_changes == 0:
-                    if last_run:
-                        break
-                    last_run = True
-                else:
-                    last_run = False
-
-            print "{} nodes, {} edges and {} terminals removed " \
-                .format(cnt_nodes - len(nx.nodes(steiner.graph)), cnt_edge - len(nx.edges(steiner.graph)),
-                        cnt_terminals - len(steiner.terminals))
+            reducer.reduce(steiner)
 
         if solve:
             steiner._lengths = {}
@@ -87,21 +52,7 @@ def process_file(filename, solve, apply_reductions):
 
             # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
             if apply_reductions:
-                reducers.reverse()
-                solution = solver.result
-
-                while True:
-                    change = False
-                    for r in reducers:
-                        ret = r.post_process(solution)
-                        solution = ret[0]
-                        change = change or ret[1]
-                    for c in contractors:
-                        ret = c.post_process(solution)
-                        solution = ret[0]
-                        change = change or ret[1]
-                    if not change:
-                        break
+                solution = reducer.unreduce(solution[0], solution[1])
 
             results.append(solution)
             print "Solution found: " + str(solution[1])
@@ -142,7 +93,9 @@ long_reduction = [113, 129, 151, 181, 189]
 # All other instances are solvable in a feasible amount of time
 easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_reduction]
 
-for i in [197]:
+lst = list(set(easy_instances).union(long_reduction))
+lst.extend(reversed(hard_instances))
+for i in (x for x in lst):
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
