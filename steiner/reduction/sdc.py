@@ -6,9 +6,10 @@ class SdcReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.graph.edges) > 1000 and len(steiner.graph.edges) / len(steiner.graph.nodes) > 4:
+        if len(steiner.graph.edges) > 1000 and len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
             return 0
 
+        # TODO: Combine SDC and NTDK to reuse edge results
         count = 0
         edge_count = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
