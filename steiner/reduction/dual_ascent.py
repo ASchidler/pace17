@@ -46,11 +46,11 @@ class DualAscent:
         results.sort(key=lambda x: x[0], reverse=True)
         max_result, max_root, max_graph = results[0]
 
-        # idx_list = [[0, 1], [2, 3], [4, 5], [0, 1, 2], [0, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
+        idx_list = [[0, 1], [2, 3], [4, 5], [0, 1, 2], [0, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
         # idx_list = [[0, 1], [2, 3], [0, 1, 2, 3, 4]]
-        #aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
-        #new_ap2 = min(aps, key=lambda x: x.cost)
-        new_ap2 = self.find_new(steiner, results)
+        aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
+        new_ap2 = min(aps, key=lambda x: x.cost)
+        #new_ap2 = self.find_new(steiner, results)
 
         if new_ap2.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap2
@@ -60,10 +60,15 @@ class DualAscent:
             for x in pruned_list:
                 if x.cost < steiner.get_approximation().cost:
                     steiner._approximation = x
-            # TODO: Fix this
-            comb = self.find_new_from_sol(steiner, pruned_list)
-            if comb.cost < steiner.get_approximation().cost:
-                steiner._approximation = comb
+
+            idx_list = [[0, 1], [2, 3], [0, 4], [0, 1, 2], [0, 3, 4], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
+            comb = [self.find_new_from_sol(steiner, [pruned_list[i] for i in idx]) for idx in idx_list]
+            for c_comb in comb:
+                if c_comb.cost < steiner.get_approximation().cost:
+                    steiner._approximation = c_comb
+            # comb = self.find_new_from_sol(steiner, pruned_list)
+            # if comb.cost < steiner.get_approximation().cost:
+            #     steiner._approximation = comb
         else:
             pruned = self.prune_ascent(steiner, results[0])
             if pruned.cost < steiner.get_approximation().cost:
@@ -166,6 +171,7 @@ class DualAscent:
         edge_weights = [self.calc_edge_weight(g, u, v, d, t_weight) for (u, v, d) in g.graph.edges(data='weight')]
         edge_weights.sort(reverse=True)
         bnd = edge_weights[min(len(edge_weights)-1, min_removal)]
+        nb = g.graph._adj
 
         for n in list(g.graph.nodes):
             # While all terminals must be in the tree, the list of terminals may have changed during preprocessing
@@ -177,6 +183,14 @@ class DualAscent:
 
                     if total > bnd:
                         g.remove_node(n)
+
+                    else:
+                        for n2, dta in nb[n].items():
+                            if not tree.has_edge(n, n2):
+                                total = self.calc_edge_weight(g, n, n2, dta['weight'], t_weight)
+
+                            if total > bnd:
+                                g.remove_edge(n, n2)
 
         if not is_connected(g.graph):
             return None
