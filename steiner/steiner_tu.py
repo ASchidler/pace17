@@ -19,6 +19,7 @@ results = []
 
 for steiner in components:
     reducer = Reducer(cfg.reducers())
+    reducer.reduce(steiner)
 
     # Solve
     # Distance matrix may be incorrect due to preprocessing, restore
