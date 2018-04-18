@@ -1,8 +1,8 @@
 from sys import maxint
-import heapq
+from heapq import heappush, heappop, merge
 from collections import defaultdict
 from itertools import chain
-from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree
+from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, is_connected
 
 
 # TODO: Optimize the whole thing
@@ -13,20 +13,22 @@ class VoronoiPartition:
         self.source = source
         self._tmp_regions = defaultdict(lambda: {})
         self._tmp_closest = {}
+        pop = heappop
+        push = heappush
 
         queue = []
         visited = set()
         nb = source._adj
-
+        # TODO: Use scanned instead of visited?
         # Find voronoi regions. Initialize with tree nodes as voronoi centers
         for n in target.nodes:
             self.regions[n] = {}
             # Queue format is: cost, current node, original start, previous node
-            heapq.heappush(queue, [0, n, n, n])
+            push(queue, [0, n, n, n])
 
         node_count = len(source.nodes)
         while len(visited) != node_count:
-            el = heapq.heappop(queue)
+            el = pop(queue)
 
             if el[1] not in visited:
                 visited.add(el[1])
@@ -36,7 +38,7 @@ class VoronoiPartition:
                 for n, dta in nb[el[1]].items():
                     if n not in visited:
                         cost = el[0] + dta['weight']
-                        heapq.heappush(queue, [cost, n, el[2], el[1]])
+                        push(queue, [cost, n, el[2], el[1]])
 
     def reset(self):
         self._tmp_regions = defaultdict(lambda: {})
@@ -52,6 +54,9 @@ class VoronoiPartition:
         repair_nodes = set()
         visited_repair = set()
         queue = []
+        nbs = self.source._adj
+        pop = heappop
+        push = heappush
 
         # Find all nodes in the deleted regions
         for p in intermediaries:
@@ -59,24 +64,24 @@ class VoronoiPartition:
 
         # Initialize dijkstra s.t. the boundary nodes are added with the distance to the adjacent center
         for rep in repair_nodes:
-            for nb in self.source.neighbors(rep):
+            for nb, dta in nbs[rep].items():
                 c_closest = self._closest[nb]
                 if c_closest not in intermediaries:
-                    cost = self.regions[c_closest][nb][0] + self.source[rep][nb]['weight']
-                    heapq.heappush(queue, [cost, rep, c_closest, nb])
+                    cost = self.regions[c_closest][nb][0] + dta['weight']
+                    push(queue, [cost, rep, c_closest, nb])
 
         # Run dijkstra, limit to dangling nodes
         while len(visited_repair) != len(repair_nodes):
-            el = heapq.heappop(queue)
+            el = pop(queue)
             if el[1] not in visited_repair:
                 visited_repair.add(el[1])
                 self._tmp_closest[el[1]] = el[2]
                 self._tmp_regions.setdefault(el[2], {})[el[1]] = (el[0], el[3])
 
-                for nb in self.source.neighbors(el[1]):
+                for nb, dta in nbs[el[1]].items():
                     if nb not in visited_repair and nb in repair_nodes:
-                        cost = el[0] + self.source[el[1]][nb]['weight']
-                        heapq.heappush(queue, [cost, nb, el[2], el[1]])
+                        cost = el[0] + dta['weight']
+                        push(queue, [cost, nb, el[2], el[1]])
 
     def extract_path(self, n):
         t = self._tmp_closest[n] if n in self._tmp_closest else self._closest[n]
@@ -140,7 +145,7 @@ class SteinerApproximation:
             queue = [(0, self._root)]
             visited = set()
             while queue:
-                d, n = heapq.heappop(queue)
+                d, n = heappop(queue)
 
                 if n in g.terminals:
                     self._root = n
@@ -151,7 +156,7 @@ class SteinerApproximation:
 
                 for n2, dta in nb[n].items():
                     if n2 not in visited:
-                        heapq.heappush(queue, (d + dta['weight'], n2))
+                        heappush(queue, (d + dta['weight'], n2))
 
         return self._root
 
@@ -173,7 +178,8 @@ class SteinerApproximation:
                     if d == 1 and n not in self.steiner.terminals:
                         self.tree.remove_node(n)
 
-    def calculate(self, steiner, start_node):
+    @staticmethod
+    def calculate(steiner, start_node):
         # Solution init
         tree = Graph()
         cost = 0
@@ -240,6 +246,67 @@ class SteinerApproximation:
             cost = cost + d
 
         return tree, cost
+
+    @staticmethod
+    def calculate2(steiner, start_node):
+        tree = Graph()
+        tree.add_node(start_node)
+        nb = steiner.graph._adj
+
+        scanned = {start_node: 0}
+        p = {start_node: None}
+        queue = []
+        remaining = {t for t in steiner.terminals if t != start_node}
+
+        # Pre-Expand root
+        for (n, dta) in nb[start_node].items():
+            p[n] = start_node
+            scanned[n] = dta['weight']
+            heappush(queue, (dta['weight'], n))
+
+        while remaining:
+            cost, n = heappop(queue)
+
+            if n in remaining:
+                remaining.remove(n)
+                c_node = n
+                path = []
+
+                while not tree.has_node(c_node):
+                    path.append(c_node)
+                    c_node = p[c_node]
+
+                # c_node now contains node that is in the tree, but not in path
+                while path:
+                    c_next = path.pop()
+                    tree.add_edge(c_node, c_next, weight=nb[c_node][c_next]['weight'])
+                    for n2, dta in nb[c_next].items():
+                        if n2 not in scanned or dta['weight'] < scanned[n2]:
+                            heappush(queue, (dta['weight'], n2))
+                            p[n2] = c_next
+                            scanned[n2] = dta['weight']
+                    c_node = c_next
+            else:
+                for n2, dta in nb[n].items():
+                    total = cost + dta['weight']
+                    if n2 not in scanned or total < scanned[n2]:
+                        heappush(queue, (total, n2))
+                        scanned[n2] = total
+                        p[n2] = n
+
+        # Prune by using an MST and clearing non-terminal leafs
+        tree = minimum_spanning_tree(tree)
+
+        # Remove non-terminal leafs
+        old = maxint
+        while old != len(tree.nodes):
+            old = len(tree.nodes)
+
+            for (n, d) in list(tree.degree()):
+                if d == 1 and n not in steiner.terminals:
+                    tree.remove_node(n)
+
+        return tree, sum(d for (u, v, d) in tree.edges(data='weight'))
 
     def vertex_insertion(self, steiner):
         for n in steiner.graph.nodes:
@@ -417,9 +484,9 @@ class SteinerApproximation:
                     pinned.add(min_bound[3][1])
 
                 # Merge bridge list with parent
-                bridges[last] = list(heapq.merge(bridges[last], bridges[node]))
+                bridges[last] = list(merge(bridges[last], bridges[node]))
                 for p in intermediaries:
-                    bridges[last] = list(heapq.merge(bridges[last], bridges[p]))
+                    bridges[last] = list(merge(bridges[last], bridges[p]))
 
                 vor.reset()
 
@@ -491,7 +558,7 @@ class SteinerApproximation:
                 # Move border nodes up
                 if node != root:
                     parent = d_tree.predecessors(node).next()
-                    bridges[parent] = list(heapq.merge(bridges[parent], bridges[node]))
+                    bridges[parent] = list(merge(bridges[parent], bridges[node]))
 
                 # If terminal, node is critical. Therefore update subset and clear intermediary list
                 if node in steiner.terminals:
@@ -651,9 +718,9 @@ class SteinerApproximation:
                 # Update node boundary. This is a cleanup task for after the iteration, but since we may return
 
                 for kv in child_subsets.keys():
-                    bridges[node] = heapq.merge(bridges[node], bridges[kv])
+                    bridges[node] = merge(bridges[node], bridges[kv])
                 for kv in child_intermediaries:
-                    bridges[node] = heapq.merge(bridges[node], bridges[kv])
+                    bridges[node] = merge(bridges[node], bridges[kv])
 
                 bridges[node] = list(bridges[node])
 
