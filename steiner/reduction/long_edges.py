@@ -25,7 +25,7 @@ class LongEdgeReduction:
 
         for t in steiner.terminals:
             for n in list(steiner.graph.neighbors(t)):
-                if steiner.graph[n][t]['weight'] > steiner.get_lengths(n, t):
+                if steiner.graph[n][t]['weight'] > steiner.get_lengths(t, n):
                     steiner.remove_edge(n, t)
 
         if self._delete_equal and cnt == 0 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 10:

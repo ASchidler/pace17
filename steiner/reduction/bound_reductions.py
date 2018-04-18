@@ -36,9 +36,9 @@ class BoundNodeReduction:
                                 n)):
                         steiner.remove_node(n)
 
+        track -= len(steiner.graph.edges)
         self.enabled = track > 0
 
-        track -= len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_dist(+1)
             steiner.invalidate_steiner(+1)
