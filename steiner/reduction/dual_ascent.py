@@ -186,11 +186,12 @@ class DualAscent:
 
                     else:
                         for n2, dta in nb[n].items():
-                            if not tree.has_edge(n, n2):
+                            # Do not disconnect tree
+                            if not tree.has_edge(n, n2) and g.graph.degree(n2) > 1 and g.graph.degree(n) > 1:
                                 total = self.calc_edge_weight(g, n, n2, dta['weight'], t_weight)
 
-                            if total > bnd:
-                                g.remove_edge(n, n2)
+                                if total > bnd:
+                                    g.remove_edge(n, n2)
 
         if not is_connected(g.graph):
             return None
