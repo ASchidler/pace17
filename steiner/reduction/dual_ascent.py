@@ -1,94 +1,112 @@
 from sys import maxint
-import heapq as hq
+from heapq import heappop, heappush, heapify
 from networkx import single_source_dijkstra_path_length, single_source_dijkstra_path, is_connected
 import steiner_graph as sg
 import steiner_approximation as sa
-from reduction import degree, long_edges, ntdk, sdc, terminal_distance
+from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex
 from reducer import Reducer
-import time
 
 
 class DualAscent:
-    def __init__(self, run_once=False):
+    def __init__(self, run_once=False, quick_run=False):
         self.runs = 0
         self._done = False
         self._run_once = run_once
+        self._quick_run = quick_run
+        self.enabled = True
 
     def reduce(self, steiner, cnt, last_run):
         # This invalidates the approximation. This is important in case the DA doesnt go through in the last run
         # so the solver has a valid approximation
         steiner.invalidate_approx(-2)
 
-        if len(steiner.terminals) < 4 or (self._run_once and self.runs > 0):
-            return 0
-
-        small_graph = len(steiner.graph.nodes) < 500 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3
-
-        da_limit = 10 if len(steiner.graph.edges) / len(steiner.graph.nodes) <= 10 else 1
-
-        if self.runs > 0 and cnt > 0 and not last_run:
-            return 0
-
         self.runs += 1
+        if len(steiner.terminals) < 4 or (self._run_once and self.runs > 1):
+            return 0
+
+        do_quick_run = self._quick_run and self.enabled and not self.runs == 1
+
+        if self.runs > 1 and cnt > 0 and not last_run and not do_quick_run:
+            return 0
+
+        # parameters
+        solution_limit = solution_rec_limit = prune_limit = prune_rec_limit = 0
+
+        if self._quick_run:
+            solution_limit = 2
+            solution_rec_limit = 1
+            prune_limit = 0
+            prune_rec_limit = 0
+        # Very small graph
+        elif len(steiner.graph.nodes) < 200 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 5:
+            solution_limit = 20
+            solution_rec_limit = 10
+            prune_limit = 10
+            prune_rec_limit = 5
+        # Small graph
+        elif len(steiner.graph.nodes) < 500 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
+            solution_limit = 15
+            solution_rec_limit = 5
+            prune_limit = 5
+            prune_rec_limit = 3
+        # Medium
+        elif len(steiner.graph.nodes) < 3000 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
+            solution_limit = 10
+            solution_rec_limit = 5
+            prune_limit = 2
+            prune_rec_limit = 1
+        # Dense graph
+        elif len(steiner.graph.edges) / len(steiner.graph.nodes) > 3:
+            solution_limit = 1
+            solution_rec_limit = 0
+            prune_limit = 1
+            prune_rec_limit = 0
+        else:
+            solution_limit = 5
+            solution_rec_limit = 3
+            prune_limit = 1
+            prune_rec_limit = 0
+
         ts = list(steiner.terminals)
         track = len(steiner.graph.edges)
-        results = []
+        solution_limit = min(solution_limit, len(ts))
+        target_roots = (ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit))
 
-        # Spread chosen roots a little bit, as they are usually close
-        num_results = min(da_limit, len(ts))
-        target_roots = (ts[max(len(ts) / num_results, 1) * i] for i in xrange(0, num_results))
-
-        for root in target_roots:
-            bnd, grph = self.calc(steiner, root)
-            results.append((bnd, root, grph))
-
+        # Generate solutions
+        results = [self.calc(steiner, root) for root in target_roots]
         results.sort(key=lambda x: x[0], reverse=True)
-        max_result, max_root, max_graph = results[0]
 
-        idx_list = [[0, 1], [2, 3], [4, 5], [0, 1, 2], [0, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
-        # idx_list = [[0, 1], [2, 3], [0, 1, 2, 3, 4]]
-        aps = [self.find_new(steiner, [results[i] for i in idx]) for idx in idx_list]
-        new_ap2 = min(aps, key=lambda x: x.cost)
-        #new_ap2 = self.find_new(steiner, results)
+        solution_pool = []
 
-        if new_ap2.cost < steiner.get_approximation().cost:
-            steiner._approximation = new_ap2
+        if solution_rec_limit > 0:
+            solution_rec_idx = list(self.index_generator(0, len(results), 5))
+            solution_pool.extend(self.find_new(steiner, [results[i] for i in idx]) for idx in solution_rec_idx)
 
-        if small_graph:
-            pruned_list = [self.prune_ascent(steiner, results[i]) for i in range(0, min(len(results), 5))]
-            for x in pruned_list:
-                if x.cost < steiner.get_approximation().cost:
-                    steiner._approximation = x
+        if prune_limit > 0:
+            solution_pool.extend(self.prune_ascent(steiner, results[i]) for i in range(0, min(len(results), prune_limit)))
 
-            idx_list = [[0, 1], [2, 3], [0, 4], [0, 1, 2], [0, 3, 4], [0, 1, 2, 3], [0, 1, 2, 3, 4]]
-            comb = [self.find_new_from_sol(steiner, [pruned_list[i] for i in idx]) for idx in idx_list]
-            for c_comb in comb:
-                if c_comb.cost < steiner.get_approximation().cost:
-                    steiner._approximation = c_comb
-            # comb = self.find_new_from_sol(steiner, pruned_list)
-            # if comb.cost < steiner.get_approximation().cost:
-            #     steiner._approximation = comb
-        else:
-            pruned = self.prune_ascent(steiner, results[0])
-            if pruned.cost < steiner.get_approximation().cost:
-                steiner._approximation = pruned
+        if prune_rec_limit > 0:
+            solution_pool.sort(key=lambda tr: tr.cost)
+            pruned_idx = self.index_generator(0, min(10, len(solution_pool)), prune_rec_limit)
+            solution_pool.extend(self.find_new_from_sol(steiner, [solution_pool[i] for i in idx]) for idx in pruned_idx)
 
-        if small_graph:
-            for c_bnd, c_root, c_g in results:
-                self.reduce_graph(steiner, c_g, c_bnd, c_root)
-        else:
-            self.reduce_graph(steiner, max_graph, max_result, max_root)
+        ub = min(solution_pool, key=lambda tr: tr.cost)
+        if ub.cost < steiner.get_approximation().cost:
+            steiner._approximation = ub
+        print ub.cost
+        # Reduce graph
+        for c_bnd, c_g, c_root in results:
+            self.reduce_graph(steiner, c_g, c_bnd, c_root)
 
-        DualAscent.root = max_root
-        DualAscent.graph = max_graph
-        DualAscent.value = max_result
+        DualAscent.value, DualAscent.graph, DualAscent.root = results[0]
 
         track = track - len(steiner.graph.edges)
         if track > 0:
             steiner.invalidate_steiner(-2)
             steiner.invalidate_dist(-2)
 
+        self.enabled = track > 0 and self.runs > 1
         return track
 
     def reduce_graph(self, steiner, g, bnd, root):
@@ -115,9 +133,18 @@ class DualAscent:
                                 else:
                                     edges.add((n2, n))
 
+    def index_generator(self, start, end, count):
+        gap = end - start
+        c_count = 1
+
+        while c_count <= count:
+            target = max(2, min(gap, gap / c_count + 1))
+            yield [start + (i * 83 + c_count) % gap for i in range(0, target)]
+            c_count += 1
+
     def prune_ascent(self, steiner, result):
         og = sg.SteinerGraph()
-        bnd, r, g = result
+        bnd, g, r = result
 
         og.terminals = set(steiner.terminals)
         for (u, v, d) in g.edges(data='weight'):
@@ -184,14 +211,15 @@ class DualAscent:
                     if total > bnd:
                         g.remove_node(n)
 
-                    else:
-                        for n2, dta in nb[n].items():
-                            # Do not disconnect tree
-                            if not tree.has_edge(n, n2) and g.graph.degree(n2) > 1 and g.graph.degree(n) > 1:
-                                total = self.calc_edge_weight(g, n, n2, dta['weight'], t_weight)
-
-                                if total > bnd:
-                                    g.remove_edge(n, n2)
+                    # This causes a worse bound (at least for instance 197)
+                    # else:
+                    #     for n2, dta in nb[n].items():
+                    #         # Do not disconnect tree
+                    #         if not tree.has_edge(n, n2) and g.graph.degree(n2) > 1 and g.graph.degree(n) > 1:
+                    #             total = self.calc_edge_weight(g, n, n2, dta['weight'], t_weight)
+                    #
+                    #             if total > bnd:
+                    #                 g.remove_edge(n, n2)
 
         if not is_connected(g.graph):
             return None
@@ -204,6 +232,7 @@ class DualAscent:
         return result
 
     def find_new_from_sol(self, steiner, solutions):
+        """Combines (unoptimal) steiner trees into a new solution"""
         red = Reducer(self.reducers())
         alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
         dg = sg.SteinerGraph()
@@ -241,12 +270,13 @@ class DualAscent:
         return app
 
     def find_new(self, steiner, results):
+        """Combines solution graphs into a new solution"""
         rs = self.reducers()
         alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
         dg = sg.SteinerGraph()
         dg.terminals = {x for x in steiner.terminals}
 
-        for (bnd, r, g) in results:
+        for (bnd, g, r) in results:
             # 0 length paths
             pths = single_source_dijkstra_path(g, r, cutoff=1)
             for t in (t for t in steiner.terminals if t != r):
@@ -295,6 +325,7 @@ class DualAscent:
 
     @staticmethod
     def voronoi(dg, ts):
+        """Builds a voronoi diagram of the nodes in the graph based on bases in ts"""
         voronoi = {t: {} for t in ts}
 
         queue = [[0, t, t] for t in ts]
@@ -303,7 +334,7 @@ class DualAscent:
         pred = dg._pred
 
         while len(visited) != len(dg.nodes):
-            el = hq.heappop(queue)
+            el = heappop(queue)
 
             if el[1] in visited:
                 continue
@@ -315,46 +346,56 @@ class DualAscent:
             for n, dta in pred[el[1]].items():
                 if n not in visited:
                     d = dta['weight']
-                    hq.heappush(queue, [el[0]+d, n, el[2]])
+                    heappush(queue, [el[0]+d, n, el[2]])
 
         return voronoi
 
     @staticmethod
     def calc(steiner, root):
+        """ Calculates a lower bound and an updated graph based on the dual ascent alglorithm"""
+
         dg = steiner.graph.to_directed()
         main_cut = set()
         main_cut.add(root)
         bound = 0
         t_cuts = []
         nb = dg._pred
+        pop = heappop
+        push = heappush
 
+        # Initial cuts, every terminal for itself, except the root
         for t in (t for t in steiner.terminals if t != root):
             c = set()
             c.add(t)
             t_cuts.append([1, c])
 
+        # Expand cuts up to the root
         while len(t_cuts) > 0:
-            old_size, c_cut = hq.heappop(t_cuts)
+            # Start with minimal cut
+            old_size, c_cut = pop(t_cuts)
             cut_add = set()
 
+            # Find smallest edge and update
             delta = maxint
             for n in c_cut:
-                for n2 in dg.predecessors(n):
+                for n2, dta in nb[n].items():
                     if n2 not in c_cut:
-                        delta = min(delta, dg[n2][n]['weight'])
+                        delta = min(delta, dta['weight'])
 
             bound += delta
 
+            # Update edges and find all edges with 0 cost
             remove = False
             i_edges = 0
+            heap_changed = False
 
             for n in c_cut:
-                for n2 in dg.predecessors(n):
+                for n2, dta in nb[n].items():
                     if n2 not in c_cut:
                         i_edges += 1
-                        dg[n2][n]['weight'] -= delta
+                        dta['weight'] -= delta
 
-                        if dg[n2][n]['weight'] == 0:
+                        if dta['weight'] == 0:
                             # Find connected nodes
                             queue = [n2]
                             connected_nodes = set()
@@ -362,32 +403,39 @@ class DualAscent:
                                 c_node = queue.pop()
                                 connected_nodes.add(c_node)
 
-                                for c_p, dta in nb[c_node].items():
-                                    if dta['weight'] == 0 and c_p not in connected_nodes:
+                                for c_p, c_dta in nb[c_node].items():
+                                    if c_dta['weight'] == 0 and c_p not in connected_nodes:
                                         queue.append(c_p)
 
+                            # If we reached the root, we are finished and can remove the cut
                             root_found = root in connected_nodes
                             remove = remove or root_found
                             cut_add.update(connected_nodes)
 
                             # This loop is probably a huge performance drain...
-                            changed = False
+                            # Update all other cuts that contain this node
                             for i in reversed(range(0, len(t_cuts))):
                                 if n in t_cuts[i][1]:
                                     if root_found:
-                                        changed = True
+                                        heap_changed = True
                                         t_cuts.pop(i)
                                     else:
                                         t_cuts[i][1].update(connected_nodes)
 
-                            if changed:
-                                hq.heapify(t_cuts)
-
+            # If we haven't reached to root yet, add the updated cut again
             if not remove:
                 c_cut |= cut_add
-                hq.heappush(t_cuts, [i_edges, c_cut])
+                if heap_changed:
+                    t_cuts.append([i_edges, c_cut])
+                else:
+                    push(t_cuts, [i_edges, c_cut])
 
-        return bound, dg
+            # Reinstante heapness if changed
+            if heap_changed:
+                heapify(t_cuts)
+
+        # Return the lower bound and the updated graph
+        return bound, dg, root
 
     def post_process(self, solution):
         return solution, False
