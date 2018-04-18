@@ -19,7 +19,7 @@ class DebugReduction:
 
 
 class Reducer:
-    def __init__(self, reducers, threshold=0.05):
+    def __init__(self, reducers, threshold=0.005):
         self._reducers = reducers
         self._threshold = threshold
 
@@ -28,6 +28,8 @@ class Reducer:
 
         while True:
             min_changes = self._threshold * len(g.graph.edges)
+            min_n_changes = self._threshold * len(g.graph.nodes)
+            n_length = len(g.graph.nodes)
             cnt_changes = 0
 
             for r in self._reducers:
@@ -35,7 +37,8 @@ class Reducer:
                     reduced = r.reduce(g, cnt_changes, last_run)
                     cnt_changes = cnt_changes + reduced
 
-            if cnt_changes <= min_changes:
+            # Use both edge and node changes, as the NTDK may produce nodes although successful
+            if cnt_changes <= min_changes and (n_length - len(g.graph.nodes) <= min_n_changes):
                 if last_run:
                     break
                 last_run = True
