@@ -16,14 +16,18 @@ class DualAscent:
         self._run_once = run_once
 
     def reduce(self, steiner, cnt, last_run):
+        # This invalidates the approximation. This is important in case the DA doesnt go through in the last run
+        # so the solver has a valid approximation
+        steiner.invalidate_approx(-2)
+
         if len(steiner.terminals) < 4 or (self._run_once and self.runs > 0):
             return 0
 
-        steiner.invalidate_approx(-2)
+        small_graph = len(steiner.graph.nodes) < 500 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3
 
         da_limit = 10 if len(steiner.graph.edges) / len(steiner.graph.nodes) <= 10 else 1
 
-        if self.runs > 0 and cnt > 0:
+        if self.runs > 0 and cnt > 0 and not last_run:
             return 0
 
         self.runs += 1
@@ -51,35 +55,25 @@ class DualAscent:
         if new_ap2.cost < steiner.get_approximation().cost:
             steiner._approximation = new_ap2
 
-        pruned = self.prune_ascent(steiner, results[0])
-        if pruned.cost < steiner.get_approximation().cost:
-            steiner._approximation = pruned
+        if small_graph:
+            pruned_list = [self.prune_ascent(steiner, results[i]) for i in range(0, min(len(results), 5))]
+            for x in pruned_list:
+                if x.cost < steiner.get_approximation().cost:
+                    steiner._approximation = x
+            # TODO: Fix this
+            comb = self.find_new_from_sol(steiner, pruned_list)
+            if comb.cost < steiner.get_approximation().cost:
+                steiner._approximation = comb
+        else:
+            pruned = self.prune_ascent(steiner, results[0])
+            if pruned.cost < steiner.get_approximation().cost:
+                steiner._approximation = pruned
 
-        # bla = [self.prune_ascent(steiner, results[i]) for i in range(1, 5)]
-        # for x in bla:
-        #     if x.cost < steiner.get_approximation().cost:
-        #         steiner._approximation = x
-
-        root_dist = single_source_dijkstra_path_length(max_graph, max_root)
-        vor = self.voronoi(max_graph, [t for t in ts if t != max_root])
-
-        edges = set()
-
-        limit = steiner.get_approximation().cost - max_result
-        for (t, v) in vor.items():
-            for (n, d) in v.items():
-                # Theoretically the paths should be arc-disjoint -> possible tighter bound
-                if root_dist[n] + d > limit:
-                    steiner.remove_node(n)
-                    track += 1
-                else:
-                    for n2 in list(steiner.graph.neighbors(n)):
-                        if root_dist[n2] + max_graph[n2][n]['weight'] + d > limit:
-                            if (n, n2) in edges:
-                                track += 1
-                                steiner.remove_edge(n, n2)
-                            else:
-                                edges.add((n2, n))
+        if small_graph:
+            for c_bnd, c_root, c_g in results:
+                self.reduce_graph(steiner, c_g, c_bnd, c_root)
+        else:
+            self.reduce_graph(steiner, max_graph, max_result, max_root)
 
         DualAscent.root = max_root
         DualAscent.graph = max_graph
@@ -91,6 +85,30 @@ class DualAscent:
             steiner.invalidate_dist(-2)
 
         return track
+
+    def reduce_graph(self, steiner, g, bnd, root):
+        if len(steiner.terminals) <= 3:
+            return
+
+        root_dist = single_source_dijkstra_path_length(g, root)
+        vor = self.voronoi(g, [t for t in steiner.terminals if t != root])
+
+        edges = set()
+
+        limit = steiner.get_approximation().cost - bnd
+        for (t, v) in vor.items():
+            for (n, d) in v.items():
+                if steiner.graph.has_node(n):
+                    # Theoretically the paths should be arc-disjoint -> possible tighter bound
+                    if root_dist[n] + d > limit:
+                        steiner.remove_node(n)
+                    else:
+                        for n2 in list(steiner.graph.neighbors(n)):
+                            if steiner.graph.has_edge(n, n2) and root_dist[n2] + g[n2][n]['weight'] + d > limit:
+                                if (n, n2) in edges:
+                                    steiner.remove_edge(n, n2)
+                                else:
+                                    edges.add((n2, n))
 
     def prune_ascent(self, steiner, result):
         og = sg.SteinerGraph()
@@ -169,6 +187,43 @@ class DualAscent:
 
         result = sa.SteinerApproximation(g, limit=10)
         return result
+
+    def find_new_from_sol(self, steiner, solutions):
+        red = Reducer(self.reducers())
+        alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
+        dg = sg.SteinerGraph()
+        dg.terminals = set(steiner.terminals)
+
+        for ct in solutions:
+            for (u, v, d) in ct.tree.edges(data='weight'):
+                u, v = min(u, v), max(u, v)
+                dg.add_edge(u, v, d)
+                alpha[(u, v)] += 1
+
+        red.reduce(dg)
+
+        for ((u, v), d) in alpha.items():
+            if d > 0 and dg.graph.has_edge(u, v):
+                c = dg.graph[u][v]['weight']
+                val = min(c-1, d/3)
+                alpha[(u, v)] = val
+                dg.graph[u][v]['weight'] -= val
+
+        app = sa.SteinerApproximation(dg, False)
+
+        for ((u, v), d) in alpha.items():
+            if d > 0 and dg.graph.has_edge(u, v):
+                dg.graph[u][v]['weight'] += d
+                if app.tree.has_edge(u, v):
+                    app.tree[u][v]['weight'] += d
+
+        app.optimize()
+
+        r_result = red.unreduce(app.tree, app.cost)
+        app.tree = r_result[0]
+        app.cost = r_result[1]
+
+        return app
 
     def find_new(self, steiner, results):
         rs = self.reducers()
