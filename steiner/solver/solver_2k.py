@@ -12,11 +12,7 @@ class Solver2k:
         self.terminals = list(terminals)
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
-        target_root = steiner.get_approximation().root
-        # This may happen in a pruned tree since the tree is reduced...
-        if target_root not in steiner.terminals:
-            target_root = steiner.get_closest(target_root)[0][0]
-
+        target_root = steiner.get_approximation().get_root(self.steiner)
         self.root_node = self.terminals.pop(self.terminals.index(target_root))
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
@@ -64,7 +60,6 @@ class Solver2k:
             heapq.heappush(self.queue, [0, self.terminals[terminal_id], 1 << terminal_id])
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        iterations = 0
         while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
             el = heapq.heappop(self.queue)
             n = el[1]
