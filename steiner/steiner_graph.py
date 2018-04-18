@@ -2,7 +2,7 @@ import networkx as nx
 from sys import maxint
 import steiner_approximation as sa
 from collections import defaultdict
-
+from heapq import heappop, heappush
 
 class SteinerGraph:
 
@@ -194,6 +194,7 @@ class SteinerGraph:
         if self._restricted_closest is not None and self._restricted_validity != -2:
             for i in xrange(0, len(self._restricted_closest)):
                 if self._restricted_closest[i] is not None:
+                    # Do not forget this is a list, not a dictionary, i.e. entries for non-nodes exist
                     if self.graph.has_node(i):
                         self._restricted_closest[i] = [x for x in self._restricted_closest[i] if x[0] != tsource]
                         if ttarget not in self.terminals:
@@ -303,6 +304,35 @@ class SteinerGraph:
                     self._restricted_lengths[t][t_prime] = dist
 
         return self._restricted_lengths[t].setdefault(n, maxint)
+
+    # TODO: Test and use
+    def find_restricted_closest(self, n):
+        scanned = {}
+        visited = set()
+        queue = [(0, n)]
+        pop = heappop
+        push = heappush()
+
+        nb = self.graph._adj
+        closest = []
+
+        while queue:
+            c_d, c_n = pop(queue)
+
+            if c_n in visited:
+                continue
+
+            visited.add(c_n)
+            if c_n in self.terminals:
+                closest.append((c_n, c_d))
+            else:
+                for n2, dta in nb[c_n].items():
+                    tot = c_d + dta['weight']
+                    if n2 not in scanned or tot < scanned[n2]:
+                        scanned[n2] = tot
+                        push((tot, n2))
+
+        return closest
 
     def get_restricted_closest(self, n):
         if self._restricted_validity == -2:

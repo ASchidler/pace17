@@ -22,6 +22,7 @@ def reducers():
         ntdk.NtdkReduction(False),
         degree.DegreeReduction(),
         preselection_pack.NvSlPack(),
+        dual_ascent.DualAscent(),
         bound_reductions.BoundNodeReduction(),
         bound_reductions.BoundEdgeReduction(),
         bound_reductions.BoundGraphReduction(),
@@ -29,7 +30,7 @@ def reducers():
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         # Last test so the bound can be used for the solver
-        dual_ascent.DualAscent(),
+
     ]
 
 
