@@ -50,7 +50,6 @@ class Reducer:
             g.reset_all()
 
     def unreduce(self, graph, cost):
-        self._reducers.reverse()
         solution = (graph, cost)
 
         while True:

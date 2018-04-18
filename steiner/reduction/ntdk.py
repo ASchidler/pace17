@@ -132,29 +132,27 @@ class NtdkReduction:
     @staticmethod
     def modified_dijkstra_sub(steiner, u, v, cut_off):
         queue = [[0, u]]
-        visited = {u}
         scanned = defaultdict(lambda: maxint)
+
         scanned_edges = 0
         nb = steiner.graph._adj
 
         # Expand first node explicitly here, so no check in the loop is required to exclude edge
-        for n2 in steiner.graph.neighbors(u):
+        for n2, dta in nb[u].items():
             if n2 != v:
-                c = steiner.graph[u][n2]['weight']
+                c = dta['weight']
                 hq.heappush(queue, [c, n2])
                 scanned[n2] = c
 
-        # TODO: The limit constant has a big effect on the effectiveness of the reduction! SCIP uses valuee of up to 400
+        # TODO: The limit constant has a big effect on the effectiveness of the reduction! SCIP uses values of up to 400
         while len(queue) > 0 and scanned_edges < 40:
             c_val = hq.heappop(queue)
             n = c_val[1]
 
-            if n in visited:
-                continue
             if c_val[0] > cut_off:
                 break
-            # Do not skip the first node, even if it is a terminal
-            elif n in steiner.terminals or n == v:
+            # Do not use source or target and also stop at terminals
+            elif n in steiner.terminals or n == v or n == u:
                 continue
 
             for n2, dta in nb[n].items():
@@ -162,11 +160,10 @@ class NtdkReduction:
                 if scanned_edges > 40:
                     break
 
-                if n2 not in visited:
-                    cost = c_val[0] + dta['weight']
+                cost = c_val[0] + dta['weight']
 
-                    if cost < scanned[n2] and cost <= cut_off:
-                        scanned[n2] = cost
-                        hq.heappush(queue, [cost, n2])
+                if (n2 not in scanned or cost < scanned[n2]) and cost <= cut_off:
+                    scanned[n2] = cost
+                    hq.heappush(queue, [cost, n2])
 
         return scanned
