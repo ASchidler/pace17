@@ -114,7 +114,7 @@ class SteinerApproximation:
     def __init__(self, steiner, optimize=True, limit=20):
         self.cost = maxint
         self.tree = None
-        self.root = None
+        self._root = None
         self.steiner = steiner
         self._descendants = None
 
@@ -128,10 +128,32 @@ class SteinerApproximation:
             if result[1] < self.cost:
                 self.cost = result[1]
                 self.tree = result[0]
-                self.root = start_node
+                self._root = start_node
 
         if optimize:
             self.optimize()
+
+    def get_root(self, g):
+        # Make sure root is a terminal, otherwise take the closest (may happen if base graph was reduced)
+        if self._root not in g.terminals:
+            nb = self.tree._adj
+            queue = [(0, self._root)]
+            visited = set()
+            while queue:
+                d, n = heapq.heappop(queue)
+
+                if n in g.terminals:
+                    self._root = n
+                    break
+
+                if n in visited:
+                    continue
+
+                for n2, dta in nb[n].items():
+                    if n2 not in visited:
+                        heapq.heappush(queue, (d + dta['weight'], n2))
+
+        return self._root
 
     def optimize(self):
         prev = 0
@@ -640,20 +662,20 @@ class SteinerApproximation:
         kv_rec(root, root)
         self.cost = sum(d for (u, v, d) in self.tree.edges(data='weight'))
 
-    def get_descendants(self):
+    def get_descendants(self, g):
         if self._descendants is not None:
             return self._descendants
 
         self._descendants = {}
 
         # DFS
-        queue = [(self.root, {self.root})]
+        queue = [(self.get_root(g), {self.get_root(g)})]
 
         while len(queue) > 0:
             n, s = queue.pop()
 
             self._descendants[n] = set()
-            if n in self.steiner.terminals:
+            if n in g.terminals:
                 for n2 in s:
                     self._descendants[n2].add(n)
                 self._descendants[n].add(n)

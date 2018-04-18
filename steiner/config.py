@@ -22,14 +22,14 @@ def reducers():
         ntdk.NtdkReduction(False),
         degree.DegreeReduction(),
         preselection_pack.NvSlPack(),
-        # Run before the others, as this might produce a tighter upper bound!
-        dual_ascent.DualAscent(),
         bound_reductions.BoundNodeReduction(),
         bound_reductions.BoundEdgeReduction(),
         bound_reductions.BoundGraphReduction(),
         bound_reductions.BoundNtdkReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
+        # Last test so the bound can be used for the solver
+        dual_ascent.DualAscent(),
     ]
 
 
