@@ -1,6 +1,6 @@
 from sys import maxint
 from heapq import heappush, heappop, merge
-from collections import defaultdict
+from collections import defaultdict, deque
 from itertools import chain
 from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, is_connected
 
@@ -115,6 +115,8 @@ class VoronoiPartition:
 
 
 class SteinerApproximation:
+    good_roots = deque(maxlen=10)
+
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
     def __init__(self, steiner, optimize=True, limit=20):
         self.cost = maxint
@@ -125,15 +127,32 @@ class SteinerApproximation:
 
         steiner.requires_dist(0)
 
+        # Select roots, based on previous good roots
         limit = min(limit, len(steiner.terminals))
+        target_roots = set()
+        seed = 1
+        while SteinerApproximation.good_roots and len(target_roots) <= limit / 2:
+            el = SteinerApproximation.good_roots.pop()
+            if steiner.graph.has_node(el):
+                target_roots.add(el)
+                seed = el
+        SteinerApproximation.good_roots.clear()
+
         ts = list(steiner.terminals)
-        for i in xrange(0, limit):
-            start_node = ts[max(len(steiner.terminals) / limit, 1) * i]
-            result = self.calculate2(steiner, start_node)
-            if result[1] < self.cost:
-                self.cost = result[1]
-                self.tree = result[0]
-                self._root = start_node
+
+        for idx in ((i * 196613 + seed) % len(ts) for i in range(1, len(ts) + 1)):
+            if len(target_roots) == limit:
+                break
+            el = ts[idx]
+            seed = el
+            target_roots.add(el)
+
+        results = [(self.calculate2(steiner, start_node), start_node) for start_node in target_roots]
+        results.sort(key=lambda x: x[0][1])
+        for i in reversed(range(0, len(results))):
+            SteinerApproximation.good_roots.append(results[i][1])
+
+        (self.tree, self.cost), self._root = results[0]
 
         if optimize:
             self.optimize()
