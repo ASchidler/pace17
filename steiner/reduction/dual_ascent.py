@@ -30,7 +30,7 @@ class DualAscent:
         if self.runs > 1 and cnt > 0 and not last_run and not do_quick_run:
             return 0
 
-        if not do_quick_run and self._quick_run:
+        if (not do_quick_run and self._quick_run) or (self._quick_run and last_run):
             return 0
 
         # parameters
@@ -42,8 +42,8 @@ class DualAscent:
             prune_limit = 0
             prune_rec_limit = 0
         # Very small graph
-        elif len(steiner.graph.nodes) < 200 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 5:
-            solution_limit = 20
+        elif len(steiner.graph.nodes) < 250 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 5:
+            solution_limit = 30
             solution_rec_limit = 10
             prune_limit = 10
             prune_rec_limit = 5
