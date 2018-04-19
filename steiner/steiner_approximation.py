@@ -160,6 +160,10 @@ class SteinerApproximation:
     def get_root(self, g):
         # Make sure root is a terminal, otherwise take the closest (may happen if base graph was reduced)
         if self._root not in g.terminals:
+            # This may happen with an outdated approximation
+            if not any(x in g.terminals for x in self.tree.nodes):
+                return None
+
             nb = self.tree._adj
             queue = [(0, self._root)]
             visited = set()
@@ -172,6 +176,8 @@ class SteinerApproximation:
 
                 if n in visited:
                     continue
+
+                visited.add(n)
 
                 for n2, dta in nb[n].items():
                     if n2 not in visited:

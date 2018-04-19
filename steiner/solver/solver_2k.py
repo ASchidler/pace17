@@ -13,7 +13,8 @@ class Solver2k:
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
         target_root = steiner.get_approximation().get_root(self.steiner)
-        self.root_node = self.terminals.pop(self.terminals.index(target_root))
+        self.root_node = self.terminals.pop(self.terminals.index(target_root)) \
+            if target_root is not None else self.terminals.pop()
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
