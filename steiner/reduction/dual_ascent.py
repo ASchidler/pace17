@@ -6,9 +6,12 @@ import steiner_approximation as sa
 from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex
 from reducer import Reducer
+from collections import deque
 
 
 class DualAscent:
+    good_roots = deque(maxlen=10)
+
     def __init__(self, run_once=False, quick_run=False):
         self.runs = 0
         self._done = False
@@ -75,6 +78,24 @@ class DualAscent:
         ts = list(steiner.terminals)
         track = len(steiner.graph.edges)
         solution_limit = min(solution_limit, len(ts))
+        target_roots = set()
+        seed = 1
+
+        while DualAscent.good_roots and len(target_roots) <= solution_limit / 2:
+            el = DualAscent.good_roots.pop()
+            if steiner.graph.has_node(el):
+                target_roots.add(el)
+                seed = el
+        DualAscent.good_roots.clear()
+
+        for idx in ((i * 196613 + seed) % len(ts) for i in range(1, len(ts) + 1)):
+            if len(target_roots) == solution_limit:
+                break
+
+            el = ts[idx]
+            seed = el
+            target_roots.add(el)
+
         target_roots = (ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit))
 
         # Generate solutions
@@ -108,6 +129,12 @@ class DualAscent:
             self.reduce_graph(steiner, c_g, c_bnd, c_root)
 
         DualAscent.value, DualAscent.graph, DualAscent.root = results[0]
+
+        print "Low {} Up {}".format(DualAscent.value, steiner.get_approximation().cost)
+
+        # Inversed order, so best is the last element
+        for i in reversed(range(0, len(results))):
+            DualAscent.good_roots.append(results[i][2])
 
         track = track - len(steiner.graph.edges)
         if track > 0:
