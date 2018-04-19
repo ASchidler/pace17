@@ -25,9 +25,12 @@ class DualAscent:
         if len(steiner.terminals) < 4 or (self._run_once and self.runs > 1):
             return 0
 
-        do_quick_run = self._quick_run and self.enabled and not self.runs == 1
+        do_quick_run = self._quick_run and self.enabled and self.runs > 1
 
         if self.runs > 1 and cnt > 0 and not last_run and not do_quick_run:
+            return 0
+
+        if not do_quick_run and self._quick_run:
             return 0
 
         # parameters
@@ -62,6 +65,7 @@ class DualAscent:
             solution_rec_limit = 0
             prune_limit = 1
             prune_rec_limit = 0
+        # Large, not dense graphs
         else:
             solution_limit = 5
             solution_rec_limit = 3
@@ -79,22 +83,26 @@ class DualAscent:
 
         solution_pool = []
 
+        # Tries to recombine solution graphs into a better solution
         if solution_rec_limit > 0:
             solution_rec_idx = list(self.index_generator(0, len(results), 5))
             solution_pool.extend(self.find_new(steiner, [results[i] for i in idx]) for idx in solution_rec_idx)
 
+        # Tries to find better graphs be pruning the solutions
         if prune_limit > 0:
             solution_pool.extend(self.prune_ascent(steiner, results[i]) for i in range(0, min(len(results), prune_limit)))
 
+        # Tries to find better solutions by recombining the solutions found above
         if prune_rec_limit > 0:
             solution_pool.sort(key=lambda tr: tr.cost)
             pruned_idx = self.index_generator(0, min(10, len(solution_pool)), prune_rec_limit)
             solution_pool.extend(self.find_new_from_sol(steiner, [solution_pool[i] for i in idx]) for idx in pruned_idx)
 
+        # Find best upper bound from all solutions
         ub = min(solution_pool, key=lambda tr: tr.cost)
         if ub.cost < steiner.get_approximation().cost:
             steiner._approximation = ub
-        print ub.cost
+
         # Reduce graph
         for c_bnd, c_g, c_root in results:
             self.reduce_graph(steiner, c_g, c_bnd, c_root)
@@ -444,7 +452,7 @@ class DualAscent:
         """Creates the set of reducing preprocessing tests"""
         return [
             degree.DegreeReduction(),
-            long_edges.LongEdgeReduction(True),
+            long_edges.LongEdgeReduction(False),
             ntdk.NtdkReduction(True),
             sdc.SdcReduction(),
             degree.DegreeReduction(),

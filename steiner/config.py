@@ -9,8 +9,8 @@ from solver.heuristics import *
 def reducers():
     """Creates the set of reducing preprocessing tests"""
     return [
-        component.ComponentReduction(),
         dual_ascent.DualAscent(run_once=True),
+        component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         degree.DegreeReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
@@ -23,14 +23,17 @@ def reducers():
         degree.DegreeReduction(),
         preselection_pack.NvSlPack(),
         dual_ascent.DualAscent(),
+        component.ComponentReduction(),
+        degree.DegreeReduction(),
         bound_reductions.BoundNodeReduction(),
         bound_reductions.BoundEdgeReduction(),
         bound_reductions.BoundGraphReduction(),
         bound_reductions.BoundNtdkReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
+        dual_ascent.DualAscent(quick_run=True),
+        component.ComponentReduction(),
         # Last test so the bound can be used for the solver
-
     ]
 
 
@@ -49,6 +52,6 @@ def solver(steiner):
             mst_heuristic.MstHeuristic(steiner),
             # smt_heuristic.SmtHeuristic(steiner, 3),
             # tsp_heuristic.TspHeuristic(steiner),
-            #da_heuristic.DaHeuristic(steiner)
+            #bnd_heuristic.BoundHeuristic(steiner)
     ]
     return sv.Solver2k(steiner, steiner.terminals, heuristics)
