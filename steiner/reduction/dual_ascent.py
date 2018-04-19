@@ -130,8 +130,6 @@ class DualAscent:
 
         DualAscent.value, DualAscent.graph, DualAscent.root = results[0]
 
-        print "Low {} Up {}".format(DualAscent.value, steiner.get_approximation().cost)
-
         # Inversed order, so best is the last element
         for i in reversed(range(0, len(results))):
             DualAscent.good_roots.append(results[i][2])
