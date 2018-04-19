@@ -6,7 +6,7 @@ class SdcReduction:
         self._done = False
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.graph.edges) > 1000 and len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
             return 0
 
         track = len(steiner.graph.edges)
