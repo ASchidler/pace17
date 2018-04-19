@@ -182,17 +182,10 @@ class SteinerApproximation:
     def calculate(steiner, start_node):
         # Solution init
         tree = Graph()
-        cost = 0
 
         # Queue -> all terminals must be in solutions and processed nodes
-        queue = sorted(list(steiner.terminals))
-        nodes = set()
-
-        # Set start node
-        if start_node in steiner.terminals:
-            queue.remove(start_node)
-
-        nodes.add(start_node)
+        queue = [x for x in steiner.terminals if x != start_node]
+        tree.add_node(start_node)
 
         while len(queue) > 0:
             # Find terminal with minimal distance to tree
@@ -201,7 +194,7 @@ class SteinerApproximation:
             min_n = None
 
             for t in queue:
-                for n in nodes:
+                for n in tree.nodes:
                     c = steiner.get_lengths(t, n)
 
                     if c < min_val:
@@ -210,23 +203,19 @@ class SteinerApproximation:
                         min_n = n
 
             # Add to solution
-            nodes.add(min_t)
             queue.remove(min_t)
 
             # Find shortest path between
             path = dijkstra_path(steiner.graph, min_t, min_n)
 
             # Now backtrack edges
-            prev_n = min_t
-            for i in range(1, len(path)):
-                current_n = path[i]
-                if not tree.has_edge(prev_n, current_n):
-                    nodes.add(current_n)
-                    w = steiner.graph[prev_n][current_n]['weight']
-                    cost = cost + w
-                    tree.add_edge(prev_n, current_n, weight=w)
-
-                prev_n = current_n
+            c_node = path.pop()
+            cst = 0
+            while path:
+                c_next = path.pop()
+                cst += steiner.graph[c_node][c_next]['weight']
+                tree.add_edge(c_node, c_next, weight=steiner.graph[c_node][c_next]['weight'])
+                c_node = c_next
 
         # Improve solution by creating an MST and deleting non-terminal leafs
         tree = minimum_spanning_tree(tree)
@@ -260,12 +249,15 @@ class SteinerApproximation:
 
         # Pre-Expand root
         for (n, dta) in nb[start_node].items():
-            p[n] = start_node
-            scanned[n] = dta['weight']
             heappush(queue, (dta['weight'], n))
+            scanned[n] = dta['weight']
+            p[n] = start_node
 
         while remaining:
             cost, n = heappop(queue)
+
+            if tree.has_node(n):
+                continue
 
             if n in remaining:
                 remaining.remove(n)
@@ -274,6 +266,7 @@ class SteinerApproximation:
 
                 while not tree.has_node(c_node):
                     path.append(c_node)
+                    tree.add_node(c_node)
                     c_node = p[c_node]
 
                 # c_node now contains node that is in the tree, but not in path
@@ -281,15 +274,16 @@ class SteinerApproximation:
                     c_next = path.pop()
                     tree.add_edge(c_node, c_next, weight=nb[c_node][c_next]['weight'])
                     for n2, dta in nb[c_next].items():
-                        if n2 not in scanned or dta['weight'] < scanned[n2]:
+                        if (n2 not in scanned or dta['weight'] < scanned[n2]) and not tree.has_node(n2):
                             heappush(queue, (dta['weight'], n2))
-                            p[n2] = c_next
                             scanned[n2] = dta['weight']
+                            p[n2] = c_next
+
                     c_node = c_next
             else:
                 for n2, dta in nb[n].items():
                     total = cost + dta['weight']
-                    if n2 not in scanned or total < scanned[n2]:
+                    if (n2 not in scanned or total < scanned[n2]) and not tree.has_node(n2):
                         heappush(queue, (total, n2))
                         scanned[n2] = total
                         p[n2] = n
