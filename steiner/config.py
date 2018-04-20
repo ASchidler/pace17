@@ -21,6 +21,8 @@ def reducers():
         degree.DegreeReduction(),
         ntdk.NtdkReduction(False),
         degree.DegreeReduction(),
+        ntdk.NtdkReduction(False, search_limit=100, only_last=True),
+        degree.DegreeReduction(),
         preselection_pack.NvSlPack(),
         dual_ascent.DualAscent(),
         component.ComponentReduction(),

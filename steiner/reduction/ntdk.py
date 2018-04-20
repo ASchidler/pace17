@@ -7,13 +7,18 @@ from networkx import minimum_spanning_edges, Graph
 class NtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self, restricted):
+    def __init__(self, restricted, search_limit=40, only_last=False):
         self._removed = {}
         self._restricted = restricted
         self._done = False
+        self._search_limit = search_limit
+        self._only_last = only_last
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
+            return 0
+
+        if self._only_last and not last_run:
             return 0
 
         if self._restricted:
@@ -29,7 +34,7 @@ class NtdkReduction:
 
                 # Calc distances, more memory efficient than calculating it all beforehand
                 if not self._restricted:
-                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, False) for (x, tt1) in nb for (y, tt2) in nb if y > x}
+                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._search_limit, False) for (x, tt1) in nb for (y, tt2) in nb if y > x}
                 else:
                     dist = {(x, y): steiner.get_steiner_lengths(x, y, 0) for (x, tt1) in nb for (y, tt2) in nb if y > x}
 
@@ -108,9 +113,9 @@ class NtdkReduction:
         return d
 
     @staticmethod
-    def modified_dijkstra(steiner, u, v, cut_off, restrict=False):
-        scanned1 = NtdkReduction.modified_dijkstra_sub(steiner, u, v, cut_off)
-        scanned2 = NtdkReduction.modified_dijkstra_sub(steiner, v, u, cut_off)
+    def modified_dijkstra(steiner, u, v, cut_off, depth_limit, restrict=False):
+        scanned1 = NtdkReduction.modified_dijkstra_sub(steiner, u, v, cut_off, depth_limit)
+        scanned2 = NtdkReduction.modified_dijkstra_sub(steiner, v, u, cut_off, depth_limit)
 
         # If we found the other node use this dist. Scanned != Visited, therefore values may differ!
         sd = scanned1[v] if v in scanned1 else maxint
@@ -130,7 +135,7 @@ class NtdkReduction:
         return sd
 
     @staticmethod
-    def modified_dijkstra_sub(steiner, u, v, cut_off):
+    def modified_dijkstra_sub(steiner, u, v, cut_off, depth_limit):
         queue = [[0, u]]
         scanned = defaultdict(lambda: maxint)
 
@@ -145,7 +150,7 @@ class NtdkReduction:
                 scanned[n2] = c
 
         # TODO: The limit constant has a big effect on the effectiveness of the reduction! SCIP uses values of up to 400
-        while len(queue) > 0 and scanned_edges < 40:
+        while len(queue) > 0 and scanned_edges < depth_limit:
             c_val = hq.heappop(queue)
             n = c_val[1]
 
@@ -157,7 +162,7 @@ class NtdkReduction:
 
             for n2, dta in nb[n].items():
                 scanned_edges += 1
-                if scanned_edges > 40:
+                if scanned_edges > depth_limit:
                     break
 
                 cost = c_val[0] + dta['weight']
