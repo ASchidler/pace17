@@ -19,18 +19,21 @@ class DebugReduction:
 
 
 class Reducer:
-    def __init__(self, reducers, threshold=0.0025):
+    def __init__(self, reducers, threshold=0.0025, run_limit=0):
         self._reducers = reducers
         self._threshold = threshold
+        self._run_limit = run_limit
 
     def reduce(self, g):
         last_run = False
+        run_num = 1
 
         while True:
             min_changes = self._threshold * len(g.graph.edges)
             min_n_changes = self._threshold * len(g.graph.nodes)
             n_length = len(g.graph.nodes)
             cnt_changes = 0
+            last_run = last_run or (run_num == self._run_limit)
 
             for r in self._reducers:
                 if len(g.graph.nodes) > 1:
@@ -48,6 +51,11 @@ class Reducer:
                 last_run = False
 
             g.reset_all()
+
+            if self._run_limit == run_num:
+                break
+
+            run_num += 1
 
     def unreduce(self, graph, cost):
         solution = (graph, cost)
