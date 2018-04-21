@@ -58,13 +58,12 @@ class Solver2k:
         # Initialize queue with partial solutions, containing only the terminals themselves
         # Queue format is: (estimated_costs, node, set_id)
         for terminal_id in range(0, len(self.terminals)):
-            heapq.heappush(self.queue, [0, self.terminals[terminal_id], 1 << terminal_id])
+            heapq.heappush(self.queue, (0, (1 << terminal_id) * -1, self.terminals[terminal_id]))
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
-            el = heapq.heappop(self.queue)
-            n = el[1]
-            s = el[2]
+            old_cost, s, n = heapq.heappop(self.queue)
+            s *= -1
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
@@ -84,18 +83,22 @@ class Solver2k:
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
-        for other_node in self.steiner.graph.neighbors(n):
+        if n == self.root_node:
+            return
+
+        nb = self.steiner.graph._adj
+        for other_node, dta in nb[n].items():
             other_node_cost = self.costs[other_node][n_set]
 
             # Not permanent
             if not other_node_cost[1]:
-                total = n_cost + self.steiner.graph[n][other_node]['weight']
+                total = n_cost + dta['weight']
                 if total < other_node_cost[0]:
                     # Store costs. The second part of the tuple is backtracking info.
                     self.costs[other_node][n_set] = (total, False, n, False)
                     h = self.heuristic(other_node, n_set, total)
                     if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
-                        heapq.heappush(self.queue, [total + h, other_node, n_set])
+                        heapq.heappush(self.queue, (total + h, n_set * -1, other_node))
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
@@ -121,12 +124,13 @@ class Solver2k:
 
                         h = heuristic(n, combined, total)
                         if total + h <= approx and not prune(n, n_set, total, other_set):
-                            push(q, [total + h, n, combined])
+                            push(q, (total + h, combined * -1, n))
 
     def heuristic(self, n, set_id, total):
         if len(self.heuristics) == 0:
             return 0
 
+        # Invert set
         set_id = self.max_set ^ set_id
         ts = self.to_list(set_id)
         ts.add(self.root_node)

@@ -5,12 +5,19 @@ from networkx import Graph, minimum_spanning_edges
 class BoundNodeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
-    def __init__(self):
+    def __init__(self, start_at=1):
         self.enabled = True
         self._done = False
+        self._start_at = start_at
+        self._runs = 0
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
+            return 0
+
+        self._runs += 1
+
+        if self._runs < self._start_at:
             return 0
 
         steiner.requires_restricted_dist(-1)

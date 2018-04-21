@@ -40,15 +40,10 @@ class Reducer:
                     reduced = r.reduce(g, cnt_changes, last_run)
                     cnt_changes = cnt_changes + reduced
 
-            # TODO: Find a better stopping criterion
-            min_n_changes = min_changes = 2
-            # Use both edge and node changes, as the NTDK may produce nodes although successful
-            if cnt_changes <= min_changes and (n_length - len(g.graph.nodes) <= min_n_changes):
-                if last_run:
-                    break
+            if cnt_changes <= min_changes and not last_run:
                 last_run = True
-            else:
-                last_run = False
+            elif 2 >= n_length - len(g.graph.nodes) and last_run:
+                break
 
             g.reset_all()
 
