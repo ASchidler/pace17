@@ -87,17 +87,22 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Instances that are not solvable yet
-hard_instances = [141, 149, 153, 161, 163, 165, 167, 171, 173, 175, 187, 193, 195, 197, 199]
+hard_instances = [141, 161, 163, 165, 167, 171, 173, 187, 193, 195]
 # Instances that are stuck (either forever or too long) in reduction mode
-long_reduction = [113, 129, 151, 181, 189]
+long_reduction = [113, 129, 151, 181, 189, 197, 199]
 # All other instances are solvable in a feasible amount of time
 easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_reduction]
-long_runtime = [137]
+long_runtime = [131, 149, 169, 197, 199]
+solved_but_not_optil = [169, 197, 199]
 lst = list(set(easy_instances).union(long_reduction))
-lst.extend(reversed(hard_instances))
+# lst.extend(reversed(hard_instances))
 
 # Error 131 with mst heuristic
-for i in [141]:#(x for x in lst):
+# 173 small in no reductions, 187 large almost no reductions
+# 171 small, few nodes reduced,
+# 167 hard to crack reasonable reduction
+# 167, 171, 173, ?193
+for i in [167]: #(x for x in lst if x > 149): # hard_instances:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
