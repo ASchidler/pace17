@@ -487,7 +487,74 @@ class DualAscent:
             nearest_vertex.NearestVertex()
         ]
 
+    @staticmethod
+    def calc2(g, root, ts):
+        dg = g.to_directed()
+        queue = [(0, t) for t in ts if t != root]
+        nb = dg._pred
+        pop = heappop
+        push = heappush
+        limit = 0
+        active = set(ts)
+
+        while queue:
+            _, t = pop(queue)
+
+            # BFS search of cut
+            bfs_queue = [t]
+            edges = []
+            cut = {t}
+
+            t_found = False
+            while bfs_queue and not t_found:
+                c_n = bfs_queue.pop()
+
+                for n2, dta in nb[c_n].items():
+                    if n2 not in cut:
+                        c = dta['weight']
+                        if c == 0:
+                            # Hit an active vertex? Stop processing node
+                            if n2 in active:
+                                t_found = True
+                                break
+
+                            bfs_queue.append(n2)
+                            cut.add(n2)
+                        else:
+                            edges.append((c_n, n2, c))
+
+            # Cut is no longer active
+            if t_found:
+                active.remove(t)
+                continue
+
+            # Find minimum cost and remove edges that are inside the cut
+            edges = [(u, v, c) for (u, v, c) in edges if v not in cut]
+
+            # Check if really the smallest element with a 25% tolerance
+            if queue and (len(edges) > (1.25 * queue[0][0])):
+                push(queue, (len(edges), t))
+                continue
+
+            min_cost = min(c for (u, v, c) in edges)
+            limit += min_cost
+
+            # Update weights
+            new_in = 0
+            for (u, v, c) in edges:
+                nb[u][v]['weight'] -= min_cost
+                if c == min_cost:
+                    cut.add(v)
+                    # -1 because the connecting edge is now inside the cut
+                    new_in += len(nb[v]) - 1
+
+            # Add to queue. Priority is depending on incoming edges
+            push(queue, (new_in + len(edges), t))
+
+        return limit, dg, root
 
 DualAscent.root = None
 DualAscent.graph = None
 DualAscent.value = None
+
+# TODO: Optimize graph class
