@@ -12,12 +12,14 @@ from collections import deque
 class DualAscent:
     good_roots = deque(maxlen=10)
 
-    def __init__(self, run_once=False, quick_run=False):
+    def __init__(self, run_once=False, quick_run=False, start_at=1, run_every=3):
         self.runs = 0
         self._done = False
         self._run_once = run_once
         self._quick_run = quick_run
         self.enabled = True
+        self._start_at = start_at
+        self._run_every = run_every
 
     def reduce(self, steiner, cnt, last_run):
         # This invalidates the approximation. This is important in case the DA doesnt go through in the last run
@@ -25,13 +27,17 @@ class DualAscent:
         steiner.invalidate_approx(-2)
 
         self.runs += 1
-        if len(steiner.terminals) < 4 or (self._run_once and self.runs > 1):
+
+        if len(steiner.terminals) < 4:
+            return 0
+
+        if not (self.runs >= self._start_at and (self.runs - self._start_at) % self._run_every == 0):
+            return 0
+
+        if self.runs > self._start_at and self._run_once:
             return 0
 
         do_quick_run = self._quick_run and self.enabled and self.runs > 1
-
-        if self.runs > 1 and cnt > 0 and not last_run and not do_quick_run:
-            return 0
 
         if (not do_quick_run and self._quick_run) or (self._quick_run and last_run):
             return 0
@@ -40,7 +46,7 @@ class DualAscent:
         solution_limit = solution_rec_limit = prune_limit = prune_rec_limit = 0
 
         if self._quick_run:
-            solution_limit = 2
+            solution_limit = 5
             solution_rec_limit = 1
             prune_limit = 0
             prune_rec_limit = 0
@@ -99,7 +105,7 @@ class DualAscent:
         target_roots = (ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit))
 
         # Generate solutions
-        results = [self.calc(steiner, root) for root in target_roots]
+        results = [self.calc(steiner.graph, root, steiner.terminals) for root in target_roots]
         results.sort(key=lambda x: x[0], reverse=True)
 
         solution_pool = []
@@ -138,7 +144,7 @@ class DualAscent:
         if track > 0:
             steiner.invalidate_steiner(-2)
             steiner.invalidate_dist(-2)
-
+        steiner.invalidate_approx(0)
         self.enabled = track > 0 and self.runs > 1
         return track
 
@@ -185,7 +191,7 @@ class DualAscent:
                 og.add_edge(u, v, steiner.graph[u][v]['weight'])
 
         sol = sa.SteinerApproximation(og)
-        red = Reducer(self.reducers())
+        red = Reducer(self.reducers(), run_limit=5)
 
         for i in xrange(0, 3):
             red.reduce(og)
@@ -266,7 +272,7 @@ class DualAscent:
 
     def find_new_from_sol(self, steiner, solutions):
         """Combines (unoptimal) steiner trees into a new solution"""
-        red = Reducer(self.reducers())
+        red = Reducer(self.reducers(), run_limit=5)
         alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
         dg = sg.SteinerGraph()
         dg.terminals = set(steiner.terminals)
@@ -304,7 +310,7 @@ class DualAscent:
 
     def find_new(self, steiner, results):
         """Combines solution graphs into a new solution"""
-        rs = self.reducers()
+        red = Reducer(self.reducers(), run_limit=5)
         alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
         dg = sg.SteinerGraph()
         dg.terminals = {x for x in steiner.terminals}
@@ -318,11 +324,7 @@ class DualAscent:
                     dg.add_edge(u, v, steiner.graph[u][v]['weight'])
                     alpha[(u, v)] += 1
 
-        cnt = 1
-        while cnt > 0:
-            cnt = 0
-            for r in rs:
-                cnt += r.reduce(dg, cnt, False)
+        red.reduce(dg)
 
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
@@ -340,20 +342,11 @@ class DualAscent:
                     app.tree[u][v]['weight'] += d
 
         app.optimize()
-        c_result = (app.tree, app.cost)
 
-        while True:
-            change = False
-            for r in rs:
-                ret = r.post_process(c_result)
-                c_result = ret[0]
-                change = change or ret[1]
+        r_result = red.unreduce(app.tree, app.cost)
+        app.tree = r_result[0]
+        app.cost = r_result[1]
 
-            if not change:
-                break
-
-        app.tree = c_result[0]
-        app.cost = c_result[1]
         return app
 
     @staticmethod
@@ -384,10 +377,10 @@ class DualAscent:
         return voronoi
 
     @staticmethod
-    def calc(steiner, root):
-        """ Calculates a lower bound and an updated graph based on the dual ascent alglorithm"""
+    def calc(g, root, ts):
+        """ Calculates a lower bound and an updated graph based on the dual ascent algorithm"""
 
-        dg = steiner.graph.to_directed()
+        dg = g.to_directed()
         main_cut = set()
         main_cut.add(root)
         bound = 0
@@ -397,7 +390,7 @@ class DualAscent:
         push = heappush
 
         # Initial cuts, every terminal for itself, except the root
-        for t in (t for t in steiner.terminals if t != root):
+        for t in (t for t in ts if t != root):
             c = set()
             c.add(t)
             t_cuts.append([1, c])
