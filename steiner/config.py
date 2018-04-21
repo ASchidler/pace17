@@ -2,6 +2,7 @@ from solver import solver_2k as sv
 from reduction import *
 from preselection import *
 from solver.heuristics import *
+import solver.heuristics.da_heuristic as da
 
 """Used as a configuration for the whole steiner solving suite"""
 
@@ -25,6 +26,7 @@ def reducers():
         degree.DegreeReduction(),
         preselection_pack.NvSlPack(),
         dual_ascent.DualAscent(),
+        dual_ascent.DualAscent(quick_run=True, start_at=3),
         component.ComponentReduction(),
         degree.DegreeReduction(),
         bound_reductions.BoundNodeReduction(),
@@ -32,28 +34,14 @@ def reducers():
         bound_reductions.BoundGraphReduction(),
         bound_reductions.BoundNtdkReduction(),
         terminal_distance.CostVsTerminalDistanceReduction(),
-        degree.DegreeReduction(),
-        dual_ascent.DualAscent(quick_run=True),
-        component.ComponentReduction(),
-        # Last test so the bound can be used for the solver
+        degree.DegreeReduction()
     ]
-
-
-def contractors():
-    return [
-        #terminals.TerminalReduction(),
-        #nearest_vertex.NearestVertex(),
-        #short_links.ShortLinkPreselection(),
-        terminal_distance.CostVsTerminalDistanceReduction()
-    ]
-
 
 def solver(steiner):
     """Creates a solver"""
-    heuristics = [
-            mst_heuristic.MstHeuristic(steiner),
-            # smt_heuristic.SmtHeuristic(steiner, 3),
-            # tsp_heuristic.TspHeuristic(steiner),
-            #bnd_heuristic.BoundHeuristic(steiner)
-    ]
-    return sv.Solver2k(steiner, steiner.terminals, heuristics)
+    heuristics = [mst_heuristic.MstHeuristic(steiner)]
+    da_h = da.DaHeuristic(steiner)
+    #heuristics.append(da_h)
+    slv = sv.Solver2k(steiner, steiner.terminals, heuristics)
+    da_h.solver = slv
+    return slv
