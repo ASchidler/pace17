@@ -15,61 +15,58 @@ class ShortLinkPreselection:
         steiner.requires_dist(1)
 
         track = len(steiner.graph.edges)
-        vor = steiner.get_voronoi()
+        closest = steiner.get_closest
 
-        for (t, r) in vor.items():
+        # Find bridging edges
+        bridging_edges = {t: (maxint, None) for t in steiner.terminals}
+        second_val = {t: maxint for t in steiner.terminals}
+
+        # TODO: When is this valid? Since finding one edge may invalidate this...
+        for (u, v, d) in steiner.graph.edges(data='weight'):
+            t1 = closest(u)[0][0]
+            t2 = closest(v)[0][0]
+
+            if t1 != t2:
+                if d < bridging_edges[t1][0]:
+                    second_val[t1] = bridging_edges[t1][0]
+                    bridging_edges[t1] = (d, t2, u, v)
+                elif d < second_val[t1]:
+                    second_val[t1] = d
+
+                if d < bridging_edges[t2][0]:
+                    second_val[t2] = bridging_edges[t2][0]
+                    bridging_edges[t2] = (d, t1, u, v)
+                elif d < second_val[t2]:
+                    second_val[t2] = d
+
+        for t in list(steiner.terminals):
             # May have been removed in between
             if t not in steiner.terminals:
                 continue
 
-            # Find shortest and second shortest edge out
-            min1 = (0, 0, maxint)
-            min2 = (0, 0, maxint)
-
-            for (u, v, d) in steiner.graph.edges(data='weight'):
-                u_in = (u == t or u in r)
-                v_in = (v == t or v in r)
-
-                # Bridges region?
-                if u_in ^ v_in:
-                    if d <= min1[2]:
-                        min2 = min1
-                        min1 = (u, v, d)
-                    elif d < min2[2]:
-                        min2 = (u, v, d)
-
-            # This can happen if terminals get deleted during the loop
-            if min1[2] == maxint:
-                return track
+            d, t2, u, v = bridging_edges[t]
+            # Edge vanished in previous contraction. If t2 isn't a terminal anymore, the voronoi areas changed
+            if not steiner.graph.has_edge(u, v) or t2 not in steiner.terminals:
+                continue
 
             # There always exists a boundary edge. If there is no second largest edge, we can contract
-            total = steiner.get_closest(min1[0])[0][1] + min1[2] + steiner.get_closest(min1[1])[0][1]
+            total = closest(u)[0][1] + d + closest(v)[0][1]
 
-            if min2[2] >= total:
+            if second_val[t] >= total:
                 # Store
-                self.deleted.append((min1[0], min1[1], min1[2]))
+                self.deleted.append((u, v, d))
 
                 # Contract, prefer to contract into a terminal
-                n1, n2 = (min1[0], min1[1]) if min1[0] in steiner.terminals else (min1[1], min1[0])
+                if v in steiner.terminals:
+                    u, v = v, u
 
-                for e in steiner.contract_edge(n1, n2):
+                for e in steiner.contract_edge(u, v):
                     self.merged.append(e)
-
-                # Fix voronoi if terminals are not merged
-                t, other_t = steiner.get_closest(min1[0])[0][0], steiner.get_closest(min1[1])[0][0]
-                if t != n1 and t != n2 and other_t != n1 and other_t != n2:
-                    for n in list(vor[t]):
-                        if steiner.get_lengths(t, n) > steiner.get_lengths(other_t, n):
-                            vor[t].remove(n)
-                            vor[other_t].add(n)
-
-                    for n in list(vor[other_t]):
-                        if steiner.get_lengths(other_t, n) > steiner.get_lengths(t, n):
-                            vor[other_t].remove(n)
-                            vor[t].add(n)
 
         track -= len(steiner.graph.edges)
         if track > 0:
+            steiner._voronoi_areas = None
+            steiner._closest_terminals = None
             steiner.invalidate_steiner(1)
             steiner.invalidate_dist(1)
             steiner.invalidate_approx(1)
