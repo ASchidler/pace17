@@ -26,7 +26,8 @@ class NearestVertex:
                 for n, dta in nb[t].items():
                     d = dta['weight']
 
-                    cmp_val = d + steiner.get_closest(n)[1][1] if n in steiner.get_voronoi()[t] else d + steiner.get_closest(n)[0][1]
+                    cmp_val = d + steiner.get_closest(n)[1][1] if steiner.get_closest(n)[0][0] == t \
+                        else d + steiner.get_closest(n)[0][1]
 
                     if d < e1[1] or (d == e1[1] and cmp_val < e1[2]):
                         e3, e2, e1 = e2, e1, (n, d, cmp_val)
@@ -55,11 +56,12 @@ class NearestVertex:
                     for e in steiner.contract_edge(t, e1[0]):
                         self.merged.append(e)
 
-                    steiner._voronoi_areas = None
-                    steiner._closest_terminals = None
         track -= len(steiner.graph.edges)
 
         if track > 0:
+            # The contractions can mess up the whole voronoi diagram
+            steiner._voronoi_areas = None
+            steiner._closest_terminals = None
             steiner.invalidate_steiner(1)
             steiner.invalidate_dist(1)
             steiner.invalidate_approx(1)
