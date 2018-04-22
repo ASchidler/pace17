@@ -76,10 +76,10 @@ class DualAscent:
             prune_rec_limit = 0
         # Large, not dense graphs
         else:
-            solution_limit = 5
+            solution_limit = 10
             solution_rec_limit = 3
-            prune_limit = 1
-            prune_rec_limit = 0
+            prune_limit = 2
+            prune_rec_limit = 1
 
         ts = list(steiner.terminals)
         track = len(steiner.graph.edges)
@@ -285,20 +285,19 @@ class DualAscent:
 
         red.reduce(dg)
 
+        max_occ = len(solutions)
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
-                c = dg.graph[u][v]['weight']
-                val = min(c-1, d/3)
-                alpha[(u, v)] = val
-                dg.graph[u][v]['weight'] -= val
+                dg.graph[u][v]['weight'] += (1 + (max_occ - d)) * 100
 
         app = sa.SteinerApproximation(dg, False)
 
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
-                dg.graph[u][v]['weight'] += d
+                modifier = (1 + (max_occ - d)) * 100
+                dg.graph[u][v]['weight'] -= modifier
                 if app.tree.has_edge(u, v):
-                    app.tree[u][v]['weight'] += d
+                    app.tree[u][v]['weight'] -= modifier
 
         app.optimize()
 
@@ -311,7 +310,7 @@ class DualAscent:
     def find_new(self, steiner, results):
         """Combines solution graphs into a new solution"""
         red = Reducer(self.reducers(), run_limit=5)
-        alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
+        alpha = {(u, v): set() for (u, v) in steiner.graph.edges}
         dg = sg.SteinerGraph()
         dg.terminals = {x for x in steiner.terminals}
 
@@ -321,25 +320,25 @@ class DualAscent:
             for t in (t for t in steiner.terminals if t != r):
                 for i in range(1, len(pths[t])):
                     u, v = min(pths[t][i-1], pths[t][i]), max(pths[t][i-1], pths[t][i])
-                    dg.add_edge(u, v, steiner.graph[u][v]['weight'])
-                    alpha[(u, v)] += 1
+                    alpha[(u, v)].add(r)
+                    if not dg.graph.has_edge(u, v):
+                        dg.add_edge(u, v, steiner.graph[u][v]['weight'])
 
         red.reduce(dg)
 
+        max_occ = len(results)
+        alpha = {(u, v): len(d) for ((u, v), d) in alpha.items()}
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
-                c = dg.graph[u][v]['weight']
-                val = min(c-1, d/6)
-                alpha[(u, v)] = val
-
-                dg.graph[u][v]['weight'] -= val
+                dg.graph[u][v]['weight'] += (1 + (max_occ - d)) * 100
 
         app = sa.SteinerApproximation(dg, False)
         for ((u, v), d) in alpha.items():
             if d > 0 and dg.graph.has_edge(u, v):
-                dg.graph[u][v]['weight'] += d
+                modifier = (1 + (max_occ - d)) * 100
+                dg.graph[u][v]['weight'] -= modifier
                 if app.tree.has_edge(u, v):
-                    app.tree[u][v]['weight'] += d
+                    app.tree[u][v]['weight'] -= modifier
 
         app.optimize()
 

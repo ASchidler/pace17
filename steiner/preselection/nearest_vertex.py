@@ -13,6 +13,7 @@ class NearestVertex:
 
         steiner.requires_dist(1)
         track = len(steiner.graph.edges)
+        nb = steiner.graph._adj
 
         for t in list(steiner.terminals):
             # t may have been deleted before
@@ -22,8 +23,8 @@ class NearestVertex:
                 e3 = (None, maxint)
 
                 # Find three smallest incident edges
-                for n in steiner.graph.neighbors(t):
-                    d = steiner.graph[t][n]['weight']
+                for n, dta in nb[t].items():
+                    d = dta['weight']
 
                     cmp_val = d + steiner.get_closest(n)[1][1] if n in steiner.get_voronoi()[t] else d + steiner.get_closest(n)[0][1]
 
@@ -41,8 +42,8 @@ class NearestVertex:
                     contract = True
                 elif e2[1] < maxint and e3[1] >= e1[2] and e2[0] not in steiner.terminals:
                     contract = True
-                    for n2 in steiner.graph.neighbors(e2[0]):
-                        if n2 != t and steiner.graph[e2[0]][n2]['weight'] < e1[2]:
+                    for n2, dta in nb[e2[0]].items():
+                        if n2 != t and dta['weight'] < e1[2]:
                             contract = False
                             break
 
@@ -56,13 +57,12 @@ class NearestVertex:
 
                     steiner._voronoi_areas = None
                     steiner._closest_terminals = None
-
         track -= len(steiner.graph.edges)
 
         if track > 0:
-            steiner.invalidate_steiner(-1)
-            steiner.invalidate_dist(-1)
-            steiner.invalidate_approx(-1)
+            steiner.invalidate_steiner(1)
+            steiner.invalidate_dist(1)
+            steiner.invalidate_approx(1)
 
         return track
 

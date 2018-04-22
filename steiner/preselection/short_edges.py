@@ -51,9 +51,9 @@ class ShortEdgeReduction:
 
         result = track - len(steiner.graph.edges)
         if cnt > 0:
-            steiner.invalidate_steiner(-1)
-            steiner.invalidate_dist(-1)
-            steiner.invalidate_approx(-1)
+            steiner.invalidate_steiner(1)
+            steiner.invalidate_dist(1)
+            steiner.invalidate_approx(1)
 
         return result
 
