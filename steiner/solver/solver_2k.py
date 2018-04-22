@@ -69,8 +69,8 @@ class Solver2k:
             n_cost = self.costs[n][s]
             if not n_cost[1]:
                 # Mark permanent
-                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
-                self.labels[n].add(s)
+                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3], n_cost[4])
+                self.labels[n].append(s)
 
                 self.process_neighbors(n, s, n_cost[0])
                 self.process_labels(n, s, n_cost[0])
@@ -83,22 +83,20 @@ class Solver2k:
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
-        if n == self.root_node:
-            return
-
         nb = self.steiner.graph._adj
+        prev_h = self.costs[n][n_set][4]
         for other_node, dta in nb[n].items():
             other_node_cost = self.costs[other_node][n_set]
 
-            # Not permanent
-            if not other_node_cost[1]:
-                total = n_cost + dta['weight']
-                if total < other_node_cost[0]:
-                    # Store costs. The second part of the tuple is backtracking info.
-                    self.costs[other_node][n_set] = (total, False, n, False)
-                    h = self.heuristic(other_node, n_set, total)
-                    if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
-                        heapq.heappush(self.queue, (total + h, n_set * -1, other_node))
+            total = n_cost + dta['weight']
+            if total < other_node_cost[0]:
+                # Store costs. The second part of the tuple is backtracking info.
+
+                h = self.heuristic(other_node, n_set)
+                h = max(h, prev_h - dta['weight'])
+                self.costs[other_node][n_set] = (total, False, n, False, h)
+                if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
+                    heapq.heappush(self.queue, (total + h, n_set * -1, other_node))
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
@@ -109,24 +107,25 @@ class Solver2k:
         approx = self.steiner.get_approximation().cost
         q = self.queue
         push = heapq.heappush
+        prev_h = cst[n_set][4]
 
         for other_set in lbl(n_set):
-                # Set union
-                combined = n_set | other_set
+            # Set union
+            combined = n_set | other_set
 
-                # Check of not already permanent
-                combined_cost = cst[combined]
-                if not combined_cost[1]:
-                    total = n_cost + cst[other_set][0]
+            o_cost = cst[other_set][0]
+            total = n_cost + o_cost
+            combined_cost = cst[combined]
 
-                    if total < combined_cost[0]:
-                        cst[combined] = (total, False, other_set, True)
+            if total < combined_cost[0]:
+                h = heuristic(n, combined)
+                h = max(h, prev_h - o_cost)
+                cst[combined] = (total, False, other_set, True, h)
 
-                        h = heuristic(n, combined, total)
-                        if total + h <= approx and not prune(n, n_set, total, other_set):
-                            push(q, (total + h, combined * -1, n))
+                if total + h <= approx and not prune(n, n_set, total, other_set):
+                    push(q, (total + h, combined * -1, n))
 
-    def heuristic(self, n, set_id, total):
+    def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
             return 0
 
@@ -257,8 +256,8 @@ class SolverCosts(dict):
 
     def __missing__(self, key):
         if key == self.terminal_id:
-            return 0, [], None, False
+            return 0, [], None, False, 0
 
         # Otherwise infinity
-        return self.max_val, [], None, False
+        return self.max_val, [], None, False, 0
 
