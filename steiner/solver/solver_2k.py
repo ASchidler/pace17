@@ -137,7 +137,7 @@ class Solver2k:
 
         max_val = 0
         for h in self.heuristics:
-            max_val = max(max_val, h.calculate(n, set_id, ts, total))
+            max_val = max(max_val, h.calculate(n, set_id, ts))
 
         return max_val
 
