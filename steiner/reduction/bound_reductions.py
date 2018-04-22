@@ -47,8 +47,8 @@ class BoundNodeReduction:
         self.enabled = track > 0
 
         if track > 0:
-            steiner.invalidate_dist(+1)
-            steiner.invalidate_steiner(+1)
+            steiner.invalidate_dist(-1)
+            steiner.invalidate_steiner(-1)
 
         return track
 
@@ -59,12 +59,19 @@ class BoundNodeReduction:
 class BoundEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
-    def __init__(self):
+    def __init__(self, start_at=1):
         self.enabled = True
         self._done = False
+        self._start_at = start_at
+        self._runs = 0
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or not (self.enabled or last_run):
+            return 0
+
+        self._runs += 1
+
+        if self._runs < self._start_at:
             return 0
 
         steiner.requires_restricted_dist(-1)
@@ -98,8 +105,8 @@ class BoundEdgeReduction:
         track -= len(steiner.graph.edges)
 
         if track > 0:
-            steiner.invalidate_dist(+1)
-            steiner.invalidate_steiner(+1)
+            steiner.invalidate_dist(-1)
+            steiner.invalidate_steiner(-1)
 
         self.enabled = track > 0
         return track
@@ -111,13 +118,20 @@ class BoundEdgeReduction:
 class BoundNtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self):
+    def __init__(self, start_at=1):
         self._removed = {}
         self.enabled = True
         self._done = False
+        self._start_at = start_at
+        self._runs = 0
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 3 or not (self.enabled or last_run):
+            return 0
+
+        self._runs += 1
+
+        if self._runs < self._start_at:
             return 0
 
         steiner.requires_restricted_dist(-1)
@@ -154,8 +168,8 @@ class BoundNtdkReduction:
 
         track -= len(steiner.graph.edges)
         if track > 0:
-            steiner.invalidate_dist(+1)
-            steiner.invalidate_steiner(+1)
+            steiner.invalidate_dist(-1)
+            steiner.invalidate_steiner(+-1)
 
         self.enabled = track > 0
         return track
@@ -175,12 +189,19 @@ class BoundNtdkReduction:
 class BoundGraphReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
-    def __init__(self):
+    def __init__(self, start_at=1):
         self.enabled = True
         self._done = False
+        self._start_at = start_at
+        self._runs = 0
 
     def reduce(self, steiner, cnt, last_run):
         if len(steiner.terminals) < 2 or cnt > 0 or (not self.enabled and not last_run):
+            return 0
+
+        self._runs += 1
+
+        if self._runs < self._start_at:
             return 0
 
         steiner.requires_restricted_dist(-1)
@@ -229,8 +250,8 @@ class BoundGraphReduction:
 
         track = track - len(steiner.graph.edges)
         if track > 0:
-            steiner.invalidate_dist(+1)
-            steiner.invalidate_steiner(+1)
+            steiner.invalidate_dist(-1)
+            steiner.invalidate_steiner(-1)
 
         self.enabled = track > 0
         return track

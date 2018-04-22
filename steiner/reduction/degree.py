@@ -62,9 +62,9 @@ class DegreeReduction:
                         t_cnt += 1
 
         if t_cnt > 0:
-            steiner.invalidate_steiner(-1)
-            steiner.invalidate_dist(-1)
-            steiner.invalidate_approx(-1)
+            steiner.invalidate_steiner(1)
+            steiner.invalidate_dist(1)
+            steiner.invalidate_approx(1)
 
         return track - len(steiner.graph.edges)
 

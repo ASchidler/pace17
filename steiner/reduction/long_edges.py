@@ -37,7 +37,7 @@ class LongEdgeReduction:
 
         result = track - len(steiner.graph.edges)
         if result > 0:
-            steiner.invalidate_dist(+1)
+            steiner.invalidate_dist(-1)
 
         self.runs = self.runs + 1
         return result
