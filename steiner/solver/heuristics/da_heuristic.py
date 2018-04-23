@@ -18,6 +18,8 @@ class DaHeuristic:
                 return self.steiner.get_lengths(t, n)
 
         self._qry_cnt += 1
+
+        # Load precalculated value or calculate if not existing
         try:
             d = self.calculated[set_id][n]
             self._hit_at[set_id] = self._qry_cnt
@@ -28,6 +30,7 @@ class DaHeuristic:
             self._hit_at[set_id] = self._qry_cnt
             d = self.calculated[set_id][n]
 
+        # Clean up to save memory
         if self._qry_cnt % 5000 == 0:
             for (s, c) in self._hit_at.items():
                 if self._qry_cnt - c > 5000:
@@ -36,37 +39,16 @@ class DaHeuristic:
 
         return d
 
-    # TODO: Remove, this is just for testing
-    def calculate2(self, n, set_id, ts):
-        # Simplest "tree", just an edge
-        if len(ts) == 1:
-            for t in ts:
-                return self.steiner.get_lengths(t, n)
-
-        # Calc steiner tree including n rooted at r
-        r = self.solver.root_node
-        ts = set(ts)
-        ts.add(n)
-        result = da.DualAscent.calc2(self.steiner.graph, r, ts)
-
-        return result[0]
-
     def precalc(self, ts, set_id):
         r = self.solver.root_node
         ts = set(ts)
         result = da.DualAscent.calc2(self.steiner.graph, r, ts)
 
-        root_dist = single_source_dijkstra_path_length(result[1], r)
-        # for (n2, dta) in result[1]._pred[r].items():
-        #     result[1].remove_edge(n2, r)
-
-        vor = da.DualAscent.voronoi(result[1], [t for t in ts if t != r])
-
         nodes = {}
         bnd = result[0]
-
-        for (t, v) in vor.items():
-            for (n, d) in v.items():
-                nodes[n] = root_dist[n] + bnd + d
+        # Do not add the distance to the closest terminal. As n is the linking node between the partial results
+        # it may be a leaf for the heuristic!
+        for (n, d) in single_source_dijkstra_path_length(result[1], r).items():
+            nodes[n] = d + bnd
 
         self.calculated[set_id] = nodes
