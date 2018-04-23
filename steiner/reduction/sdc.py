@@ -12,7 +12,6 @@ class SdcReduction:
 
         track = len(steiner.graph.edges)
 
-        # TODO: Combine SDC and NTDK to reuse edge results
         count = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
             if d >= NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, self._search_limit, True):
