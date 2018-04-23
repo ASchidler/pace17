@@ -2,7 +2,7 @@ from sys import maxint
 from heapq import heappush, heappop, merge
 from collections import defaultdict, deque
 from itertools import chain
-from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, is_connected
+from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, is_connected, connected_components
 
 
 # TODO: Optimize the whole thing
@@ -676,7 +676,7 @@ class SteinerApproximation:
                 [super_graph.add_edge(tp1, tp2, weight=total) for ((tp1, tp2), (total, edge, p1, p2)) in shortest_edges.items()]
 
                 # Check if any node is not possibly connected
-                if all(super_graph.has_node(x) for x in child_subsets.keys()) and super_graph.has_node(last):
+                if all(super_graph.has_node(x) for x in child_subsets.keys()) and super_graph.has_node(last) and is_connected(super_graph):
                     mst_edges = list(minimum_spanning_edges(super_graph))
                     mst_cost = sum((dist['weight'] for (x, y, dist) in mst_edges))
 
