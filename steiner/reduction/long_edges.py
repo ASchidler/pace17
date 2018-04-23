@@ -29,7 +29,7 @@ class LongEdgeReduction:
                 if steiner.graph[n][t]['weight'] > steiner.get_lengths(t, n):
                     steiner.remove_edge(n, t)
 
-        if self._delete_equal and cnt == 0 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 10:
+        if self._delete_equal and (cnt == 0 or last_run) and len(steiner.graph.edges) / len(steiner.graph.nodes) < 10:
             for (u, v, d) in equal_edges:
                 if steiner.graph.has_edge(u, v) and \
                         d >= ntdk.NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, self._equal_search_limit, True):

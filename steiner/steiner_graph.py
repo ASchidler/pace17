@@ -4,6 +4,7 @@ import steiner_approximation as sa
 from collections import defaultdict
 from heapq import heappop, heappush
 
+
 class SteinerGraph:
 
     def __init__(self):
@@ -310,7 +311,6 @@ class SteinerGraph:
 
         return self._restricted_lengths[t].setdefault(n, maxint)
 
-    # TODO: Test and use
     def find_restricted_closest(self, n):
         scanned = {}
         visited = set()

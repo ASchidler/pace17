@@ -2,7 +2,7 @@ class SetStorage:
     """A storage for sets that can quickly retrieve disjoint sets for a given set"""
 
     # Empty since it will be overridden
-    def add(self, set_id):
+    def append(self, set_id):
         """Adds a value to the collection"""
         pass
 
@@ -16,7 +16,7 @@ class SetStorage:
         """ Adds the first value. Additional checks are skipped"""
         self.initialized = True
         self._nodes[0] = set_id
-        self.add = self._other_add
+        self.append = self._other_add
 
     def _other_add(self, set_id):
         """ Adds every value but the first and restructures collection as needed"""
@@ -81,7 +81,7 @@ class DebuggingSetStorage(SetStorage):
     def __init__(self, cnt):
         self._check = []
         SetStorage.__init__(self, cnt)
-        self.add = self._initial_add
+        self.append = self._initial_add
 
     def _health_check(self, n_id, bit_set, lvl):
         """ Checks if the position of the values in the tree is valid"""

@@ -26,7 +26,7 @@ class MstHeuristic:
         # Find minimum pairwise distance
         min_val = []
 
-        for (t, l) in self.steiner.closest_terminals[n]:
+        for (t, l) in self.steiner.get_closest(n):
             if t in ts:
                 min_val.append(l)
 
