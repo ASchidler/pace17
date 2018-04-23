@@ -35,7 +35,7 @@ class Solver2k:
         length = steiner.get_lengths
 
         for n in self.steiner.graph.nodes:
-            self.labels[n] = st.SetStorage(len(self.terminals))
+            self.labels[n] = [] #st.SetStorage(len(self.terminals))
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
@@ -100,7 +100,7 @@ class Solver2k:
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
-        lbl = self.labels[n].find_all
+#        lbl = self.labels[n].find_all
         cst = self.costs[n]
         heuristic = self.heuristic
         prune = self.prune
@@ -108,22 +108,23 @@ class Solver2k:
         q = self.queue
         push = heapq.heappush
         prev_h = cst[n_set][4]
+#TODO: Fix label store (instance 131 is creating problems)
+        for other_set in self.labels[n]:# lbl(n_set):
+            if (n_set & other_set) == 0:
+                # Set union
+                combined = n_set | other_set
 
-        for other_set in lbl(n_set):
-            # Set union
-            combined = n_set | other_set
+                o_cost = cst[other_set][0]
+                total = n_cost + o_cost
+                combined_cost = cst[combined]
 
-            o_cost = cst[other_set][0]
-            total = n_cost + o_cost
-            combined_cost = cst[combined]
+                if total < combined_cost[0]:
+                    h = heuristic(n, combined)
+                    h = max(h, prev_h - o_cost)
+                    cst[combined] = (total, False, other_set, True, h)
 
-            if total < combined_cost[0]:
-                h = heuristic(n, combined)
-                h = max(h, prev_h - o_cost)
-                cst[combined] = (total, False, other_set, True, h)
-
-                if total + h <= approx and not prune(n, n_set, total, other_set):
-                    push(q, (total + h, combined * -1, n))
+                    if total + h <= approx and not prune(n, n_set, total, other_set):
+                        push(q, (total + h, combined * -1, n))
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
