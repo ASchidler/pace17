@@ -18,6 +18,7 @@ class SteinerGraph:
         self._radius = None
         self._restricted_lengths = {}
         self._restricted_closest = None
+        self.lower_bound = 0
 
         self._dist_validity = -2
         self._steiner_validity = -2
