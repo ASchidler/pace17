@@ -6,8 +6,7 @@ import steiner_approximation as sa
 from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex
 from reducer import Reducer
-from collections import deque
-
+from collections import deque, defaultdict
 
 class DualAscent:
     good_roots = deque(maxlen=10)
@@ -145,6 +144,7 @@ class DualAscent:
             steiner._approximation = ub
 
         # Reduce graph
+        steiner.lower_bound = results[0][0]
         for c_bnd, c_g, c_root in results:
             self.reduce_graph(steiner, c_g, c_bnd, c_root)
 
@@ -290,7 +290,7 @@ class DualAscent:
     def find_new_from_sol(self, steiner, solutions):
         """Combines (unoptimal) steiner trees into a new solution"""
         red = Reducer(self.reducers(), run_limit=5)
-        alpha = {(u, v): 0 for (u, v) in steiner.graph.edges}
+        alpha = defaultdict(lambda: 0)
         dg = sg.SteinerGraph()
         dg.terminals = set(steiner.terminals)
 
@@ -327,7 +327,7 @@ class DualAscent:
     def find_new(self, steiner, results):
         """Combines solution graphs into a new solution"""
         red = Reducer(self.reducers(), run_limit=5)
-        alpha = {(u, v): set() for (u, v) in steiner.graph.edges}
+        alpha = defaultdict(set)
         dg = sg.SteinerGraph()
         dg.terminals = {x for x in steiner.terminals}
 
@@ -336,7 +336,8 @@ class DualAscent:
             pths = single_source_dijkstra_path(g, r, cutoff=1)
             for t in (t for t in steiner.terminals if t != r):
                 for i in range(1, len(pths[t])):
-                    u, v = min(pths[t][i-1], pths[t][i]), max(pths[t][i-1], pths[t][i])
+                    u, v = pths[t][i-1], pths[t][i]
+                    u, v = min(u, v), max(u, v)
                     alpha[(u, v)].add(r)
                     if not dg.graph.has_edge(u, v):
                         dg.add_edge(u, v, steiner.graph[u][v]['weight'])
