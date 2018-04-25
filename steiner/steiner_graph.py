@@ -75,12 +75,8 @@ class SteinerGraph:
 
     def get_approximation(self):
         """ Returns an approximation that can be used as an upper bound"""
-        if self._approximation is None:
+        if self._approximation is None or self._approx_validity != 0:
             self._approximation = sa.SteinerApproximation(self)
-        elif self._approx_validity != 0:
-            new_approx = sa.SteinerApproximation(self)
-            if new_approx < self._approximation.cost:
-                self._approximation = new_approx
 
         self._approx_validity = 0
 
