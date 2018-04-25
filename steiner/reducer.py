@@ -46,7 +46,7 @@ class Reducer:
 
             g.reset_all()
 
-            if not limit_fulfilled or run_num == self._run_limit:
+            if run_num > 1 and (not limit_fulfilled or run_num == self._run_limit):
                 break
 
             run_num += 1
