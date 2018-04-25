@@ -18,6 +18,7 @@ class NtdkReduction:
         if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
             return 0
 
+        change = False
         if self._only_last and not last_run:
             return 0
 
@@ -81,9 +82,11 @@ class NtdkReduction:
                             if steiner.add_edge(n1, n2, c1 + c2):
                                 self._removed[(n1, n2, c1 + c2)] = [(n, n1, c1), (n, n2, c2)]
                     steiner.remove_node(n)
+                    change = True
 
         result = track - len(steiner.graph.edges)
         if result > 0:
+        if change:
             steiner.invalidate_approx(-2)
 
         return result
