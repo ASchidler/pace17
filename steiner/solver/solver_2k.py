@@ -65,11 +65,14 @@ class Solver2k:
             old_cost, s, n = heapq.heappop(self.queue)
             s *= -1
 
+            if self.max_set in self.costs[self.root_node]:
+                print "Connected to root {}".format(self.costs[self.root_node][self.max_set][0])
+
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
             if not n_cost[1]:
                 # Mark permanent
-                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3], n_cost[4])
+                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
                 self.labels[n].append(s)
 
                 self.process_neighbors(n, s, n_cost[0])
@@ -84,7 +87,7 @@ class Solver2k:
 
     def process_neighbors(self, n, n_set, n_cost):
         nb = self.steiner.graph._adj
-        prev_h = self.costs[n][n_set][4]
+
         for other_node, dta in nb[n].items():
             other_node_cost = self.costs[other_node][n_set]
 
@@ -93,8 +96,7 @@ class Solver2k:
                 # Store costs. The second part of the tuple is backtracking info.
 
                 h = self.heuristic(other_node, n_set)
-                h = max(h, prev_h - dta['weight'])
-                self.costs[other_node][n_set] = (total, False, n, False, h)
+                self.costs[other_node][n_set] = (total, False, n, False)
                 if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
                     heapq.heappush(self.queue, (total + h, n_set * -1, other_node))
 
@@ -107,7 +109,7 @@ class Solver2k:
         approx = self.steiner.get_approximation().cost
         q = self.queue
         push = heapq.heappush
-        prev_h = cst[n_set][4]
+
 #TODO: Fix label store (instance 131 is creating problems)
         for other_set in self.labels[n]:# lbl(n_set):
             if (n_set & other_set) == 0:
@@ -120,8 +122,7 @@ class Solver2k:
 
                 if total < combined_cost[0]:
                     h = heuristic(n, combined)
-                    h = max(h, prev_h - o_cost)
-                    cst[combined] = (total, False, other_set, True, h)
+                    cst[combined] = (total, False, other_set, True)
 
                     if total + h <= approx and not prune(n, n_set, total, other_set):
                         push(q, (total + h, combined * -1, n))
@@ -260,5 +261,5 @@ class SolverCosts(dict):
             return 0, [], None, False, 0
 
         # Otherwise infinity
-        return self.max_val, [], None, False, 0
+        return self.max_val, [], None, False
 
