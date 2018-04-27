@@ -1,4 +1,7 @@
 
+def create_queue(d):
+    return [], {}, d
+
 def _bubble_up(ls, e, d, idx):
     n_val = ls[idx]
 
