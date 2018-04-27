@@ -1,5 +1,5 @@
 from time import time
-
+import networkx as nx
 
 class DebugReduction:
     def __init__(self, r):
@@ -11,6 +11,9 @@ class DebugReduction:
 
         print "Reduced {} needing {} in {}" \
             .format(cnt, str(time() - tm), str(self._r.__class__))
+        # cps = nx.biconnected_components(g.graph)
+        # for cp in cps:
+        #     print "BC {} nodes".format(len(cp))
 
         return cnt
 

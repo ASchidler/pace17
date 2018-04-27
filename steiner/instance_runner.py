@@ -20,6 +20,9 @@ def process_file(filename, solve, apply_reductions):
 
     f = open(filename, "r")
     steinerx = pp.parse_pace_file(f)
+    cps = nx.biconnected_components(steinerx.graph)
+    for cp in cps:
+        print "BC {} nodes".format(len(cp))
     c_finder = cf.ComponentFinder()
 
     components = [steinerx]
@@ -35,6 +38,9 @@ def process_file(filename, solve, apply_reductions):
 
         if apply_reductions:
             reducer.reduce(steiner)
+
+        for cp in cps:
+            print "BC {} nodes".format(len(cp))
 
         if solve:
             steiner._lengths = {}
@@ -87,20 +93,25 @@ def process_file(filename, solve, apply_reductions):
 
 
 # Instances that are not solvable yet
-hard_instances = [161, 163, 165, 171, 173, 187, 193, 195]
+hard_instances = [161, 163, 165, 171, 173, 193, 195]
+# Solvable but at the upper end of the timelimit
+long_runtime = [167, 187, 197, 199]
 # All other instances are solvable in a feasible amount of time
-easy_instances = [i for i in xrange(1, 200) if i not in hard_instances]
-long_runtime = [167, 197, 199]
-solved_but_not_optil = [169, 197, 199]
-lst = list(set(easy_instances))
+easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_runtime]
+solved_but_not_optil = [197, 199]
+lst = list(easy_instances)
+lst.extend(long_runtime)
 # lst.extend(reversed(hard_instances))
 
 # Error 131 with mst heuristic
-# 173 small in no reductions, 187 large almost no reductions
-# 171 small, few nodes reduced,
-# 167 hard to crack reasonable reduction
-# 167, 171, 173, ?193
-for i in [197]:# (x for x in lst if x > 189): # hard_instances:
+# 16x 0640/40896, almost no reductions
+# 171 0243/01215, few reductions => Easy with high NTDK limit
+# 173 0243/01215, no reductions,
+# 187 1244/02474, almost no reductions
+# 193 0600/01200, almost no reduction => High NTDK and search limit reduces whole graph
+# 195 0550/05000, no reductions
+# 151, 113, 181, 187, 199
+for i in [181]:# (x for x in lst if x > 189): # hard_instances:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)

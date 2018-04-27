@@ -7,16 +7,17 @@ from networkx import minimum_spanning_edges, Graph
 class NtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self, restricted, search_limit=40, only_last=False):
+    def __init__(self, restricted, search_limit=40, only_last=False, max_degree=4):
         self._removed = {}
         self._restricted = restricted
         self._done = False
         self._search_limit = search_limit
         self._only_last = only_last
+        self._max_degree = max_degree
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
-            return 0
+        # if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
+        #     return 0
 
         change = False
         if self._only_last and not last_run:
@@ -29,7 +30,7 @@ class NtdkReduction:
         nbs = steiner.graph._adj
 
         for n in list(steiner.graph.nodes):
-            if n not in steiner.terminals and 2 < steiner.graph.degree(n) <= 4:
+            if n not in steiner.terminals and 2 < steiner.graph.degree(n) <= self._max_degree:
                 nb = nbs[n].items()
                 total_edge_sum = sum(dta['weight'] for (x, dta) in nb)
 
@@ -49,26 +50,46 @@ class NtdkReduction:
                     # Sort for access to dist dict
                     nb.sort(key=lambda x: x[0])
 
-                    # Powersets
-                    # Set num will be the index of the neighbor not to include, plus -1 for the full set
-                    # Only works for degree 4!
-                    for set_num in xrange(-1, len(nb)):
-                        power_graph = Graph()
-                        edge_sum = 0
+                    # The case for 4 is slightly optimized
+                    if len(nb) == 4:
+                        # Powersets
+                        # Set num will be the index of the neighbor not to include, plus -1 for the full set
+                        # Only works for degree 4!
+                        for set_num in xrange(-1, len(nb)):
+                            power_graph = Graph()
+                            edge_sum = 0
 
-                        for i in xrange(0, len(nb)):
-                            if i != set_num:
-                                n1, dta = nb[i]
-                                edge_sum += dta['weight']
+                            for i in xrange(0, len(nb)):
+                                if i != set_num:
+                                    n1, dta = nb[i]
+                                    edge_sum += dta['weight']
 
-                                for j in xrange(i + 1, len(nb)):
-                                    if j != set_num:
-                                        n2 = nb[j][0]
-                                        w = dist[(n1, n2)]
-                                        power_graph.add_edge(n1, n2, weight=w)
+                                    for j in xrange(i + 1, len(nb)):
+                                        if j != set_num:
+                                            n2 = nb[j][0]
+                                            w = dist[(n1, n2)]
+                                            power_graph.add_edge(n1, n2, weight=w)
 
-                        mst_sum = sum(d['weight'] for (u, v, d) in minimum_spanning_edges(power_graph))
-                        true_for_all = true_for_all and mst_sum <= edge_sum
+                            mst_sum = sum(d['weight'] for (u, v, d) in minimum_spanning_edges(power_graph))
+                            true_for_all = true_for_all and mst_sum <= edge_sum
+                    else:
+                        for power_set in xrange(1, 1 << len(nb)):
+                            power_graph = Graph()
+                            edge_sum = 0
+                            if bin(power_set).count("1") >= 3:
+                                for i in xrange(0, len(nb)):
+                                    if ((1 << i) & power_set) > 0:
+                                        n1, dta = nb[i]
+                                        edge_sum = edge_sum + dta['weight']
+
+                                        for j in xrange(i + 1, len(nb)):
+                                            if ((1 << j) & power_set) > 0:
+                                                n2 = nb[j][0]
+                                                w = dist[(n1, n2)]
+                                                power_graph.add_edge(n1, n2, weight=w)
+
+                                mst_sum = sum(d['weight'] for (u, v, d) in minimum_spanning_edges(power_graph))
+                                true_for_all = true_for_all and mst_sum <= edge_sum
 
                         if not true_for_all:
                             break
@@ -85,7 +106,6 @@ class NtdkReduction:
                     change = True
 
         result = track - len(steiner.graph.edges)
-        if result > 0:
         if change:
             steiner.invalidate_approx(-2)
 
