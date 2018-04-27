@@ -163,6 +163,8 @@ class SteinerApproximation:
             # This may happen with an outdated approximation
             if not any(x in g.terminals for x in self.tree.nodes):
                 return None
+            if not self.tree.has_node(self._root):
+                return None
 
             nb = self.tree._adj
             queue = [(0, self._root)]

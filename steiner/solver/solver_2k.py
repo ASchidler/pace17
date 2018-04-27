@@ -1,4 +1,3 @@
-import heapq
 from itertools import chain
 from sys import maxint
 from networkx import Graph
@@ -36,7 +35,7 @@ class Solver2k:
         length = steiner.get_lengths
 
         for n in self.steiner.graph.nodes:
-            self.labels[n] = [] #st.SetStorage(len(self.terminals))
+            self.labels[n] = st.SetStorage(len(self.terminals))
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
@@ -67,13 +66,13 @@ class Solver2k:
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
-            if not n_cost[1]:
-                # Mark permanent
-                self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
-                self.labels[n].append(s)
+            # Mark permanent
+            # TODO: Really need this?
+            self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
+            self.labels[n].append(s)
 
-                self.process_neighbors(n, s, n_cost[0])
-                self.process_labels(n, s, n_cost[0])
+            self.process_neighbors(n, s, n_cost[0])
+            self.process_labels(n, s, n_cost[0])
 
         # Process result
         ret = Graph()
@@ -99,30 +98,27 @@ class Solver2k:
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
-#        lbl = self.labels[n].find_all
+        lbl = self.labels[n].find_all
         cst = self.costs[n]
         heuristic = self.heuristic
         prune = self.prune
         approx = self.steiner.get_approximation().cost
         q = self.queue
-        push = heapq.heappush
 
-#TODO: Fix label store (instance 131 is creating problems)
-        for other_set in self.labels[n]:# lbl(n_set):
-            if (n_set & other_set) == 0:
-                # Set union
-                combined = n_set | other_set
+        for other_set in lbl(n_set):
+            # Set union
+            combined = n_set | other_set
 
-                o_cost = cst[other_set][0]
-                total = n_cost + o_cost
-                combined_cost = cst[combined]
+            o_cost = cst[other_set][0]
+            total = n_cost + o_cost
+            combined_cost = cst[combined]
 
-                if total < combined_cost[0]:
-                    h = heuristic(n, combined)
-                    cst[combined] = (total, False, other_set, True)
+            if total < combined_cost[0]:
+                h = heuristic(n, combined)
+                cst[combined] = (total, False, other_set, True)
 
-                    if total + h <= approx and not prune(n, n_set, total, other_set):
-                        dh.enqueue(q, total + h, (combined, n))
+                if total + h <= approx and not prune(n, n_set, total, other_set):
+                    dh.enqueue(q, total + h, (combined, n))
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
