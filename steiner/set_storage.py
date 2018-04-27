@@ -9,7 +9,7 @@ class SetStorage:
     def __init__(self, cnt):
         self.initialized = False
         self._nodes = {}
-        self.add = self._first_add
+        self.append = self._first_add
         self.cnt = cnt + 1
 
     def _first_add(self, set_id):
@@ -33,6 +33,8 @@ class SetStorage:
                 placed = True
             # Determine if the current value of the node or the new value is placed in the current node
             else:
+                if nodes[current_node_id] == set_id:
+                    break
                 # Place the value
                 terminal = 1 << current_level
                 current_level += 1
@@ -103,7 +105,7 @@ class DebuggingSetStorage(SetStorage):
         """Used to override the initial add in the base class"""
         self._check.append(set_id)
         self._first_add(set_id)
-        self.add = self._add
+        self.append = self._add
 
     def _add(self, set_id):
         """Used to override the other add in the base class"""
