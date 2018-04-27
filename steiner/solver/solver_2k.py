@@ -4,6 +4,7 @@ from networkx import Graph
 import set_storage as st
 import d_heap as dh
 import bounded_structures as bs
+import reduction.dual_ascent as da
 
 class Solver2k:
     def __init__(self, steiner, terminals, heuristics):
@@ -12,16 +13,16 @@ class Solver2k:
         self.terminals = list(terminals)
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
-        target_root = steiner.get_approximation().get_root(self.steiner)
+        target_root = da.DualAscent.root
+        if target_root is None or not steiner.graph.has_node(target_root):
+            target_root = steiner.get_approximation().get_root(self.steiner)
         self.root_node = self.terminals.pop(self.terminals.index(target_root)) \
             if target_root is not None else self.terminals.pop()
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
-        self.prune_smt = {}
         self.heuristics = heuristics
         self.labels = list([None] * (self.max_node + 1))
-        self.result = None
 
         if steiner.get_approximation().cost <= 5000:
             self.queue = bs.create_queue(steiner.get_approximation().cost)
@@ -60,11 +61,10 @@ class Solver2k:
         if len(self.steiner.terminals) == 1:
             ret = Graph()
             ret.add_node(list(self.steiner.terminals)[0])
-            self.result = ret, 0
             return ret, 0
 
         # Initialize queue with partial solutions, containing only the terminals themselves
-        # Queue format is: (estimated_costs, node, set_id)
+        # The queue is keyed by node and terminal subset
         for terminal_id in range(0, len(self.terminals)):
             self.push(self.queue, 0, (1 << terminal_id, self.terminals[terminal_id]))
 
@@ -73,24 +73,21 @@ class Solver2k:
         max_set = self.max_set
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
-        while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
-            s, n = dh.dequeue(self.queue)
+        while True:
+            s, n = pop(self.queue)
 
-            # Make sure it has not yet been processed (elements may be queued multiple times)
-            n_cost = self.costs[n][s]
-            # Mark permanent
-            # TODO: Really need this?
-            self.costs[n][s] = (n_cost[0], True, n_cost[2], n_cost[3])
+            if s == max_set and n == root_node:
+                break
+
+            n_cost = self.costs[n][s][0]
             self.labels[n].append(s)
-
-            self.process_neighbors(n, s, n_cost[0])
-            self.process_labels(n, s, n_cost[0])
+            self.process_neighbors(n, s, n_cost)
+            self.process_labels(n, s, n_cost)
 
         # Process result
         ret = Graph()
         total = self.backtrack(self.root_node, self.max_set, ret)
 
-        self.result = ret, total
         return ret, total
 
     def process_neighbors(self, n, n_set, n_cost):
@@ -102,9 +99,9 @@ class Solver2k:
             total = n_cost + dta['weight']
             if total < other_node_cost[0]:
                 # Store costs. The second part of the tuple is backtracking info.
-
+                self.costs[other_node][n_set] = (total, n, False)
                 h = self.heuristic(other_node, n_set)
-                self.costs[other_node][n_set] = (total, False, n, False)
+
                 if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
                     self.push(self.queue, total + h, (n_set, other_node))
 
@@ -118,6 +115,7 @@ class Solver2k:
         q = self.queue
         push = self.push
 
+        # Union result with all existing labels that are disjoint
         for other_set in lbl(n_set):
             # Set union
             combined = n_set | other_set
@@ -127,8 +125,10 @@ class Solver2k:
             combined_cost = cst[combined]
 
             if total < combined_cost[0]:
+                # The costs could be set inside the next conditional. This would maybe save some memory, but since
+                # this is a bound before executing the heuristic the next time round, the bound is preferable
                 h = heuristic(n, combined)
-                cst[combined] = (total, False, other_set, True)
+                cst[combined] = (total, other_set, True)
 
                 if total + h <= approx and not prune(n, n_set, total, other_set):
                     push(q, total + h, (combined, n))
@@ -235,17 +235,17 @@ class Solver2k:
         # or the previous to sets (share the same node). Or nothing if it is a leaf
         entry = self.costs[n][s]
 
-        if entry[2] is None:
+        if entry[1] is None:
             return 0
 
-        if not entry[3]:
-            n2 = entry[2]
+        if not entry[2]:
+            n2 = entry[1]
             w = self.steiner.graph[n][n2]['weight']
             ret.add_edge(n, n2, weight=w)
             return w + self.backtrack(n2, s, ret)
         else:
-            tmp = self.backtrack(n, entry[2], ret)
-            tmp = tmp + self.backtrack(n, s ^ entry[2], ret)
+            tmp = self.backtrack(n, entry[1], ret)
+            tmp = tmp + self.backtrack(n, s ^ entry[1], ret)
             return tmp
 
     def to_list(self, set_id):
@@ -264,7 +264,7 @@ class SolverCosts(dict):
 
     def __missing__(self, key):
         if key == self.terminal_id:
-            return 0, [], None, False, 0
+            return 0, None, False, 0
 
         # Otherwise infinity
-        return self.max_val, [], None, False
+        return self.max_val, None, False
