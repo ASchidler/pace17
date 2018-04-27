@@ -125,7 +125,7 @@ class DualAscent:
 
         # Tries to recombine solution graphs into a better solution
         if solution_rec_limit > 0:
-            solution_rec_idx = list(self.index_generator(0, len(results), 5))
+            solution_rec_idx = list(self.index_generator(0, len(results), solution_rec_limit))
             solution_pool.extend(self.find_new(steiner, [results[i] for i in idx]) for idx in solution_rec_idx)
 
         # Tries to find better graphs be pruning the solutions

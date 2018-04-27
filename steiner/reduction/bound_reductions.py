@@ -196,7 +196,7 @@ class BoundGraphReduction:
         self._runs = 0
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 2 or cnt > 0 or (not self.enabled and not last_run):
+        if len(steiner.terminals) < 2 or (not self.enabled and not last_run):
             return 0
 
         self._runs += 1
