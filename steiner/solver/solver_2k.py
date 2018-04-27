@@ -3,6 +3,7 @@ from itertools import chain
 from sys import maxint
 from networkx import Graph
 import set_storage as st
+import d_heap as dh
 
 
 class Solver2k:
@@ -22,7 +23,7 @@ class Solver2k:
         self.heuristics = heuristics
         self.labels = list([None] * (self.max_node + 1))
         self.result = None
-        self.queue = []
+        self.queue = ([], {}, 16)
 
         # Pre calculate the IDs of the sets with just the terminal
         self.terminal_ids = {}
@@ -58,15 +59,11 @@ class Solver2k:
         # Initialize queue with partial solutions, containing only the terminals themselves
         # Queue format is: (estimated_costs, node, set_id)
         for terminal_id in range(0, len(self.terminals)):
-            heapq.heappush(self.queue, (0, (1 << terminal_id) * -1, self.terminals[terminal_id]))
+            dh.enqueue(self.queue, 0, (1 << terminal_id, self.terminals[terminal_id]))
 
         # Start algorithm, finish if the root node is added to the tree with all terminals
         while not (self.max_set in self.costs[self.root_node] and self.costs[self.root_node][self.max_set][1]):
-            old_cost, s, n = heapq.heappop(self.queue)
-            s *= -1
-
-            if self.max_set in self.costs[self.root_node]:
-                print "Connected to root {}".format(self.costs[self.root_node][self.max_set][0])
+            s, n = dh.dequeue(self.queue)
 
             # Make sure it has not yet been processed (elements may be queued multiple times)
             n_cost = self.costs[n][s]
@@ -98,7 +95,7 @@ class Solver2k:
                 h = self.heuristic(other_node, n_set)
                 self.costs[other_node][n_set] = (total, False, n, False)
                 if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
-                    heapq.heappush(self.queue, (total + h, n_set * -1, other_node))
+                    dh.enqueue(self.queue, total + h, (n_set, other_node))
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
@@ -125,7 +122,7 @@ class Solver2k:
                     cst[combined] = (total, False, other_set, True)
 
                     if total + h <= approx and not prune(n, n_set, total, other_set):
-                        push(q, (total + h, combined * -1, n))
+                        dh.enqueue(q, total + h, (combined, n))
 
     def heuristic(self, n, set_id):
         if len(self.heuristics) == 0:
@@ -262,4 +259,3 @@ class SolverCosts(dict):
 
         # Otherwise infinity
         return self.max_val, [], None, False
-

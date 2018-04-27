@@ -5,12 +5,11 @@ def _bubble_up(ls, e, d, idx):
     # Bubble value up the tree
     while idx > 0:
         n_idx = (idx - 1) / d
-        tg = ls[n_idx]
 
         # if current node is bigger, swap
-        if tg[0] > n_val[0]:
-            ls[idx] = tg
-            e[tg[1]] = idx
+        if ls[n_idx][0] > n_val[0]:
+            ls[idx] = ls[n_idx]
+            e[ls[n_idx][1]] = idx
             idx = n_idx
             continue
         break
@@ -43,6 +42,7 @@ def dequeue(queue):
     # Swap last und first value. Remove last value
     val = ls[0]
     n_val = ls.pop()
+    e.pop(val[1])
     if not ls:
         return val[1]
 
@@ -67,7 +67,7 @@ def dequeue(queue):
 
         # Move minimum item up one level
         ls[idx] = ls[c_idx]
-        e[ls[c_idx][1]] = c_idx
+        e[ls[c_idx][1]] = idx
         idx = c_idx
         child = d * idx + 1
 
@@ -77,5 +77,4 @@ def dequeue(queue):
     e[n_val[1]] = idx
     _bubble_up(ls, e, d, idx)
 
-    e.pop(val[1])
     return val[1]
