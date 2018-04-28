@@ -22,7 +22,7 @@ class DebugReduction:
 
 
 class Reducer:
-    def __init__(self, reducers, threshold=0.001, run_limit=0):
+    def __init__(self, reducers, threshold=0.05, run_limit=0):
         self._reducers = reducers
         self._threshold = threshold
         self._run_limit = run_limit
@@ -49,7 +49,7 @@ class Reducer:
 
             g.reset_all()
 
-            if run_num > 1 and (not limit_fulfilled or run_num == self._run_limit):
+            if (run_num > 2 or cnt_changes == 0) and (not limit_fulfilled or run_num == self._run_limit):
                 break
 
             run_num += 1
