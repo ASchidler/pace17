@@ -105,13 +105,11 @@ lst.extend(long_runtime)
 
 # Error 131 with mst heuristic
 # 16x 0640/40896, almost no reductions
-# 171 0243/01215, few reductions => Easy with high NTDK limit
-# 173 0243/01215, no reductions,
-# 187 1244/02474, almost no reductions
-# 193 0600/01200, almost no reduction => High NTDK and search limit reduces whole graph
-# 195 0550/05000, no reductions
-# 151, 113, 181, 187, 199
-for i in [181]:# (x for x in lst if x > 189): # hard_instances:
+# 171 0243/01215, few reductions, unit weights
+# 173 0243/01215, no reductions, most edges weight 1, some 2
+# 193 0600/01200, almost no reduction
+# 195 0550/05000, no reductions, unit weights
+for i in lst: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)

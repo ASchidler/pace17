@@ -6,7 +6,6 @@ import solver.heuristics.da_heuristic as da
 
 """Used as a configuration for the whole steiner solving suite"""
 
-# TODO: B&B implementation branching on node of highest degree in best solution with reductions
 def reducers():
     """Creates the set of reducing preprocessing tests"""
     return [

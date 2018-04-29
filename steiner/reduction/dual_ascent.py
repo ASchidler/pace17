@@ -8,7 +8,10 @@ from preselection import short_links, nearest_vertex
 from reducer import Reducer
 from collections import deque, defaultdict
 
+
 class DualAscent:
+    """A reduction a that uses dual ascent on the LP relaxation to estimate a lower bound"""
+
     good_roots = deque(maxlen=10)
 
     def __init__(self, run_once=False, quick_run=False, start_at=1, run_every=1, run_last=True):
@@ -47,7 +50,7 @@ class DualAscent:
         if not do_run:
             return 0
 
-        # parameters
+        # parameters, adapt to instance
         solution_limit = solution_rec_limit = prune_limit = prune_rec_limit = 0
 
         if not (len(steiner.graph.edges) / len(steiner.graph.nodes) > 3) and (self._quick_run or self._run_once):
@@ -78,7 +81,7 @@ class DualAscent:
         elif len(steiner.graph.nodes) < 3000 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
             solution_limit = 10
             solution_rec_limit = 5
-            prune_limit = 2
+            prune_limit = 3
             prune_rec_limit = 1
         # Dense graph
         elif len(steiner.graph.edges) / len(steiner.graph.nodes) > 3:
@@ -93,12 +96,14 @@ class DualAscent:
             prune_limit = 2
             prune_rec_limit = 1
 
+        # Init
         ts = list(steiner.terminals)
         track = len(steiner.graph.edges)
         solution_limit = min(solution_limit, len(ts))
         target_roots = set()
         seed = self.runs
 
+        # Distribute the root selection to not choose the same again and again
         while DualAscent.good_roots and len(target_roots) <= solution_limit / 2:
             el = DualAscent.good_roots.pop()
             if steiner.graph.has_node(el):
@@ -115,10 +120,15 @@ class DualAscent:
             seed = el
             target_roots.add(el)
 
-        target_roots = (ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit))
+        target_roots = [ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit)]
+        results = []
+        algs = [self.calc, self.calc3, self.calc2]
 
         # Generate solutions
-        results = [self.calc(steiner.graph, root, steiner.terminals) for root in target_roots]
+        for i in range(0, len(target_roots)):
+            r = target_roots[i]
+            results.append(algs[i % 3](steiner.graph, r, steiner.terminals))
+        #results = [self.calc3(steiner.graph, root, steiner.terminals) for root in target_roots]
         results.sort(key=lambda x: x[0], reverse=True)
 
         solution_pool = []
@@ -163,11 +173,13 @@ class DualAscent:
         return track
 
     def reduce_graph(self, steiner, g, bnd, root):
+        """Removes nodes that violate the upper bound using the dual ascent solution as a lower bound"""
         if len(steiner.terminals) <= 3:
             return
 
         pred = g._pred
         root_dist = single_source_dijkstra_path_length(g, root)
+        # That would be correct according to SCIP jack paper, but produces incorrect results!
         # for (n2, dta) in pred.items():
         #     g.remove_edge(n2, root)
         vor = self.voronoi(g, [t for t in steiner.terminals if t != root])
@@ -190,6 +202,8 @@ class DualAscent:
                                     edges.add((n2, n))
 
     def index_generator(self, start, end, count):
+        """Produces count many numbers distributed between start and end"""
+
         gap = end - start
         c_count = 1
 
@@ -395,7 +409,7 @@ class DualAscent:
 
     @staticmethod
     def calc(g, root, ts):
-        """ Calculates a lower bound and an updated graph based on the dual ascent algorithm"""
+        """ Performs the dual ascent. This is the slowest of the 3 implementations but produces the best results """
 
         dg = g.to_directed()
         main_cut = set()
@@ -554,11 +568,15 @@ class DualAscent:
             for (u, v, c) in edges:
                 nb[u][v]['weight'] -= min_cost
                 if c == min_cost:
+                    if not t_found and v in active:
+                        active.remove(t)
+                        t_found = True
                     # -1 because the connecting edge is now inside the cut
                     new_in += len(nb[v]) - 1
 
             # Add to queue. Priority is depending on incoming edges
-            push(queue, (new_in + len(edges), t))
+            if not t_found:
+                push(queue, (new_in + len(edges), t))
 
         return limit, dg, root
 
@@ -604,10 +622,10 @@ class DualAscent:
                 continue
 
             # Find minimum cost and remove edges that are inside the cut
-            edges = [(u, v, c) for (u, v, c) in edges if v not in cut]
+            edges = {(u, v, c) for (u, v, c) in edges if v not in cut}
 
-            # Check if really the smallest element with a 25% tolerance
-            if queue and (len(edges) > (1.00 * queue[0][0])):
+            # Check if really the smallest element
+            if queue and (len(edges) > queue[0][0]):
                 push(queue, (len(edges), t))
                 continue
 
@@ -616,6 +634,7 @@ class DualAscent:
 
             # Update weights
             new_in = 0
+            in_edges = set()
             for (u, v, c) in edges:
                 nb[u][v]['weight'] -= min_cost
 
@@ -626,13 +645,18 @@ class DualAscent:
 
                     cut.add(v)
                     # -1 because the connecting edge is now inside the cut
-                    new_in += len(nb[v]) - 1
+                    new_in += len(nb[v])
+                    in_edges.update(((v, x) for (x, d) in nb[v].items() if d['weight'] != 0 and x not in cut))
+                else:
+                    if v not in cut:
+                        in_edges.add((u, v))
+                    new_in += 1
 
-            real_in = len({(u, v) for u in cut for (v, dta) in nb[u].items() if v not in cut and dta['weight'] != 0})
-
+            #real_in = len({(u, v) for u in cut for (v, dta) in nb[u].items() if v not in cut and dta['weight'] != 0})
+            #print len(in_edges) - real_in
             # Add to queue. Priority is depending on incoming edges
             if not t_found:
-                push(queue, (real_in, t))
+                push(queue, (len([(u, v) for (u, v) in in_edges if v not in cut]), t))
 
         return limit, dg, root
 
@@ -640,5 +664,3 @@ class DualAscent:
 DualAscent.root = None
 DualAscent.graph = None
 DualAscent.value = None
-
-# TODO: Optimize graph class

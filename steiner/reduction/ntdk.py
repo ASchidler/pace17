@@ -16,8 +16,8 @@ class NtdkReduction:
         self._max_degree = max_degree
 
     def reduce(self, steiner, cnt, last_run):
-        # if len(steiner.graph.edges) / len(steiner.graph.nodes) >= 3:
-        #     return 0
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
+            return 0
 
         change = False
         if self._only_last and not last_run:

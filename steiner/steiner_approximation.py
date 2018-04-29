@@ -118,7 +118,7 @@ class SteinerApproximation:
     good_roots = deque(maxlen=10)
 
     """Represents an approximation algorithm for steiner trees for an upper bound. It applies repeated shortest paths"""
-    def __init__(self, steiner, optimize=True, limit=20):
+    def __init__(self, steiner, optimize=True, limit=20, starter=None):
         self.cost = maxint
         self.tree = None
         self._root = None
@@ -129,7 +129,7 @@ class SteinerApproximation:
 
         # Select roots, based on previous good roots
         limit = min(limit, len(steiner.terminals))
-        target_roots = set()
+        target_roots = {starter} if starter is not None else set()
         seed = 1
         while SteinerApproximation.good_roots and len(target_roots) <= limit / 2:
             el = SteinerApproximation.good_roots.pop()

@@ -16,6 +16,9 @@ import networkx as nx
 import solver.solver_2k as kk
 import d_heap as dh
 import random
+import solver.solver_pol as pol
+
+import bounded_structures as bs
 
 class DefaultingDict(dict):
     def __init__(self, dflt):
@@ -60,7 +63,7 @@ def build_voronoi(steiner):
     return lengths
 
 #[141, 149, 161, 163, 165, 167, 171, 173, 187, 193, 195]
-file_path = "..\instances\lowTerm\instance171.gr"
+file_path = "..\instances\lowTerm\instance187.gr"
 #171
 f = open(file_path, "r")
 steiner1 = pp.parse_pace_file(f)
@@ -68,6 +71,12 @@ f.close()
 f = open(file_path, "r")
 steiner2 = pp.parse_pace_file(f)
 f.close()
+#
+# nb = steiner1.graph._adj
+# for t in steiner1.terminals:
+#     m_c = min(d['weight'] for (_, d) in nb[t].items())
+#     print "t {} vs {}".format(len([n for (n, d) in nb[t].items() if d['weight'] == m_c]), len(nb[t].items()))
+#
 
 # tm = time.time()
 # result = build_voronoi(steiner2)
@@ -85,19 +94,59 @@ f.close()
 #         if result[t][n] != c:
 #             print "Error {}".format(result[t][n] - c)
 #
+
+#print pol.solve(steiner1)
+
 # ts = list(steiner1.terminals)
 # target_ts = [ts[i] for i in xrange(0, 5)]
 #
-# tm = time.time()
-# results2 = [da.DualAscent.calc_approx(steiner1.graph, t, ts, steiner1.get_approximation().tree) for t in target_ts]
-# print "Result 2 in {}".format(time.time() - tm)
+# set_size = 3
+# max_terminals = (1 << 5) - 1
+# set_pointers = [(1 << i) for i in xrange(0, set_size)]
+# finished = False
 #
-# tm = time.time()
-# results1 = [da.DualAscent.calc(steiner1.graph, t, ts) for t in target_ts]
-# print "Result 1 in {}".format(time.time() - tm)
+# offset = 0
+# length = 5
+# v = reduce(lambda x, y: x | y, ((1 << i) for i in xrange(0, set_size)))
 #
-# print "Total gap (higher is better for the new) {}".format(sum(results2[i][0] - results1[i][0] for i in range(0, len(results1))))
-# print "Max gap (higher is better for the new) {}".format(max(x for (x, _, _) in results2) - max(x for (x, _, _) in results1))
+# full_subset = (1 << set_size) - 1
+# subset = reduce(lambda x, y: x | y, ((1 << i) for i in xrange(0, set_size)))
+# while subset <= max_terminals:
+#     # Find mapping between enumeration and subsets
+#     mapping = {}
+#     cnt = 0
+#     for i in xrange(0, length):
+#         if (1 << i) & subset > 0:
+#             mapping[cnt] = (1 << i)
+#             cnt += 1
+#
+#     print "{0:05b}".format(subset)
+#     # Find decompositions
+#     # set_size - 1 since the subsets are symmetric
+#     for i in range(1, 1 << (set_size - 1)):
+#         s1 = reduce(lambda x, y: x | y, (mapping[j] for j in xrange(0, set_size) if ((1 << j) & i) > 0))
+#         s2 = subset ^ s1
+#         print "{0:b} {1:b}".format(s1, s2)
+#
+#     t = (subset | (subset - 1)) + 1
+#     subset = t | ((((t & -t) / (subset & -subset)) >> 1) - 1)
+#
+ts = list(steiner1.terminals)
+target_ts = [ts[i] for i in xrange(0, 5)]
+tm = time.time()
+results2 = [da.DualAscent.calc3(steiner1.graph, t, ts) for t in target_ts]
+print "Result 2 in {}".format(time.time() - tm)
+
+tm = time.time()
+results1 = [da.DualAscent.calc2(steiner1.graph, t, ts) for t in target_ts]
+print "Result 1 in {}".format(time.time() - tm)
+
+print "Total gap (higher is better for the new) {}".format(sum(results2[i][0] - results1[i][0] for i in range(0, len(results1))))
+max2, max1 = max(x for (x, _, _) in results2), max(x for (x, _, _) in results1)
+print "Max gap (higher is better for the new) 2: {} 1: {} Diff: {}".format(max2, max1, max2 - max1)
+
+
+print "Upper bound {}".format(steiner1.get_approximation().cost)
 #
 # # h = dah.DaHeuristic(steiner1)
 # h2 = bh.BndHeuristic(steiner1)
@@ -127,28 +176,38 @@ f.close()
 # print "Done {}".format(result.cost)
 
 #nx.find_cliques(steiner1.graph)
-
-rands = [random.randint(0, 1000000) for i in xrange(0, 100000)]
-tm = time.time()
-q = ([], {}, 16)
-
-[dh.enqueue(q, i, i) for i in rands]
-[dh.enqueue(q, i - random.randint(0, 100), i) for i in rands]
-#[dh.enqueue(q, 100000 - i, i) for i in reversed(xrange(0, 100000))]
-try:
-    while True:
-        print dh.dequeue(q)
-except IndexError:
-    pass
-print "Result 2 in {}".format(time.time() - tm)
-
-qp = []
-tm = time.time()
-[heappush(qp, [i, i]) for i in reversed(xrange(0, 100000))]
-[heappush(qp, [100000 - i, i]) for i in reversed(xrange(0, 100000))]
-try:
-    while True:
-        heappop(qp)
-except IndexError:
-    pass
-print "Result 1 in {}".format(time.time() - tm)
+#
+# rands = [random.randint(0, 100) for i in xrange(0, 100000)]
+# tm = time.time()
+# q = ([], {}, 16)
+#
+# [dh.enqueue(q, rands[i], i) for i in xrange(0, 100000)]
+# [dh.enqueue(q, random.randint(0, 10000), i) for i in xrange(0, 100000)]
+# try:
+#     while True:
+#         dh.dequeue(q)
+# except IndexError:
+#     pass
+# print "Result 2 in {}".format(time.time() - tm)
+#
+# qp = []
+# tm = time.time()
+# [heappush(qp, (rands[i], i)) for i in xrange(0, 100000)]
+# [heappush(qp, (random.randint(0, 10000), i)) for i in xrange(0, 100000)]
+# try:
+#     while True:
+#         heappop(qp)
+# except IndexError:
+#     pass
+# print "Result 1 in {}".format(time.time() - tm)
+#
+# bq = bs.create_queue(100)
+# [bs.enqueue(bq, rands[i], i) for i in xrange(0, 100000)]
+# [bs.enqueue(bq, random.randint(0, 10000), i) for i in xrange(0, 100000)]
+#
+# try:
+#     while True:
+#         bs.dequeue(bq)
+# except KeyError:
+#     pass
+# print "Result 3 in {}".format(time.time() - tm)
