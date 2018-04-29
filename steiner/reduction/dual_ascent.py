@@ -127,9 +127,9 @@ class DualAscent:
         # Generate solutions
         for i in range(0, len(target_roots)):
             r = target_roots[i]
-            results.append(algs[i % 2](steiner.graph, r, steiner.terminals))
-        #results = [self.calc3(steiner.graph, root, steiner.terminals) for root in target_roots]
-        #results.sort(key=lambda x: x[0], reverse=True)
+            results.append(algs[1](steiner.graph, r, steiner.terminals))
+
+        results.sort(key=lambda x: x[0], reverse=True)
 
         solution_pool = []
 
@@ -154,6 +154,7 @@ class DualAscent:
             steiner._approximation = ub
 
         # Reduce graph
+        print "Upper bound {}".format(ub.cost)
         steiner.lower_bound = results[0][0]
         for c_bnd, c_g, c_root in results:
             self.reduce_graph(steiner, c_g, c_bnd, c_root)
