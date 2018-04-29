@@ -734,7 +734,7 @@ class SteinerApproximation:
         kv_rec(root, root)
         self.cost = sum(d for (u, v, d) in self.tree.edges(data='weight'))
 
-    def get_descendants(self, g):
+    def get_descendants(self, g, r):
         """Produces a dictionary for each node in the tree, containing the terminals preceding the node"""
         if self._descendants is not None:
             return self._descendants
@@ -742,7 +742,7 @@ class SteinerApproximation:
         self._descendants = {}
 
         # DFS
-        queue = [(self.get_root(g), {self.get_root(g)})]
+        queue = [(r, {r})]
 
         while len(queue) > 0:
             n, s = queue.pop()

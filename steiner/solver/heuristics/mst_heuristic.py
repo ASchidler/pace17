@@ -5,9 +5,16 @@ class MstHeuristic:
     def __init__(self, steiner):
         self.steiner = steiner
         self.mst = {}
+        self.solver = None
+        self.desc = None
 
     """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
     def calculate(self, n, set_id, ts):
+        # if self.desc is None:
+        #     self.desc = self.steiner.get_approximation().get_descendants(self.steiner, self.solver.root_node)
+        # if n in self.desc and all(t in self.desc[n] for t in ts):
+        #     return 0
+
         length = self.steiner.get_lengths
 
         # Only one terminal
