@@ -122,14 +122,14 @@ class DualAscent:
 
         target_roots = [ts[max(len(ts) / solution_limit, 1) * i] for i in xrange(0, solution_limit)]
         results = []
-        algs = [self.calc, self.calc3, self.calc2]
+        algs = [self.calc, self.calc3]
 
         # Generate solutions
         for i in range(0, len(target_roots)):
             r = target_roots[i]
-            results.append(algs[i % 3](steiner.graph, r, steiner.terminals))
+            results.append(algs[i % 2](steiner.graph, r, steiner.terminals))
         #results = [self.calc3(steiner.graph, root, steiner.terminals) for root in target_roots]
-        results.sort(key=lambda x: x[0], reverse=True)
+        #results.sort(key=lambda x: x[0], reverse=True)
 
         solution_pool = []
 
