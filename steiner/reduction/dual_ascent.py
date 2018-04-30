@@ -154,7 +154,6 @@ class DualAscent:
             steiner._approximation = ub
 
         # Reduce graph
-        print "Upper bound {}".format(ub.cost)
         steiner.lower_bound = results[0][0]
         for c_bnd, c_g, c_root in results:
             self.reduce_graph(steiner, c_g, c_bnd, c_root)
