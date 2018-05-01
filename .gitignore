@@ -54,3 +54,7 @@ venv/
 *.pyc
 
 testInstances/*.stp
+
+papers
+
+testInstances
