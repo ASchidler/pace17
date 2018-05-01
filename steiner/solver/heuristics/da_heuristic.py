@@ -36,9 +36,9 @@ class DaHeuristic:
             d = self.calculated[set_id][n]
 
         # Clean up to save memory
-        if self._qry_cnt % 5000 == 0:
+        if self._qry_cnt % 15000 == 0:
             for (s, c) in self._hit_at.items():
-                if self._qry_cnt - c > 5000:
+                if self._qry_cnt - c > 15000:
                     self._hit_at.pop(s)
                     self.calculated.pop(s)
 
