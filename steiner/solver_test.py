@@ -5,7 +5,6 @@ import iparser as pp
 
 import config as cfg
 import reduction.terminals as terminals
-import solver.label_store as ls
 import steiner_graph as sg
 import component_finder as cf
 import reduction.degree as dg

@@ -5,7 +5,6 @@ import iparser as pp
 
 import config as cfg
 import reduction.terminals as terminals
-import solver.label_store as ls
 import steiner_graph as sg
 import component_finder as cf
 import sys
@@ -98,18 +97,14 @@ hard_instances = [161, 163, 165, 171, 173, 195]
 long_runtime = [167, 187, 193, 197, 199]
 # All other instances are solvable in a feasible amount of time
 easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_runtime]
-solved_but_not_optil = [197, 199]
 lst = list(easy_instances)
 lst.extend(long_runtime)
-# lst.extend(reversed(hard_instances))
 
-# Error 131 with mst heuristic
 # 16x 0640/40896, almost no reductions
 # 171 0243/01215, few reductions, unit weights
 # 173 0243/01215, no reductions, most edges weight 1, some 2
-# 193 0600/01200, almost no reduction
 # 195 0550/05000, no reductions, unit weights
-for i in long_runtime: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
+for i in [199]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)
