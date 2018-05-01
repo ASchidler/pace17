@@ -283,69 +283,50 @@ class SteinerGraph:
 
     def get_restricted(self, t, n):
         if self._restricted_validity == -2:
-            self._restricted_lengths = {}
-            max_node = max(nx.nodes(self.graph))
-            self._restricted_closest = list([None] * (max_node + 1))
-            self._restricted_validity = 0
+            self.find_restricted_closest()
 
-        if t not in self._restricted_lengths:
-            g_prime = self.graph.copy()
-            for t_prime in self.terminals:
-                if t_prime != t:
-                    g_prime.remove_node(t_prime)
+        return self._restricted_lengths[t][n]
 
-            self._restricted_lengths[t] = nx.single_source_dijkstra_path_length(g_prime, t)
+    def find_restricted_closest(self):
+        max_node = max(n for n in self.graph.nodes) + 1
+        self._restricted_closest = [[] for _ in range(0, (max_node + 1))]
+        self._restricted_lengths = {t: [maxint] * max_node for t in self.terminals}
+        clst = self._restricted_closest
+        restr = self._restricted_lengths
+        queue = [(0, t, t) for t in self.terminals]
 
-            # Find shortest paths to other terminals
-            for t_prime in self.terminals:
-                if t != t_prime:
-                    dist = maxint
-                    for n2 in nx.neighbors(self.graph, t_prime):
-                        if (n2 == t or n2 not in self.terminals) and n2 in self._restricted_lengths[t]:
-                            dist = min(dist, self._restricted_lengths[t][n2] + self.graph[n2][t_prime]['weight'])
-
-                    self._restricted_lengths[t][t_prime] = dist
-
-        return self._restricted_lengths[t].setdefault(n, maxint)
-
-    def find_restricted_closest(self, n):
-        scanned = {}
-        visited = set()
-        queue = [(0, n)]
+        push = heappush
         pop = heappop
-        push = heappush()
-
         nb = self.graph._adj
-        closest = []
+        done = set()
 
         while queue:
-            c_d, c_n = pop(queue)
+            dist, n, t = pop(queue)
 
-            if c_n in visited:
+            if (t, n) in done:
                 continue
+            done.add((t, n))
 
-            visited.add(c_n)
-            if c_n in self.terminals:
-                closest.append((c_n, c_d))
-            else:
-                for n2, dta in nb[c_n].items():
-                    tot = c_d + dta['weight']
-                    if n2 not in scanned or tot < scanned[n2]:
-                        scanned[n2] = tot
-                        push((tot, n2))
+            restr[t][n] = dist
+            clst[n].append((t, dist))
 
-        return closest
+            for n2, dta in nb[n].items():
+                tot = dist + dta['weight']
+                if tot < restr[t][n2]:
+                    restr[t][n2] = tot
+
+                    if n2 not in self.terminals:
+                        push(queue, (tot, n2, t))
+
+        # Add default entries since not every node reaches every terminal
+        for l in clst:
+            l.extend([(0, maxint) for _ in range(0, len(self.terminals) - len(l))])
+
+        self._restricted_validity = 0
 
     def get_restricted_closest(self, n):
         if self._restricted_validity == -2:
-            self._restricted_lengths = {}
-            max_node = max(nx.nodes(self.graph))
-            self._restricted_closest = list([None] * (max_node + 1))
-            self._restricted_validity = 0
-
-        if self._restricted_closest[n] is None:
-            self._restricted_closest[n] = [(t, self.get_restricted(t, n)) for t in self.terminals]
-            self._restricted_closest[n].sort(key=lambda x: x[1])
+            self.find_restricted_closest()
 
         return self._restricted_closest[n]
 

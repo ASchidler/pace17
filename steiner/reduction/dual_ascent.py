@@ -82,7 +82,7 @@ class DualAscent:
             solution_limit = 10
             solution_rec_limit = 5
             prune_limit = 3
-            prune_rec_limit = 1
+            prune_rec_limit = 3
         # Dense graph
         elif len(steiner.graph.edges) / len(steiner.graph.nodes) > 3:
             solution_limit = 2
@@ -93,8 +93,8 @@ class DualAscent:
         else:
             solution_limit = 10
             solution_rec_limit = 3
-            prune_limit = 2
-            prune_rec_limit = 1
+            prune_limit = 1
+            prune_rec_limit = 3
 
         # Init
         ts = list(steiner.terminals)

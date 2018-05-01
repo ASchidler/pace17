@@ -104,7 +104,7 @@ lst.extend(long_runtime)
 # 171 0243/01215, few reductions, unit weights
 # 173 0243/01215, no reductions, most edges weight 1, some 2
 # 195 0550/05000, no reductions, unit weights
-for i in [199]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
+for i in [187,193,167]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     if i % 2 == 1:
         sys.setcheckinterval(1000)

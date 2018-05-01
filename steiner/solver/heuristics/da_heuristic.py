@@ -50,7 +50,7 @@ class DaHeuristic:
         if self._method is None:
             result1 = da.DualAscent.calc3(self.steiner.graph, r, self.steiner.terminals)
             result2 = da.DualAscent.calc2(self.steiner.graph, r, self.steiner.terminals)
-            self._method = da.DualAscent.calc2 if result2 >= result1 else da.DualAscent.calc3
+            self._method = da.DualAscent.calc2 if result2[0] >= result1[0] else da.DualAscent.calc3
 
         ts = set(ts)
         result = self._method(self.steiner.graph, r, ts)
