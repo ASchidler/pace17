@@ -1,0 +1,24 @@
+This project is a solver for the Steiner Tree Problem on Graphs
+
+Unfortunately the code is at the moment not cleaned up and therefore contains a lot of unused source code.
+
+Folder structure:
+- instances; contains the PACE 2018 public instances
+- steiner; contains the actual source code
+
+To run the solver use:
+python steiner/steiner_tu.py < <Input File>
+
+For example:
+python steiner/steiner_tu.py < instances/lowTerm/instance001.gr
+
+The input and output format is described here https://pacechallenge.wordpress.com/pace-2018/
+
+Source code folder structure:
+- <Main Folder>: Runscripts, testscripts and single classes that fit nowhere else.
+- iparser: Contains parsers for input
+- oparser: Contains parsers convert the result
+- preselection: Contains reductions that preselect edges
+- reduction: Contains reductions that remove part of the graph
+- solver: Contains the actual solvers. Please note that only solver2k.py is used. The other solvers were never completed.
+- solver.heuristics: Lower bounds that can be used during the solving process
