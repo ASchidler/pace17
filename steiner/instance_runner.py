@@ -18,51 +18,8 @@ def process_file(filename, solve, apply_reductions):
     """ Processes a file. Parses, reduces and solves it. Includes verbose oparser"""
 
     f = open(filename, "r")
-    steinerx = pp.parse_pace_file(f)
-    cps = nx.biconnected_components(steinerx.graph)
-    for cp in cps:
-        print "BC {} nodes".format(len(cp))
-    c_finder = cf.ComponentFinder()
-
-    components = [steinerx]
-    results = []
-
-    #components = c_finder.decompose(components)
-    print "Split into {} components".format(len(components))
-    for c in components:
-        print "{} nodes".format(len(nx.nodes(c.graph)))
-
-    for steiner in components:
-        reducer = DebugReducer(cfg.reducers())
-
-        if apply_reductions:
-            reducer.reduce(steiner)
-
-        for cp in cps:
-            print "BC {} nodes".format(len(cp))
-
-        if solve:
-            steiner._lengths = {}
-            # Reset lengths as they may not reflect reality after the reductions
-            solver = cfg.solver(steiner)
-            solution = solver.solve()
-
-            # Quick validity checks
-            if not nx.is_connected(solution[0]):
-                print "*** Unconnected solution"
-
-            for n in steiner.terminals:
-                if n not in nx.nodes(solution[0]):
-                    print "*** Missing a terminal"
-
-            # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
-            if apply_reductions:
-                solution = reducer.unreduce(solution[0], solution[1])
-
-            results.append(solution)
-            print "Solution found: " + str(solution[1])
-
-        print "\n\n"
+    steiner = pp.parse_pace_file(f)
+    solution = start_solve(steiner, solve, apply_reductions)
 
     if solve:
         # total_solution = c_finder.build_solutions(results)
@@ -91,6 +48,41 @@ def process_file(filename, solve, apply_reductions):
         return total_solution[1]
 
 
+def start_solve(steiner, solve, apply_reductions):
+    reducer = DebugReducer(cfg.reducers())
+
+    if apply_reductions:
+        reducer.reduce(steiner)
+
+    if solve:
+        #solution = solve_instance(steiner)
+        solution = cf.decompose(steiner, lambda x: solve_instance(x), lambda x: start_solve(x, solve, apply_reductions))
+
+        # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
+        if apply_reductions:
+            solution = reducer.unreduce(solution[0], solution[1])
+
+        return solution
+
+
+def solve_instance(steiner):
+    steiner._lengths = {}
+    # Reset lengths as they may not reflect reality after the reductions
+    solver = cfg.solver(steiner)
+    solution = solver.solve()
+
+    # Quick validity checks
+    if not nx.is_connected(solution[0]):
+        print "*** Unconnected solution"
+
+    for n in steiner.terminals:
+        if n not in nx.nodes(solution[0]):
+            print "*** Missing a terminal"
+
+    print "Solution found: " + str(solution[1])
+    return solution
+
+
 # Instances that are not solvable yet
 hard_instances = [161, 163, 165, 171, 173, 195]
 # Solvable but at the upper end of the timelimit
@@ -104,16 +96,21 @@ lst.extend(long_runtime)
 # 171 0243/01215, few reductions, unit weights
 # 173 0243/01215, no reductions, most edges weight 1, some 2
 # 195 0550/05000, no reductions, unit weights
-for i in [187,193,167]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
+# Not 160, 162 (u), 164(u), 190, 196
+# Yes 2-160, 166, 168, 170, 174-188, 192,
+# ? 200, 172, 194
+# slow 198
+#for i in [171]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
+for i in long_runtime:
     file_path = "..\instances\lowTerm\instance{0:03d}.gr"
-    if i % 2 == 1:
-        sys.setcheckinterval(1000)
-        current_file = file_path.format(i)
-        print current_file
-        start = time.time()
-        e1 = process_file(current_file, True, True)
-        # e2 = process_file(current_file, True, False)
-        # if e1 != e2:
-        #     print "*************** Difference in instance "+ str(i)
-        print "Done in " + str(time.time() - start)
-        print ""
+
+    sys.setcheckinterval(1000)
+    current_file = file_path.format(i)
+    print current_file
+    start = time.time()
+    e1 = process_file(current_file, True, True)
+    # e2 = process_file(current_file, True, False)
+    # if e1 != e2:
+    #     print "*************** Difference in instance "+ str(i)
+    print "Done in " + str(time.time() - start)
+    print ""
