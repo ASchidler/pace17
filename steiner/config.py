@@ -4,6 +4,7 @@ from preselection import *
 from solver.heuristics import *
 import reduction.two_path as two_path
 import reduction.twin_reduction as twin_reduction
+import reduction.deg3 as deg3
 import solver.heuristics.da_heuristic as da
 import reduction.mst_contract as mst_contract
 import reduction.heavy_edge as heavy_edge
@@ -26,11 +27,13 @@ def reducers():
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         long_edges.LongEdgeReduction(True),
+        deg3.Degree3Reduction(),
         ntdk.NtdkReduction(True, max_degree=4),
         sdc.SdcReduction(),
         degree.DegreeReduction(),
         ntdk.NtdkReduction(False, max_degree=4),
         degree.DegreeReduction(),
+        #short_edges.ShortEdgeReduction(),
         preselection_pack.NvSlPack(),
         degree.DegreeReduction(),
         # bound_reductions.BoundNodeReduction(start_at=2),
