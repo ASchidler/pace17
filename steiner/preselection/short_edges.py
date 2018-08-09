@@ -1,5 +1,8 @@
 from sys import maxint
 from networkx import minimum_spanning_tree, bidirectional_dijkstra
+import union_find as uf
+from collections import defaultdict
+
 
 # According to Polzin 04 this test is more complicated than SL and NV and the difference negligible
 class ShortEdgeReduction:
@@ -13,100 +16,125 @@ class ShortEdgeReduction:
 
     def reduce(self, steiner, cnt, last_run):
         steiner.requires_dist(1)
-
-        track = len(steiner.graph.edges)
-        self.terminals = list(steiner.terminals)
-        self.max_terminal = max(self.terminals) + 1
-
         sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
+        track = len(sorted_edges)
 
-        # TODO: Calculate once and update...
-        mst = minimum_spanning_tree(steiner.graph)
-        paths = self._min_paths(mst)
+        non_mst_edges = []
+        cps = uf.UnionFind(steiner.graph.nodes)
 
-        # Check all edges in the spanning tree
-        for (u, v, c) in mst.edges(data='weight'):
-            k = self._key(u, v)
-            if steiner.graph.has_edge(u, v) and steiner.graph.has_node(v) and k in paths:
-                min_ts = min(paths[k], key=lambda x: x[0])
-                t1, t2, d = min_ts[1], min_ts[2], min_ts[0]
+        nb = defaultdict(list)
+        above = defaultdict(list)
+        parent = {}
+        root = None
+        # Shortcut this if all nodes have been found?
+        # Build MST
+        for (u, v, d) in sorted_edges:
+            if cps.find(u) != cps.find(v):
+                if root is None:
+                    root = u
+                cps.union(u, v)
+                nb[u].append(v)
+                nb[v].append(u)
+            else:
+                non_mst_edges.append((u, v, d))
 
-                if t1 not in steiner.terminals or t2 not in steiner.terminals:
-                    continue
+        # Establish the order inside the tree
+        parent[root] = None
+        above[root] = set()
+        queue = [root]
+        leafs = {root}
+        while len(queue) > 0:
+            u = queue.pop()
+            found = False
+            for v in nb[u]:
+                if v not in parent:
+                    parent[v] = u
+                    queue.append(v)
+                    leafs.add(v)
 
-                if d <= self._min_crossing(mst, u, v, d, sorted_edges):
-                    # Merge edges
-                    # First decide how to contract
-                    if v in steiner.terminals:
-                        u, v = v, u
+                    if u in steiner.terminals:
+                        new_above = set(above[u])
+                        new_above.add(u)
+                        above[v] = new_above
+                    else:
+                        above[v] = above[u]
 
-                    # Store
-                    self.deleted.append((u, v, c))
+                    found = True
+            if found:
+                leafs.remove(u)
 
-                    # Contract
-                    for e in steiner.contract_edge(u, v):
-                        self.merged.append(e)
+        # Fill with leafs
+        queue = defaultdict(list)
 
+        for n in leafs:
+            if n in steiner.terminals:
+                queue[parent[n]].append((n, {n}, {n}))
+            else:
+                queue[parent[n]].append((n, {n}, set()))
+
+        # Find bottom up
+        while len(queue) > 0:
+            new_queue = defaultdict(list)
+
+            for u, entries in queue.items():
+                new_subs = set()
+                new_terminals = set()
+                # Arrived at root
+                if parent[u] is None:
                     break
 
+                while len(entries) > 0:
+                    v, subs, terminals = entries.pop()
+                    new_subs.update(subs)
+                    new_terminals.update(terminals)
+                    t1 = None
+                    t2 = None
+
+                    if len(terminals) == 0:
+                        continue
+
+                    for (t, dt) in steiner.get_closest(u):
+                        if t in above[u]:
+                            t1 = t
+                            break
+
+                    if t1 is None:
+                        continue
+
+                    for (t, dt) in steiner.get_closest(v):
+                        if t in terminals:
+                            t2 = t
+                            break
+
+                    # Find bridge
+                    r_val = maxint
+                    for u2, v2, d2 in non_mst_edges:
+                        if (u2 in subs and v2 not in subs) or (u2 not in subs and v2 in subs):
+                            r_val = d2
+                            break
+
+                    if steiner.get_lengths(t1, t2) <= r_val:
+                        # Store
+                        self.deleted.append((u, v, steiner.graph[u][v]['weight']))
+
+                        for e in steiner.contract_edge(u, v):
+                            self.merged.append(e)
+
+                if parent[u] is not None:
+                    new_subs.add(u)
+                    new_queue[parent[u]].append((u, new_subs, new_terminals))
+
+            queue = new_queue
+
         result = track - len(steiner.graph.edges)
-        if cnt > 0:
+        if result > 0:
+            steiner._voronoi_areas = None
+            steiner._closest_terminals = None
             steiner.invalidate_steiner(1)
             steiner.invalidate_dist(1)
             steiner.invalidate_approx(1)
 
         return result
-
-    # Creates a single key for a combination of nodes, avoid nesting of dictionaries
-    def _key(self, n1, n2):
-        if n1 > n2:
-            return n2 * self.max_terminal + n1
-        else:
-            return n1 * self.max_terminal + n2
-
-    # Finds the smallest path between terminals
-    def _min_paths(self, mst):
-        paths = {}
-
-        # Find shortest paths between terminals
-        for t1, t2 in ((x, y) for x in self.terminals for y in self.terminals if y > x):
-                l, path = bidirectional_dijkstra(mst, t1, t2)
-
-                # Convert to edges
-                prev = path[0]
-
-                for pi in range(1, len(path)):
-                    n = path[pi]
-                    k = self._key(prev, n)
-                    paths.setdefault(k, []).append((l, t1, t2))
-                    prev = n
-
-        return paths
-
-    def _min_crossing(self, mst, n1, n2, cutoff, sorted_edges):
-        """Finds the r value of an edge. I.e. the smallest edge bridging the mst cut by (n1, n2) in G
-        Since we need a value > than d, we use a cutoff value to shorten calculation"""
-        queue = [n1]
-        nodes = set()
-
-        # Calculate the cut
-        while len(queue) > 0:
-            n = queue.pop()
-            nodes.add(n)
-
-            for b in mst.neighbors(n):
-                if b != n2 and b not in nodes:
-                    queue.append(b)
-
-        # Find minimum edge bridging the cut
-        for (u, v, d) in sorted_edges:
-            if d >= cutoff:
-                return maxint
-
-            if (u in nodes and v not in nodes) or (v in nodes and u not in nodes):
-                return d
-
-        return maxint
 
     def post_process(self, solution):
         change = False
