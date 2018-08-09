@@ -22,10 +22,10 @@ class LongEdgeReduction:
         equal_edges = []
 
         self._counter += cnt
-        # if self._counter < self._threshold * len(steiner.graph.edges):
-        #     return 0
-        # else:
-        #     self._counter = 0
+        if self._counter < self._threshold * len(steiner.graph.edges):
+            return 0
+        else:
+            self._counter = 0
 
         delete = []
         for (u, v, d) in steiner.graph.edges(data='weight'):
@@ -55,6 +55,51 @@ class LongEdgeReduction:
 
         self.runs = self.runs + 1
         return result
+
+    def exact_reduce(self, steiner):
+        nbs = steiner.graph._adj
+        delete = []
+
+        for u in steiner.graph.nodes:
+            adj = []
+            c_max = 0
+            for (v, w) in nbs[u].items():
+                if u < v:
+                    adj.append(v)
+                    c_max = max(c_max, w['weight'])
+
+            dist = defaultdict(lambda: maxint)
+            dist[u] = 0
+            queue = [(0, u)]
+            while len(queue) > 0:
+                d, n = hq.heappop(queue)
+                if d != dist[n]:
+                    continue
+
+                if n in steiner.terminals:
+                    for v in adj:
+                        dist[v] = min(dist[v], max(d, steiner.get_lengths(n, v)))
+                    for (t, w) in steiner.get_closest(n):
+                        if w >= c_max:
+                            break
+
+                        d2 = max(d, w)
+                        if d2 < dist[t]:
+                            dist[t] = d2
+                            hq.heappush(queue, (d2, t))
+                else:
+                    for (v, w) in nbs[n].items():
+                        d2 = d + w['weight']
+                        if d2 < c_max and d2 < dist[v]:
+                            dist[v] = d2
+                            hq.heappush(queue, (d2, v))
+
+            for v in adj:
+                if steiner.graph[u][v]['weight'] > dist[v]:
+                    delete.append((u, v))
+
+        for u, v in delete:
+            steiner.remove_edge(u, v)
 
     def post_process(self, solution):
         return solution, False
