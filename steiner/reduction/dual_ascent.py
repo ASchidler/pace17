@@ -14,7 +14,7 @@ class DualAscent:
 
     good_roots = deque(maxlen=10)
 
-    def __init__(self, run_once=False, quick_run=False, start_at=1, run_every=1, run_last=True):
+    def __init__(self, run_once=False, quick_run=False, start_at=1, run_every=1, threshold=0.05, run_last=True):
         self.runs = 0
         self._done = False
         self._run_once = run_once
@@ -23,6 +23,9 @@ class DualAscent:
         self._start_at = start_at
         self._run_every = run_every
         self._run_last = run_last
+        self._threshold = threshold
+        self._counter = maxint / 2
+        self._last_run = -1
 
         if self._run_last and self._run_once:
             self._start_at = maxint
@@ -34,6 +37,13 @@ class DualAscent:
 
         if len(steiner.terminals) < 4:
             return 0
+
+        self._counter += cnt
+
+        if self._counter < self._threshold * len(steiner.graph.edges):
+            return 0
+        else:
+            self._counter = 0
 
         self.runs += 1
         do_quick_run = self._quick_run and self.enabled and self.runs > 1
@@ -652,8 +662,6 @@ class DualAscent:
                         in_edges.add((u, v))
                     new_in += 1
 
-            #real_in = len({(u, v) for u in cut for (v, dta) in nb[u].items() if v not in cut and dta['weight'] != 0})
-            #print len(in_edges) - real_in
             # Add to queue. Priority is depending on incoming edges
             if not t_found:
                 push(queue, (len([(u, v) for (u, v) in in_edges if v not in cut]), t))

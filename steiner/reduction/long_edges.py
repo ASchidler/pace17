@@ -1,14 +1,18 @@
 import ntdk
-
+from sys import maxint
+from collections import defaultdict
+import heapq as hq
 
 class LongEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
-    def __init__(self, delete_equal, equal_search_limit=40):
+    def __init__(self, delete_equal, threshold=0.01, equal_search_limit=40):
         self.runs = 0
         self._delete_equal = delete_equal
         self._done = False
         self._equal_search_limit = equal_search_limit
+        self._threshold = threshold
+        self._counter = maxint / 2
 
     def reduce(self, steiner, cnt, last_run):
         steiner.requires_steiner_dist(1)
@@ -17,12 +21,22 @@ class LongEdgeReduction:
 
         equal_edges = []
 
-        for (u, v, d) in list(steiner.graph.edges(data='weight')):
+        self._counter += cnt
+        # if self._counter < self._threshold * len(steiner.graph.edges):
+        #     return 0
+        # else:
+        #     self._counter = 0
+
+        delete = []
+        for (u, v, d) in steiner.graph.edges(data='weight'):
             sl = steiner.get_steiner_lengths(u, v, d)
             if d > sl:
-                steiner.remove_edge(u, v)
+                delete.append((u, v))
             elif d == sl:
                 equal_edges.append((u, v, d))
+
+        for u, v in delete:
+            steiner.remove_edge(u, v)
 
         for t in steiner.terminals:
             for n in list(steiner.graph.neighbors(t)):

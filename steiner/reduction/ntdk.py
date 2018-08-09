@@ -7,17 +7,25 @@ from networkx import minimum_spanning_edges, Graph
 class NtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self, restricted, search_limit=40, only_last=False, max_degree=4):
+    def __init__(self, restricted, threshold=0.01, search_limit=40, only_last=False, max_degree=4):
         self._removed = {}
         self._restricted = restricted
         self._done = False
         self._search_limit = search_limit
         self._only_last = only_last
         self._max_degree = max_degree
+        self._threshold = threshold
+        self._counter = maxint / 2
 
     def reduce(self, steiner, cnt, last_run):
-        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
             return 0
+
+        self._counter += cnt
+        if self._counter < self._threshold * len(steiner.graph.edges):
+            return 0
+        else:
+            self._counter = 0
 
         change = False
         if self._only_last and not last_run:

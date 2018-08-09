@@ -1,16 +1,25 @@
 from networkx import Graph, minimum_spanning_edges
+from sys import maxint
 
 
 class CostVsTerminalDistanceReduction:
     """ Removes all edges that are longer than the maximum distance between two terminals """
-    def __init__(self):
+    def __init__(self, threshold=0.01):
         self.enabled = True
         self._done = False
+        self._threshold = threshold
+        self._counter = maxint / 2
 
     def reduce(self, steiner, cnt, last_run):
         # Edge case, only one terminal
         if len(steiner.terminals) == 1 or not (self.enabled or last_run):
             return 0
+
+        self._counter += cnt
+        if self._counter < self._threshold * len(steiner.graph.edges):
+            return 0
+        else:
+            self._counter = 0
 
         steiner.requires_dist(1)
         track = len(steiner.graph.edges)
