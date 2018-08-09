@@ -84,9 +84,9 @@ def solve_instance(steiner):
 
 
 # Instances that are not solvable yet
-hard_instances = [161, 163, 165, 171, 173, 195]
+hard_instances = [161, 162, 163, 164, 165, 171, 172, 173, 194, 195, 196, 200]
 # Solvable but at the upper end of the timelimit
-long_runtime = [167, 187, 193, 197, 199]
+long_runtime = [150, 152, 167, 187, 189, 190, 192, 193, 197, 198, 199]
 # All other instances are solvable in a feasible amount of time
 easy_instances = [i for i in xrange(1, 200) if i not in hard_instances and i not in long_runtime]
 lst = list(easy_instances)

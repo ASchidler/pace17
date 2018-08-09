@@ -27,9 +27,9 @@ def reducers():
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         long_edges.LongEdgeReduction(True),
-        deg3.Degree3Reduction(),
         ntdk.NtdkReduction(True, max_degree=4),
         sdc.SdcReduction(),
+        deg3.Degree3Reduction(),
         degree.DegreeReduction(),
         ntdk.NtdkReduction(False, max_degree=4),
         degree.DegreeReduction(),
@@ -40,7 +40,7 @@ def reducers():
         # bound_reductions.BoundEdgeReduction(start_at=2),
         # bound_reductions.BoundGraphReduction(start_at=2),
         # bound_reductions.BoundNtdkReduction(start_at=2),
-        dual_ascent.DualAscent(start_at=1, run_every=2, run_last=True),
+        dual_ascent.DualAscent(),
         component.ComponentReduction(),
         degree.DegreeReduction()
     ]
@@ -50,7 +50,7 @@ def solver(steiner):
     """Creates a solver"""
     da_h = da.DaHeuristic(steiner)
 
-    if len(steiner.graph.nodes) < 2500 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
+    if len(steiner.graph.nodes) < 2000 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
         heuristics = [da_h]
     else:
         heuristics = [mst_heuristic.MstHeuristic(steiner)]
