@@ -1,27 +1,21 @@
-from networkx import Graph, minimum_spanning_edges
+from sys import maxint
 
 
 class MstHeuristic:
+    """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
     def __init__(self, steiner):
         self.steiner = steiner
         self.mst = {}
         self.solver = None
         self.desc = None
 
-    """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
     def calculate(self, n, set_id, ts):
-        # if self.desc is None:
-        #     self.desc = self.steiner.get_approximation().get_descendants(self.steiner, self.solver.root_node)
-        # if n in self.desc and all(t in self.desc[n] for t in ts):
-        #     return 0
-
         length = self.steiner.get_lengths
 
         # Only one terminal
         if len(ts) == 1:
             for t in ts:
                 return length(t, n)
-        # TODO: Special case of 2...
 
         # Calculate MST costs
         try:
@@ -43,13 +37,36 @@ class MstHeuristic:
         return (min_val[0] + min_val[1] + cost) / 2
 
     def calc_mst(self, ts):
-        """Calculate the costs of an MST using networkx"""
+        """Calculate the costs of a MST using Prim's algorithm"""
 
-        g = Graph()
+        ts = list(ts)
+        # use prim since we have a full graph
         length = self.steiner.get_lengths
-        edge = g.add_edge
+        min_edge = [maxint for _ in ts]
+        taken = [False for _ in ts]
 
-        # Cartesian product
-        [edge(t1, t2, weight=length(t1, t2)) for t1 in ts for t2 in ts if t2 > t1]
-        cost = sum(d['weight'] for u, v, d in minimum_spanning_edges(g))
-        return cost
+        idx = -1
+        sum_edges = 0
+
+        # Init
+        min_edge[0] = 0
+
+        for _ in range(0, len(ts)):
+            # Find minimum edge
+            val = maxint
+            for k in range(0, len(ts)):
+                if min_edge[k] < val:
+                    val = min_edge[k]
+                    idx = k
+
+            # Add vertex to MST
+            taken[idx] = True
+            min_edge[idx] = maxint
+            sum_edges += val
+
+            # Adjust minimum edges
+            for k in range(0, len(ts)):
+                if not taken[k]:
+                    min_edge[k] = min(min_edge[k], length(ts[idx], ts[k]))
+
+        return sum_edges

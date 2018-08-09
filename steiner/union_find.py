@@ -24,7 +24,7 @@ class UnionFind:
         el2 = self._find(val2)
 
         if el1 == el2:
-            return
+            return False
 
         if el1.rank < el2.rank:
             el1, el2 = el2, el1
@@ -32,3 +32,5 @@ class UnionFind:
         el2.parent = el1
         if el1.rank == el2.rank:
             el1.rank = el1.rank + 1
+
+        return True
