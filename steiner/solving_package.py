@@ -40,7 +40,7 @@ def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=F
                 o_pace.parse(solution)
 
     if debug:
-        "Completed in {}".format(time.time() - start_time)
+        print "Completed in {}".format(time.time() - start_time)
 
     return solution
 
