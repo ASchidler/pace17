@@ -1,3 +1,4 @@
+"""Output conforming to PACE guidelines"""
 
 
 def parse(solution):

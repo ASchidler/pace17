@@ -238,7 +238,7 @@ def _compute_partial_solutions(steiner, min_ap, rec):
     return best_sol
 
 
-def decompose(steiner, sol, rec):
+def decompose(steiner, sol, rec, debug=False):
     """Tries to decompose the graph into subgraphs and calculates the solution. sol is a function that
     calculates the solution for the current graph, rec is a function that calculates the solutions for a new
     graph"""
@@ -259,8 +259,9 @@ def decompose(steiner, sol, rec):
     if c_min[0] == 0 or c_min[0] < term_limit[len(c_min[2]) - 1]:
         return sol(steiner)
 
-    print "Splitting problem. Using set of size {} splitting the problem into parts of {} and {}"\
-        .format(len(c_min[2]), len(c_min[1][0]), len(c_min[1][1]))
+    if debug:
+        print "Splitting problem. Using set of size {} splitting the problem into parts of {} and {}"\
+            .format(len(c_min[2]), len(c_min[1][0]), len(c_min[1][1]))
 
     return _compute_partial_solutions(steiner, c_min, rec)
 

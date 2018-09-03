@@ -6,9 +6,9 @@ from solver.heuristics import *
 """Used as a configuration for the whole steiner solving suite"""
 
 
-def reducers():
+def reducers(exclude_reduction=False):
     """Creates the set of reducing preprocessing tests"""
-    return [
+    red = [
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         component.ComponentReduction(),
@@ -36,6 +36,13 @@ def reducers():
         degree.DegreeReduction()
     ]
 
+    # This is to allow for removing reductions taken from other PACE submissions
+    if exclude_reduction:
+        red.pop(11)     # Degree 3
+        red.pop(5)      # MST contract
+        red.pop(3)      # Heavy edge
+
+    return red
 
 def solver(steiner):
     """Creates a solver"""
