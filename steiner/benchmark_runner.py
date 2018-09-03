@@ -14,6 +14,8 @@ parser.add_argument('-s', action='store_true',
 parser.add_argument('-p', action='store_true',
                     help="Use only reductions submitted for PACE")
 
+parser.add_argument('--stats', type=int)
+
 args = parser.parse_args()
 f = open(args.filename, "r")
 steiner = pp.parse_pace_file(f)
