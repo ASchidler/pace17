@@ -4,9 +4,9 @@ import config as cfg
 import iparser as pp
 import thread
 import threading as th
-import steiner_graph as st
 import networkx as nx
-import reduction.terminals as terminals
+
+"""This script runs all instances in a folder using a time limit. It expects a file with the optimal values."""
 
 terminal_limit = 50
 time_limit = 120

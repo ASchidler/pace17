@@ -2,11 +2,15 @@ from sys import maxint
 from heapq import heappush, heappop, merge
 from collections import defaultdict, deque
 from itertools import chain
-from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, is_connected, connected_components
+from networkx import Graph, ancestors, dijkstra_path, minimum_spanning_edges, dfs_tree, minimum_spanning_tree, \
+    is_connected
 
 
 # TODO: Optimize the whole thing
 class VoronoiPartition:
+    """Represents a partitioning of a graph into regions based on a list of vertices. Contrary to the partitioning
+    in SteinerGraph this must not be a set of terminals."""
+
     def __init__(self, source, target):
         self.regions = {}
         self._closest = {}

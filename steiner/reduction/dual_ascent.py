@@ -1,7 +1,7 @@
 from sys import maxint
 from heapq import heappop, heappush, heapify
 from networkx import single_source_dijkstra_path_length, single_source_dijkstra_path, is_connected
-import steiner_graph as sg
+from structures import steiner_graph as sg
 import steiner_approximation as sa
 from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex

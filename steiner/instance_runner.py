@@ -9,7 +9,7 @@ import sys
 
 from reducer import DebugReducer
 
-""" This runner runs all the public instances with debug oparser """
+""" This runner is used to run certain instances in debug mode. It is mainly used manually, i.e. edited and then run """
 
 
 def process_file(filename, solve, apply_reductions):
@@ -99,8 +99,11 @@ lst.extend(long_runtime)
 # ? 200, 172, 194
 # slow 198
 #for i in [171]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
-for i in long_runtime:
-    file_path = "..\instances\lowTerm\instance{0:03d}.gr"
+for i in [141]:
+    if i % 2 == 1:
+        file_path = "..\instances\lowTerm\instance{0:03d}.gr"
+    else:
+        file_path = "..\instances\lowTermPrivate\instance{0:03d}.gr"
 
     sys.setcheckinterval(1000)
     current_file = file_path.format(i)

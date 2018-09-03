@@ -6,6 +6,7 @@ from heapq import heappop, heappush
 
 
 class SteinerGraph:
+    """Data structure that stores an instance. I.e. a graph and terminals. Offers several helping methods"""
 
     def __init__(self):
         self.graph = nx.Graph()
@@ -43,6 +44,7 @@ class SteinerGraph:
 
     def remove_edge(self, u, v):
         self.graph.remove_edge(u, v)
+
         if self.graph.degree[u] == 0:
             self.remove_node(u)
         if self.graph.degree[v] == 0:
@@ -177,20 +179,20 @@ class SteinerGraph:
         if n in self.terminals:
             self.terminals.remove(n)
 
-    def move_terminal(self, tsource, ttarget):
+    def move_terminal(self, t_source, t_target):
         if self._dist_validity == -2:
             self._reset_lengths()
 
-        self.terminals.remove(tsource)
+        self.terminals.remove(t_source)
 
         if self._closest_terminals is not None:
             for i in xrange(0, len(self._closest_terminals)):
                 if self._closest_terminals[i] is not None:
                     if self.graph.has_node(i):
-                        self._closest_terminals[i] = [x for x in self._closest_terminals[i] if x[0] != tsource]
-                        if ttarget not in self.terminals:
-                            self._closest_terminals[i].append((ttarget, self.get_lengths(ttarget, i)))
-                            self._closest_terminals[i].sort(key=lambda x: x[1])
+                        self._closest_terminals[i] = [x for x in self._closest_terminals[i] if x[0] != t_source]
+                        if t_target not in self.terminals:
+                            self._closest_terminals[i].append((t_target, self.get_lengths(t_target, i)))
+                            self._closest_terminals[i].sort(key=lambda xx: xx[1])
                     else:
                         self._closest_terminals[i] = None
 
@@ -199,27 +201,27 @@ class SteinerGraph:
                 if self._restricted_closest[i] is not None:
                     # Do not forget this is a list, not a dictionary, i.e. entries for non-nodes exist
                     if self.graph.has_node(i):
-                        self._restricted_closest[i] = [x for x in self._restricted_closest[i] if x[0] != tsource]
-                        if ttarget not in self.terminals:
-                            self._restricted_closest[i].append((ttarget, self.get_restricted(ttarget, i)))
+                        self._restricted_closest[i] = [x for x in self._restricted_closest[i] if x[0] != t_source]
+                        if t_target not in self.terminals:
+                            self._restricted_closest[i].append((t_target, self.get_restricted(t_target, i)))
                             self._restricted_closest[i].sort(key=lambda e: e[1])
                     else:
                         self._restricted_closest[i] = None
 
-        if ttarget not in self.terminals:
-            self.terminals.add(ttarget)
+        if t_target not in self.terminals:
+            self.terminals.add(t_target)
 
             if self._voronoi_areas is not None:
-                self._voronoi_areas[ttarget] = set()
+                self._voronoi_areas[t_target] = set()
 
         if self._voronoi_areas is not None:
-            for n in self._voronoi_areas[tsource]:
-                self._voronoi_areas[ttarget].add(n)
-            self._voronoi_areas.pop(tsource, None)
+            for n in self._voronoi_areas[t_source]:
+                self._voronoi_areas[t_target].add(n)
+            self._voronoi_areas.pop(t_source, None)
 
             for (k, v) in self._voronoi_areas.items():
-                if ttarget in v:
-                    v.remove(ttarget)
+                if t_target in v:
+                    v.remove(t_target)
 
     def get_voronoi(self):
         if self._dist_validity == -2:
@@ -291,8 +293,8 @@ class SteinerGraph:
         max_node = max(n for n in self.graph.nodes) + 1
         self._restricted_closest = [[] for _ in range(0, (max_node + 1))]
         self._restricted_lengths = {t: [maxint] * max_node for t in self.terminals}
-        clst = self._restricted_closest
-        restr = self._restricted_lengths
+        closest = self._restricted_closest
+        restricted = self._restricted_lengths
         queue = [(0, t, t) for t in self.terminals]
 
         push = heappush
@@ -307,19 +309,19 @@ class SteinerGraph:
                 continue
             done.add((t, n))
 
-            restr[t][n] = dist
-            clst[n].append((t, dist))
+            restricted[t][n] = dist
+            closest[n].append((t, dist))
 
             for n2, dta in nb[n].items():
                 tot = dist + dta['weight']
-                if tot < restr[t][n2]:
-                    restr[t][n2] = tot
+                if tot < restricted[t][n2]:
+                    restricted[t][n2] = tot
 
                     if n2 not in self.terminals:
                         push(queue, (tot, n2, t))
 
         # Add default entries since not every node reaches every terminal
-        for l in clst:
+        for l in closest:
             l.extend([(0, maxint) for _ in range(0, len(self.terminals) - len(l))])
 
         self._restricted_validity = 0

@@ -1,4 +1,4 @@
-import union_find as uf
+from structures import union_find as uf
 
 
 class MstContract:

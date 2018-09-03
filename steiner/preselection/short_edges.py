@@ -1,7 +1,7 @@
 from collections import defaultdict
 from sys import maxint
 
-import union_find as uf
+from structures import union_find as uf
 
 
 class ShortEdgeReduction:

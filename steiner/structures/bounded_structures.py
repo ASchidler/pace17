@@ -1,5 +1,8 @@
 from sys import maxint
 
+"""This manages a list as a priority queue using buckets. The idea is that with a low upper bound, it may be more
+efficient to use buckets than a heap"""
+
 
 def create_queue(bound):
     q = [set() for _ in xrange(0, bound + 2)]
@@ -10,7 +13,7 @@ def create_queue(bound):
 def enqueue(queue, priority, key):
     ls, e, q_min = queue
 
-    # If existing an smaller, move item up
+    # If existing and smaller, move item up
     if key in e:
         if priority < e[key]:
             ls[e[key]].remove(key)

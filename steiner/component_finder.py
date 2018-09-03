@@ -1,8 +1,10 @@
 import networkx as nx
 from sys import maxint
-import steiner_graph as sg
 import itertools as it
-import union_find as uf
+from structures import union_find as uf, steiner_graph as sg
+
+"""Tries to split the graph into two parts that can be solved separately. Originally this has only be done for 
+articulation points. The generalization of separators of larger size is from Polak and Maziarz' submission"""
 
 
 def _find_articulation_points(steiner, blocked):

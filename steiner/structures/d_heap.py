@@ -1,4 +1,10 @@
 
+"""Implements a d-heap for priority queues.
+A d-heap is a heap with d children. A binary heap is a 2-heap.
+Higher d values allow for faster inserts, but retrieval (delete-min) takes longer.
+See https://www.cs.princeton.edu/~wayne/kleinberg-tardos/pdf/BinomialHeaps.pdf"""
+
+
 def create_queue(d):
     return [], {}, d
 

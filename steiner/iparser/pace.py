@@ -1,4 +1,4 @@
-import steiner_graph as st
+from structures import steiner_graph as st
 
 """ Parses files with the PACE file format"""
 

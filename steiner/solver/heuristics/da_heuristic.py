@@ -1,7 +1,5 @@
 import reduction.dual_ascent as da
-from networkx import dijkstra_path_length, single_source_dijkstra_path_length, single_source_dijkstra_path, multi_source_dijkstra_path_length
-import steiner_graph as sg
-import steiner_approximation as sa
+from networkx import single_source_dijkstra_path_length
 
 
 class DaHeuristic:

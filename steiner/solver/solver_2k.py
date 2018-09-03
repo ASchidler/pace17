@@ -1,9 +1,7 @@
 from itertools import chain
 from sys import maxint
 from networkx import Graph
-import set_storage as st
-import d_heap as dh
-import bounded_structures as bs
+from structures import bounded_structures as bs, d_heap as dh, set_storage as st
 import reduction.dual_ascent as da
 
 

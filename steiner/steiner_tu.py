@@ -2,11 +2,9 @@ import sys
 import config as cfg
 import iparser as pp
 import oparser as po
-import reduction.degree as dg
-import component_finder as cf
 from reducer import Reducer
 
-""" The real solver script that reads from stdin and outputs the solution """
+""" This script is used for PACE. It reads the instance from STDIN and has no extra output except the solution"""
 
 steiner = pp.parse_pace_file(sys.stdin)
 

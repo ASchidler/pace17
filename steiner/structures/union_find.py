@@ -1,4 +1,6 @@
 class UnionFind:
+    """A data structure that allows for union-find operations"""
+
     class _UfElement:
         def __init__(self, val):
             self.val = val

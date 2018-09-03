@@ -1,8 +1,8 @@
 from time import time
-import networkx as nx
 
 
 class DebugReduction:
+    """Enhances the reduced with debug statements"""
     def __init__(self, r):
         self._r = r
 
@@ -20,6 +20,8 @@ class DebugReduction:
 
 
 class Reducer:
+    """Employs reductions until no more reductions can be performed. Can also reverse them for solutions"""
+
     def __init__(self, reducers, run_limit=0):
         self._reducers = reducers
         self._run_limit = run_limit
