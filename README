@@ -1,6 +1,5 @@
-This project is a solver for the Steiner Tree Problem on Graphs
-
-Unfortunately the code is at the moment not cleaned up and therefore contains a lot of unused source code.
+This application is a solver for the Steiner tree problem on graphs. It is optimized to solve instances with a low number of terminals (for details regarding the problem and input/output encoding see https://pacechallenge.wordpress.com/pace-2018/).
+The application is split into two parts that run subsequently, the reducer and the solver.
 
 Folder structure:
 - instances; contains the PACE 2018 public instances
@@ -22,3 +21,28 @@ Source code folder structure:
 - reduction: Contains reductions that remove part of the graph
 - solver: Contains the actual solvers. Please note that only solver2k.py is used. The other solvers were never completed.
 - solver.heuristics: Lower bounds that can be used during the solving process
+
+The reduction part uses the following reductions (for more details see Polzin2004 and Rehfeldt2015):
+- Non-terminals of degree 0/1/2
+- Non-terminals of degree k, with a limit of 4
+- Terminals with degree 1
+- Neighboring terminals
+- Removal of non-terminal components
+- Steiner distance / long edges
+- Steiner distance circuit
+- Terminal distance
+- Bound based using Voronoi regions
+- Bound based using dual ascent
+- Nearest vertex
+- Short links
+
+Furthmore, after the competition, the application has been enhanced by techniques from other solutions:
+From https://github.com/wata-orz/steiner_tree
+- Non-terminals of degree 3
+
+From https://bitbucket.org/krismaz/pace2018
+- Vertex cuts
+- Mst contract
+- Heavy terminals
+
+The solving part uses the Steiner-Dijkstra algorithm proposed in Hougardy2014. As a guiding heuristic it uses either 1-Trees or dual ascent, depending on the instance properties.
