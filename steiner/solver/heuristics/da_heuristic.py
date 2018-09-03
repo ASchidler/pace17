@@ -3,7 +3,7 @@ from networkx import dijkstra_path_length, single_source_dijkstra_path_length, s
 import steiner_graph as sg
 import steiner_approximation as sa
 
-# TODO: Try both heuristics at the start, choose better one for the remainder
+
 class DaHeuristic:
     def __init__(self, steiner):
         self.steiner = steiner

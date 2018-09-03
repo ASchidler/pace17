@@ -2,7 +2,6 @@ from solver import solver_2k as sv
 from reduction import *
 from preselection import *
 from solver.heuristics import *
-import solver.heuristics.da_heuristic as da
 
 """Used as a configuration for the whole steiner solving suite"""
 
@@ -40,7 +39,7 @@ def reducers():
 
 def solver(steiner):
     """Creates a solver"""
-    da_h = da.DaHeuristic(steiner)
+    da_h = da_heuristic.DaHeuristic(steiner)
 
     if len(steiner.graph.nodes) < 2000 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
         heuristics = [da_h]

@@ -6,7 +6,11 @@ import d_heap as dh
 import bounded_structures as bs
 import reduction.dual_ascent as da
 
+
 class Solver2k:
+    """Solver that uses a mixture of Dijkstra's algorithm and the Dreyfus-Wagner algorithm to solve the SPG.
+    As proposed in Hougardy2014"""
+
     def __init__(self, steiner, terminals, heuristics):
         self.steiner = steiner
         self.max_node = max(steiner.graph.nodes)

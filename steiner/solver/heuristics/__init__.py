@@ -1,1 +1,1 @@
-__all__ = ["mst_heuristic", "tsp_heuristic", "smt_heuristic"]
+__all__ = ["mst_heuristic", "da_heuristic"]
