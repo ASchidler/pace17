@@ -2,7 +2,9 @@ from sys import maxint
 
 
 class DegreeReduction:
-    """ Removed nodes with degree 1 (non-terminal) and merges nodes with degree 2 """
+    """ Removed nodes with degree 1 (non-terminal) and merges nodes with degree 2
+    Also tries to contract edges for terminals (degree 1 or of closest vertex is a terminal)
+    """
 
     def __init__(self):
         self._removed = {}

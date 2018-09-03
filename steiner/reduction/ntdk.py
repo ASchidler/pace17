@@ -44,7 +44,8 @@ class NtdkReduction:
 
                 # Calc distances, more memory efficient than calculating it all beforehand
                 if not self._restricted:
-                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._search_limit, False) for (x, tt1) in nb for (y, tt2) in nb if y > x}
+                    dist = {(x, y): self.modified_dijkstra(steiner, x, y, total_edge_sum, self._search_limit, False)
+                            for (x, tt1) in nb for (y, tt2) in nb if y > x}
                 else:
                     dist = {(x, y): steiner.get_steiner_lengths(x, y, 0) for (x, tt1) in nb for (y, tt2) in nb if y > x}
 

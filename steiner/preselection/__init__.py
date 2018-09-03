@@ -1,1 +1,2 @@
-__all__ = ["zeroedge", "short_edges", "short_links", "length_transform", "nearest_vertex", "preselection_pack"]
+__all__ = ["zeroedge", "short_edges", "short_links", "nearest_vertex", "preselection_pack",
+           "mst_contract"]

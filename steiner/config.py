@@ -2,28 +2,20 @@ from solver import solver_2k as sv
 from reduction import *
 from preselection import *
 from solver.heuristics import *
-import reduction.two_path as two_path
-import reduction.twin_reduction as twin_reduction
-import reduction.deg3 as deg3
 import solver.heuristics.da_heuristic as da
-import reduction.mst_contract as mst_contract
-import reduction.heavy_edge as heavy_edge
 
 """Used as a configuration for the whole steiner solving suite"""
+
 
 def reducers():
     """Creates the set of reducing preprocessing tests"""
     return [
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
-
-        # dual_ascent.DualAscent(run_once=True, run_last=False),
         component.ComponentReduction(),
         heavy_edge.HeavyEdge(),
         degree.DegreeReduction(),
-        #two_path.TwoPath(),
         mst_contract.MstContract(),
-        #twin_reduction.TwinReductions(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         long_edges.LongEdgeReduction(True),

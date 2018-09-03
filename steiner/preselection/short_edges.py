@@ -1,12 +1,11 @@
-from sys import maxint
-from networkx import minimum_spanning_tree, bidirectional_dijkstra
-import union_find as uf
 from collections import defaultdict
+from sys import maxint
+
+import union_find as uf
 
 
-# According to Polzin 04 this test is more complicated than SL and NV and the difference negligible
 class ShortEdgeReduction:
-    """Also called Nearest Special Vertex (NSV) test. """
+    """Also called Nearest Special Vertex (NSV) test. A generalization of short links and short edges"""
     def __init__(self):
         self.terminals = None
         self.max_terminal = None

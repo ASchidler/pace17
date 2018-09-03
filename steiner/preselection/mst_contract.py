@@ -2,7 +2,8 @@ import union_find as uf
 
 
 class MstContract:
-    """Based on the idea that any edge between two terminals that is in a minimum spanning tree can be contracted"""
+    """Based on the idea that any edge between two terminals that is in a minimum spanning tree can be contracted.
+    Found in the source code of Krzysztof Maziarz and Adam Polak"""
 
     def __init__(self):
         self.deleted = []

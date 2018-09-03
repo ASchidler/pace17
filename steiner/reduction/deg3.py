@@ -4,7 +4,7 @@ from sys import maxint
 
 
 class Degree3Reduction:
-    """Reduction that automatically contracts edges with weight 0"""
+    """Reduction that automatically contracts edges with weight 0. Found in the wata_sigma source code"""
 
     def __init__(self):
         self.merged = []
@@ -58,7 +58,7 @@ class Degree3Reduction:
                             for q, pq in nbs[p].items():
                                 pq = pq['weight']
                                 if len(ps) < 2 and q not in ignore \
-                                        and self.sub_dijkstra(steiner, [x, y], q, ignore, max(up, pq) + 1) > max(up, pq):
+                                        and self.sub_dijkstra(steiner, [x, y], q, ignore, max(up, pq)+1) > max(up, pq):
                                     ps.append((q, pq))
 
                             if len(ps) > 1:

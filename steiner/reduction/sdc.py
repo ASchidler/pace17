@@ -2,6 +2,7 @@ from ntdk import NtdkReduction
 
 
 class SdcReduction:
+    """Steiner distance circuit reduction. Searches the neighborhood of an edge in an attempt to remove it"""
     def __init__(self, search_limit=40):
         self._done = False
         self._search_limit = search_limit

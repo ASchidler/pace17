@@ -68,9 +68,9 @@ class Reducer:
 
 
 class DebugReducer(Reducer):
-    def __init__(self, reducers, threshold=0.05):
+    def __init__(self, reducers, run_limit=0):
         new_reducers = [DebugReduction(r) for r in reducers]
-        Reducer.__init__(self, new_reducers, threshold)
+        Reducer.__init__(self, new_reducers, run_limit)
 
     def reduce(self, g):
         tm = time()

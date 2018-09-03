@@ -2,6 +2,8 @@ from sys import maxint
 
 
 class NearestVertex:
+    """Nearest vertex reduction. Checks if the edge of the closest neighbor can be contracted"""
+
     def __init__(self):
         self.deleted = []
         self.merged = []

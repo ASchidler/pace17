@@ -1,10 +1,14 @@
-import short_links as sl
-import nearest_vertex as nv
-import reduction.degree as dg
-import reduction.terminals as t
 from sys import maxint
 
+import nearest_vertex as nv
+import reduction.degree as dg
+import short_links as sl
+
+
 class NvSlPack:
+    """Combines terminal contractions, nearest vertex and short links reduction and reiterates reduction until
+    failure"""
+
     def __init__(self, threshold=0.01):
         self._sl = sl.ShortLinkPreselection()
         self._nv = nv.NearestVertex()

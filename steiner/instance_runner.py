@@ -4,11 +4,9 @@ import networkx as nx
 import iparser as pp
 
 import config as cfg
-import reduction.terminals as terminals
-import steiner_graph as sg
 import component_finder as cf
 import sys
-import reduction.dual_ascent as da
+
 from reducer import DebugReducer
 
 """ This runner runs all the public instances with debug oparser """
@@ -49,7 +47,7 @@ def process_file(filename, solve, apply_reductions):
 
 
 def start_solve(steiner, solve, apply_reductions):
-    reducer = DebugReducer(cfg.reducers())
+    reducer = DebugReducer(cfg.reducers(), 0)
 
     if apply_reductions:
         reducer.reduce(steiner)

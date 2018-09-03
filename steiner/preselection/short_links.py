@@ -2,6 +2,7 @@ from sys import maxint
 
 
 class ShortLinkPreselection:
+    """Checks if the edges bridging Voronoi regions may be contracted"""
 
     def __init__(self):
         self.deleted = []

@@ -39,8 +39,8 @@ class BoundNodeReduction:
                     total = dists[0][1] + dists[1][1] + t_weight
 
                     if total > steiner.get_approximation().cost or \
-                            (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.has_node(
-                                n)):
+                            (total == steiner.get_approximation().cost and not steiner.get_approximation().tree.
+                                has_node(n)):
                         steiner.remove_node(n)
 
         track -= len(steiner.graph.edges)

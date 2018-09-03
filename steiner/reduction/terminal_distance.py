@@ -4,6 +4,7 @@ from sys import maxint
 
 class CostVsTerminalDistanceReduction:
     """ Removes all edges that are longer than the maximum distance between two terminals """
+
     def __init__(self, threshold=0.01):
         self.enabled = True
         self._done = False

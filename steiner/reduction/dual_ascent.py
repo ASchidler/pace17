@@ -150,7 +150,8 @@ class DualAscent:
 
         # Tries to find better graphs be pruning the solutions
         if prune_limit > 0:
-            solution_pool.extend(self.prune_ascent(steiner, results[i]) for i in range(0, min(len(results), prune_limit)))
+            solution_pool.extend(self.prune_ascent(steiner, results[i])
+                                 for i in range(0, min(len(results), prune_limit)))
 
         # Tries to find better solutions by recombining the solutions found above
         if prune_rec_limit > 0:
@@ -278,7 +279,6 @@ class DualAscent:
         edge_weights = [self.calc_edge_weight(g, u, v, d, t_weight) for (u, v, d) in g.graph.edges(data='weight')]
         edge_weights.sort(reverse=True)
         bnd = edge_weights[min(len(edge_weights)-1, min_removal)]
-        nb = g.graph._adj
 
         for n in list(g.graph.nodes):
             # While all terminals must be in the tree, the list of terminals may have changed during preprocessing
@@ -290,16 +290,6 @@ class DualAscent:
 
                     if total > bnd:
                         g.remove_node(n)
-
-                    # This causes a worse bound (at least for instance 197)
-                    # else:
-                    #     for n2, dta in nb[n].items():
-                    #         # Do not disconnect tree
-                    #         if not tree.has_edge(n, n2) and g.graph.degree(n2) > 1 and g.graph.degree(n) > 1:
-                    #             total = self.calc_edge_weight(g, n, n2, dta['weight'], t_weight)
-                    #
-                    #             if total > bnd:
-                    #                 g.remove_edge(n, n2)
 
         if not is_connected(g.graph):
             return None
@@ -497,7 +487,7 @@ class DualAscent:
                 else:
                     push(t_cuts, [i_edges, c_cut])
 
-            # Reinstante heapness if changed
+            # Reinstate heapness if changed
             if heap_changed:
                 heapify(t_cuts)
 

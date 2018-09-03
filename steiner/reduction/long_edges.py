@@ -3,6 +3,7 @@ from sys import maxint
 from collections import defaultdict
 import heapq as hq
 
+
 class LongEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 

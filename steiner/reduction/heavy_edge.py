@@ -1,6 +1,10 @@
 from reduction.ntdk import NtdkReduction
+
+
 class HeavyEdge:
-    """ Checks if a terminal is guaranteed to be a leaf and adapts the incident edges weights if possible"""
+    """ Checks if a terminal is guaranteed to be a leaf and adapts the incident edges weights if possible.
+    Found in the source code of Krzysztof Maziarz and Adam Polak
+    """
 
     def __init__(self):
         self._ran = False
