@@ -11,6 +11,8 @@ class DegreeReduction:
         self._contracted = []
         self._selected = []
         self._done = False
+        # Mechanism to not contract in the first run
+        self._ran = False
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         track = len(steiner.graph.edges)
@@ -30,7 +32,7 @@ class DegreeReduction:
                     if n not in steiner.terminals:
                         steiner.remove_node(n)
                     # Terminals of degree 1 => Simply contract
-                    else:
+                    elif self._ran:
                         nb = next(steiner.graph.neighbors(n))
                         self._contracted.append((n, nb, steiner.graph[n][nb]['weight']))
                         steiner.move_terminal(n, nb)
@@ -48,7 +50,7 @@ class DegreeReduction:
                     steiner.remove_node(n)
 
                 # Terminals of higher degree? Merge if the nearest node is a terminal
-                elif dg >= 2 and n in steiner.terminals:
+                elif self._ran and dg >= 2 and n in steiner.terminals:
                     min_val, min_nb = maxint, None
                     for n2 in steiner.graph.neighbors(n):
                         w = steiner.graph[n][n2]['weight']
@@ -68,6 +70,7 @@ class DegreeReduction:
             steiner.invalidate_dist(1)
             steiner.invalidate_approx(1)
 
+        self._ran = True
         return track - len(steiner.graph.edges)
 
     def post_process(self, solution):

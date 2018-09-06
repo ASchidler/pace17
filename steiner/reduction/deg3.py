@@ -141,8 +141,9 @@ class Degree3Reduction:
                             break
 
         taken = (time.time() - start)
-        # Percentage of edges removed per second > 0.1%?
-        self.enabled = float(track) / float(len(steiner.graph.edges)) / taken > 0.0008
+        if len(steiner.graph.edges) > 0 and taken > 0:
+            # Percentage of edges removed per second > 0.1%?
+            self.enabled = float(track) / float(len(steiner.graph.edges)) / taken > 0.0008
 
         return track
 

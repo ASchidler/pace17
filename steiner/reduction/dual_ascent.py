@@ -33,7 +33,7 @@ class DualAscent:
             return 0
 
         # Let the others do their thing first
-        if curr_cnt > len(steiner.graph.edges) * self.active_treshold or not self.enabled:
+        if (len(steiner.graph.edges) > 2000 and curr_cnt > len(steiner.graph.edges) * self.active_treshold) or not self.enabled:
             return 0
 
         self.runs += 1

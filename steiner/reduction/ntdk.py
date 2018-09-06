@@ -122,8 +122,9 @@ class NtdkReduction:
             steiner.invalidate_approx(-2)
 
         taken = (time.time() - start)
-        # Percentage of edges removed per second > 0.1%?
-        self._enabled = float(result) / float(len(steiner.graph.edges)) / taken > 0.0008
+        if len(steiner.graph.edges) > 0 and taken > 0:
+            # Percentage of edges removed per second > 0.1%?
+            self._enabled = float(result) / float(len(steiner.graph.edges)) / taken > 0.0008
 
         return result
 

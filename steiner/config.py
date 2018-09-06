@@ -12,9 +12,7 @@ def reducers(exclude_reduction=False):
         component.ComponentReduction(),
         zeroedge.ZeroEdgeReduction(),
         component.ComponentReduction(),
-        #heavy_edge.HeavyEdge(),
         degree.DegreeReduction(),
-        mst_contract.MstContract(),
         terminal_distance.CostVsTerminalDistanceReduction(),
         degree.DegreeReduction(),
         long_edges.LongEdgeReduction(True),
@@ -24,23 +22,26 @@ def reducers(exclude_reduction=False):
         degree.DegreeReduction(),
         ntdk.NtdkReduction(False, max_degree=4),
         degree.DegreeReduction(),
+        dual_ascent.DualAscent(),
+        component.ComponentReduction(),
+        degree.DegreeReduction(),
+        heavy_edge.HeavyEdge(),
         #short_edges.ShortEdgeReduction(),
+        mst_contract.MstContract(),
         preselection_pack.NvSlPack(),
         degree.DegreeReduction(),
         #bound_reductions.BoundNodeReduction(),
         #bound_reductions.BoundEdgeReduction(),
         #bound_reductions.BoundGraphReduction(),
         #bound_reductions.BoundNtdkReduction(),
-        dual_ascent.DualAscent(),
-        component.ComponentReduction(),
-        degree.DegreeReduction()
+
     ]
 
     # This is to allow for removing reductions taken from other PACE submissions
     if exclude_reduction:
-        red.pop(11)     # Degree 3
-        red.pop(5)      # MST contract
-        red.pop(3)      # Heavy edge
+        red.pop(9)     # Degree 3
+        red.pop(16)  # Heavy edge
+        red.pop(17)      # MST contract
 
     return red
 
