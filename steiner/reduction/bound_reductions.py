@@ -11,8 +11,8 @@ class BoundNodeReduction:
         self._start_at = start_at
         self._runs = 0
 
-    def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 2 or not (self.enabled or last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        if len(steiner.terminals) < 2 or not self.enabled:
             return 0
 
         self._runs += 1
@@ -65,8 +65,8 @@ class BoundEdgeReduction:
         self._start_at = start_at
         self._runs = 0
 
-    def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 2 or not (self.enabled or last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        if len(steiner.terminals) < 2 or not self.enabled:
             return 0
 
         self._runs += 1
@@ -125,8 +125,8 @@ class BoundNtdkReduction:
         self._start_at = start_at
         self._runs = 0
 
-    def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 3 or not (self.enabled or last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        if len(steiner.terminals) < 3 or not self.enabled:
             return 0
 
         self._runs += 1
@@ -195,8 +195,8 @@ class BoundGraphReduction:
         self._start_at = start_at
         self._runs = 0
 
-    def reduce(self, steiner, cnt, last_run):
-        if len(steiner.terminals) < 2 or (not self.enabled and not last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        if len(steiner.terminals) < 2 or not self.enabled:
             return 0
 
         self._runs += 1

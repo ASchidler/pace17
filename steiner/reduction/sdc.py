@@ -7,7 +7,7 @@ class SdcReduction:
         self._done = False
         self._search_limit = search_limit
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
             return 0
 

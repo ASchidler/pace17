@@ -11,12 +11,12 @@ class CostVsTerminalDistanceReduction:
         self._threshold = threshold
         self._counter = maxint / 2
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         # Edge case, only one terminal
-        if len(steiner.terminals) == 1 or not (self.enabled or last_run):
+        if len(steiner.terminals) == 1 or not self.enabled:
             return 0
 
-        self._counter += cnt
+        self._counter += prev_cnt
         if self._counter < self._threshold * len(steiner.graph.edges):
             return 0
         else:

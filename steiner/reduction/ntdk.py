@@ -2,6 +2,7 @@ import heapq as hq
 from collections import defaultdict
 from sys import maxint
 from networkx import minimum_spanning_edges, Graph
+import time
 
 
 class NtdkReduction:
@@ -10,6 +11,7 @@ class NtdkReduction:
     def __init__(self, restricted, threshold=0.01, search_limit=40, only_last=False, max_degree=4):
         self._removed = {}
         self._restricted = restricted
+        self._enabled = True
         self._done = False
         self._search_limit = search_limit
         self._only_last = only_last
@@ -17,23 +19,24 @@ class NtdkReduction:
         self._threshold = threshold
         self._counter = maxint / 2
 
-    def reduce(self, steiner, cnt, last_run):
-        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 10:
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
             return 0
 
-        self._counter += cnt
+        self._counter += prev_cnt
         if self._counter < self._threshold * len(steiner.graph.edges):
             return 0
         else:
             self._counter = 0
 
         change = False
-        if self._only_last and not last_run:
+        if not self._enabled:
             return 0
 
         if self._restricted:
             steiner.requires_steiner_dist(1)
 
+        start = time.time()
         track = len(steiner.graph.edges)
         nbs = steiner.graph._adj
 
@@ -117,6 +120,10 @@ class NtdkReduction:
         result = track - len(steiner.graph.edges)
         if change:
             steiner.invalidate_approx(-2)
+
+        taken = (time.time() - start)
+        # Percentage of edges removed per second > 0.1%?
+        self._enabled = float(result) / float(len(steiner.graph.edges)) / taken > 0.0008
 
         return result
 

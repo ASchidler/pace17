@@ -27,17 +27,15 @@ class Reducer:
         self._run_limit = run_limit
 
     def reduce(self, g):
-        last_run = False
         run_num = 1
         prev_changes = len(g.graph.edges)
 
         while True:
             cnt_changes = 0
-            last_run = last_run or (run_num == self._run_limit)
 
             for r in self._reducers:
                 if len(g.graph.nodes) > 1:
-                    reduced = r.reduce(g, prev_changes, last_run)
+                    reduced = r.reduce(g, prev_changes, cnt_changes)
                     cnt_changes = cnt_changes + reduced
                 else:
                     return

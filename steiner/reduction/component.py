@@ -7,7 +7,7 @@ class ComponentReduction:
     def __init__(self):
         self._done = False
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         track = len(steiner.graph.nodes)
         if len(steiner.graph.nodes) > 1 and not is_connected(steiner.graph):
             for c in list(connected_components(steiner.graph)):

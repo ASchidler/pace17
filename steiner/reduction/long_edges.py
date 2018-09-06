@@ -15,14 +15,14 @@ class LongEdgeReduction:
         self._threshold = threshold
         self._counter = maxint / 2
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         steiner.requires_steiner_dist(1)
 
         track = len(steiner.graph.edges)
 
         equal_edges = []
 
-        self._counter += cnt
+        self._counter += prev_cnt
         if self._counter < self._threshold * len(steiner.graph.edges):
             return 0
         else:
@@ -44,7 +44,7 @@ class LongEdgeReduction:
                 if steiner.graph[n][t]['weight'] > steiner.get_lengths(t, n):
                     steiner.remove_edge(n, t)
 
-        if self._delete_equal and (cnt == 0 or last_run) and len(steiner.graph.edges) / len(steiner.graph.nodes) < 10:
+        if self._delete_equal and min(curr_cnt, prev_cnt) == 0 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 10:
             for (u, v, d) in equal_edges:
                 if steiner.graph.has_edge(u, v) and \
                         d >= ntdk.NtdkReduction.modified_dijkstra(steiner, u, v, d + 1, self._equal_search_limit, True):

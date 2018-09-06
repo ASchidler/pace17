@@ -13,7 +13,7 @@ class ShortEdgeReduction:
         self.merged = []
         self._done = False
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         steiner.requires_dist(1)
         sorted_edges = sorted(steiner.graph.edges(data='weight'), key=lambda x: x[2])
         track = len(sorted_edges)

@@ -11,7 +11,7 @@ class HeavyEdge:
         self._done = False
         self._adaptions = []
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         # Run only once
         if self._ran:
             return 0

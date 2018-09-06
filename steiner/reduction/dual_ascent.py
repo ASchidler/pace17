@@ -14,69 +14,34 @@ class DualAscent:
 
     good_roots = deque(maxlen=10)
 
-    def __init__(self, run_once=False, quick_run=False, start_at=1, run_every=1, threshold=0.05, run_last=True):
+    def __init__(self, threshold=0.01, active_treshold=0.025, run_last=True):
         self.runs = 0
         self._done = False
-        self._run_once = run_once
-        self._quick_run = quick_run
         self.enabled = True
-        self._start_at = start_at
-        self._run_every = run_every
         self._run_last = run_last
         self._threshold = threshold
-        self._counter = maxint / 2
         self._last_run = -1
+        self.active_treshold = active_treshold
 
-        if self._run_last and self._run_once:
-            self._start_at = maxint
-
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         # This invalidates the approximation. This is important in case the DA doesnt go through in the last run
         # so the solver has a valid approximation
         steiner.invalidate_approx(-2)
+        goal = len(steiner.graph.edges) * self._threshold
 
         if len(steiner.terminals) < 4:
             return 0
 
-        self._counter += cnt
-
-        if self._counter < self._threshold * len(steiner.graph.edges):
+        # Let the others do their thing first
+        if curr_cnt > len(steiner.graph.edges) * self.active_treshold or not self.enabled:
             return 0
-        else:
-            self._counter = 0
 
         self.runs += 1
-        do_quick_run = self._quick_run and self.enabled and self.runs > 1
-
-        # Enabled for last run?
-        do_run = (last_run and self._run_last)
-        # Or are we ready to start and in the right cycle?
-        do_run = do_run or (self.runs >= self._start_at and (self.runs - self._start_at) % self._run_every == 0)
-        # Run once and already run? If so, stop
-        do_run = do_run and not (self.runs > self._start_at and self._run_once and not self._run_last)
-        # Do not do quick runs during last run
-        do_run = do_run and not (not do_quick_run and self._quick_run) or (self._quick_run and last_run)
-
-        if not do_run:
-            return 0
 
         # parameters, adapt to instance
         solution_limit = solution_rec_limit = prune_limit = prune_rec_limit = 0
 
-        if not (len(steiner.graph.edges) / len(steiner.graph.nodes) > 3) and (self._quick_run or self._run_once):
-            if self._quick_run:
-                solution_limit = 5
-                solution_rec_limit = 1
-                prune_limit = 1
-                prune_rec_limit = 0
-            elif self._run_once:
-                solution_limit = 20
-                solution_rec_limit = 5
-                prune_limit = 4
-                prune_rec_limit = 2
-
-        # Very small graph
-        elif len(steiner.graph.nodes) < 250 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 5:
+        if len(steiner.graph.nodes) < 250 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 5:
             solution_limit = 30
             solution_rec_limit = 10
             prune_limit = 10
@@ -100,11 +65,16 @@ class DualAscent:
             prune_limit = 1
             prune_rec_limit = 0
         # Large, not dense graphs
-        else:
+        elif len(steiner.graph.nodes) < 10000:
             solution_limit = 10
-            solution_rec_limit = 3
+            solution_rec_limit = 0
             prune_limit = 1
-            prune_rec_limit = 3
+            prune_rec_limit = 0
+        else:
+            solution_limit = 5
+            solution_rec_limit = 0
+            prune_limit = 1
+            prune_rec_limit = 0
 
         # Init
         ts = list(steiner.terminals)
@@ -179,8 +149,9 @@ class DualAscent:
         if track > 0:
             steiner.invalidate_steiner(-2)
             steiner.invalidate_dist(-2)
+
         steiner.invalidate_approx(0)
-        self.enabled = track > 0 and self.runs > 1
+        self.enabled = track > goal
         return track
 
     def reduce_graph(self, steiner, g, bnd, root):
@@ -190,9 +161,7 @@ class DualAscent:
 
         pred = g._pred
         root_dist = single_source_dijkstra_path_length(g, root)
-        # That would be correct according to SCIP jack paper, but produces incorrect results!
-        # for (n2, dta) in pred.items():
-        #     g.remove_edge(n2, root)
+
         vor = self.voronoi(g, [t for t in steiner.terminals if t != root])
 
         edges = set()

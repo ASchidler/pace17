@@ -10,7 +10,7 @@ class MstContract:
         self.merged = []
         self._done = False
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         if len(steiner.terminals) <= 2:
             return 0
 

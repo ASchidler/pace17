@@ -16,8 +16,8 @@ class NvSlPack:
         self._threshold = threshold
         self._counter = maxint / 2
 
-    def reduce(self, steiner, cnt, last_run):
-        self._counter += cnt
+    def reduce(self, steiner, prev_cnt, curr_cnt):
+        self._counter += prev_cnt
         if self._counter < self._threshold * len(steiner.graph.edges):
             return 0
         else:
@@ -27,11 +27,11 @@ class NvSlPack:
         this_run = -1
         while this_run != 0:
             this_run = 0
-            this_run += self._nv.reduce(steiner, cnt, last_run)
-            this_run += self._sl.reduce(steiner, cnt, last_run)
+            this_run += self._nv.reduce(steiner, prev_cnt, curr_cnt)
+            this_run += self._sl.reduce(steiner, prev_cnt, curr_cnt)
 
             if this_run > 0:
-                this_run += self._dg.reduce(steiner, cnt, last_run)
+                this_run += self._dg.reduce(steiner, prev_cnt, curr_cnt)
 
             total += this_run
 

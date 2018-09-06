@@ -6,7 +6,7 @@ class ZeroEdgeReduction:
         self.merged = []
         self.enabled = True
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         track = 0
         for (u, v, d) in steiner.graph.edges(data='weight'):
             if d == 0:

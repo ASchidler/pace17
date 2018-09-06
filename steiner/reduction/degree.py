@@ -12,7 +12,7 @@ class DegreeReduction:
         self._selected = []
         self._done = False
 
-    def reduce(self, steiner, cnt, last_run):
+    def reduce(self, steiner, prev_cnt, curr_cnt):
         track = len(steiner.graph.edges)
         t_cnt = 0
 
