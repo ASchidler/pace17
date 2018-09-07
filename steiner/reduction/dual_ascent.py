@@ -21,7 +21,7 @@ class DualAscent:
         self._run_last = run_last
         self._threshold = threshold
         self._last_run = -1
-        self.active_treshold = active_treshold
+        self.active_threshold = active_treshold
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         # This invalidates the approximation. This is important in case the DA doesnt go through in the last run
@@ -33,7 +33,8 @@ class DualAscent:
             return 0
 
         # Let the others do their thing first
-        if (len(steiner.graph.edges) > 2000 and curr_cnt > len(steiner.graph.edges) * self.active_treshold) or not self.enabled:
+        if (len(steiner.graph.edges) > 2000 and curr_cnt > len(steiner.graph.edges) * self.active_threshold) \
+                or not self.enabled:
             return 0
 
         self.runs += 1

@@ -6,13 +6,13 @@ class DegreeReduction:
     Also tries to contract edges for terminals (degree 1 or of closest vertex is a terminal)
     """
 
-    def __init__(self):
+    def __init__(self, contract_first=True):
         self._removed = {}
         self._contracted = []
         self._selected = []
         self._done = False
         # Mechanism to not contract in the first run
-        self._ran = False
+        self._ran = contract_first
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         track = len(steiner.graph.edges)
