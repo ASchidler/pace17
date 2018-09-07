@@ -10,8 +10,8 @@ def process_file(filename, solve, apply_reductions):
 
     f = open(filename, "r")
     steiner = pp.parse_pace_file(f)
-    sp.run(steiner, debug=True, solve=solve, reductions=apply_reductions, verify=True, split=False, pace_only=False,
-           prnt=True)
+    sp.run(steiner, sp.SolvingConfig(debug=True, solve=solve,apply_reductions=apply_reductions,verify=True,
+                                     print_output=True))
 
 
 # Instances that are not solvable yet
@@ -32,7 +32,7 @@ solvable.extend(long_runtime)
 # ? 200, 172, 194
 # slow 198
 #for i in [171]: # [171, 173, 195]:# (x for x in lst if x > 189): # hard_instances:
-for i in [141]:
+for i in [199]:
     if i % 2 == 1:
         file_path = "..\instances\lowTerm\instance{0:03d}.gr"
     else:

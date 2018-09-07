@@ -5,70 +5,91 @@ import oparser.pace as o_pace
 import reducer as red
 import config as cfg
 import time
+from solver.solver_2k import Solver2kConfig
 
 from structures.steiner_graph import SteinerGraph
 
 """Packages the whole solver so it can be called from different runners"""
 
 
-def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=False, pace_only=False, prnt=True, hvy=True):
+class SolvingConfig:
+    def __init__(self, debug=False, solve=True, apply_reductions=True, verify=False, split=False, pace_only=False,
+                 print_output=False, heavy_edges=False, heap_width=16, use_buckets=True, use_da=True, use_store=True,
+                 use_root=True):
+        self.debug = debug
+        self.solve = solve
+        self.apply_reductions = apply_reductions,
+        self.verify = verify
+        self.split = split
+        self.pace_only = pace_only
+        self.print_output = print_output
+        self.heavy_edges = heavy_edges
+        self.heap_width = heap_width
+        self.use_buckets = use_buckets
+        self.use_da = use_da
+        self.use_store = use_store
+        self.use_root = use_root
+
+
+def run(steiner, config):
     """Calls the necessary functions"""
 
     # Copy graph for verification
     steiner_cp = None
     start_time = None
 
-    if verify:
+    if config.verify:
         steiner_cp = SteinerGraph()
         steiner_cp.graph = steiner.graph.copy()
         steiner_cp.terminals = set(steiner.terminals)
 
-    if debug:
+    if config.debug:
         print "Loaded instance with {} vertices, {} edges, {} terminals".format(len(steiner.graph.nodes),
                                                                                 len(steiner.graph.edges),
                                                                                 len(steiner.terminals))
         start_time = time.time()
 
-    solution = _start_solve(steiner, debug, solve, reductions, split, pace_only, hvy)
+    solution = _start_solve(steiner, config)
 
     # Output solution
-    if not verify or _verify(steiner_cp, solution):
-        if prnt:
-            if debug:
+    if not config.verify or _verify(steiner_cp, solution):
+        if config.print_output:
+            if config.debug:
                 o_dbg.parse(solution)
             else:
                 o_pace.parse(solution)
 
-    if debug:
+    if config.debug:
         print "Completed in {}".format(time.time() - start_time)
 
     return solution
 
 
-def _start_solve(steiner, debug, solve, apply_reductions, split, pace_only, heavy):
+def _start_solve(steiner, config):
     """Reduces the whole graph and splits the solving if necessary"""
-    reducer = red.DebugReducer(cfg.reducers(pace_only, heavy)) if debug else red.Reducer(cfg.reducers(pace_only, heavy))
+    reducer = red.DebugReducer(cfg.reducers(config.pace_only, config.heavy_edges))\
+        if config.debug else red.Reducer(cfg.reducers(config.pace_only, config.heavy_edges))
 
-    if apply_reductions:
+    if config.apply_reductions:
         reducer.reduce(steiner)
 
-    if solve:
-        if split:
-            solution = cf.decompose(steiner, lambda x: _solve_instance(x, debug, split),
-                                    lambda x: _start_solve(x, debug, solve, apply_reductions, split, pace_only, heavy),
-                                    debug)
+    if config.solve:
+        if config.split:
+            solution = cf.decompose(steiner, lambda x: _solve_instance(x, config),
+                                    lambda x: _start_solve(x, config),
+                                    config.debug)
         else:
-            solution = _solve_instance(steiner, debug, split)
+            solution = _solve_instance(steiner, config)
 
         # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
-        if apply_reductions:
+        if config.apply_reductions:
             solution = reducer.unreduce(solution[0], solution[1])
 
         return solution
 
 
-def _solve_instance(steiner, debug, split):
-    if debug:
+def _solve_instance(steiner, config):
+    if config.debug:
         print "Solving instance with {} vertices, {} edges, {} terminals".format(len(steiner.graph.nodes),
                                                                                  len(steiner.graph.edges),
                                                                                  len(steiner.terminals))
@@ -77,11 +98,12 @@ def _solve_instance(steiner, debug, split):
     steiner._lengths = {}
 
     # Solve
-    solver = cfg.solver(steiner)
+    solver = cfg.solver(steiner, Solver2kConfig(config.heap_width, config.use_buckets, config.use_root,
+                                                config.use_store, config.use_da))
     solution = solver.solve()
 
     # Quick validity checks
-    if debug and split:
+    if config.debug and config.split:
         if not is_connected(solution[0]):
             print "*** Unconnected solution"
 

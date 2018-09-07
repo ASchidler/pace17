@@ -16,10 +16,23 @@ parser.add_argument('-p', action='store_true',
 
 parser.add_argument('-e', action='store_true', help="Use heavy edges reduction")
 
+parser.add_argument('-d', type=int, default=16, help="Width of the d-heap used for solver queue")
+
+parser.add_argument('-b', action='store_false', help="Do not use buckets for small upper bound instances")
+
+parser.add_argument('-a', action='store_false', help="Do not use dual ascent as a guiding heuristic")
+
+parser.add_argument('-t', action='store_false', help="Do not use custom label store")
+
+parser.add_argument('-r', action='store_false', help="Do not use best root from dual ascent")
+
 parser.add_argument('--stats', type=int)
 
 args = parser.parse_args()
 f = open(args.filename, "r")
 steiner = pp.parse_pace_file(f)
 
-sp.run(steiner, debug=True, solve=True, reductions=True, verify=False, split=args.s, pace_only=args.p, prnt=True, hvy=args.e)
+conf = sp.SolvingConfig(debug=True, split=args.s, pace_only=args.p, print_output=True, heavy_edges=args.e,
+                        heap_width=args.d, use_buckets=args.b, use_da=args.a, use_store=args.t, use_root=args.r)
+
+sp.run(steiner, conf)

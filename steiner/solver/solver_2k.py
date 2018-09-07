@@ -5,19 +5,47 @@ from structures import bounded_structures as bs, d_heap as dh, set_storage as st
 import reduction.dual_ascent as da
 
 
+class Solver2kConfig:
+    """This class contains the parameters for the solver"""
+    def __init__(self, heap_width=16, use_buckets=True, root_choice=True, use_store=True, use_da=True):
+        self.heap_width = heap_width
+        self.use_buckets = use_buckets
+        self.root_choice = root_choice
+        self.use_store = use_store
+        self.use_da = use_da
+
+
+class SolverSetLabelStore:
+    """This store uses a simple set to manage labels"""
+
+    def __init__(self):
+        self._store = set()
+
+    def append(self, label):
+        self._store.add(label)
+
+    def find_all(self, label):
+        for n in self._store:
+            if (n & label) == 0:
+                yield n
+
+
 class Solver2k:
     """Solver that uses a mixture of Dijkstra's algorithm and the Dreyfus-Wagner algorithm to solve the SPG.
     As proposed in Hougardy2014"""
 
-    def __init__(self, steiner, terminals, heuristics):
+    def __init__(self, steiner, terminals, heuristics, config):
         self.steiner = steiner
         self.max_node = max(steiner.graph.nodes)
         self.terminals = list(terminals)
         self.terminals.sort()
         # Use best root from approximations as base for the algorithm
-        target_root = da.DualAscent.root
-        if target_root is None or not steiner.graph.has_node(target_root):
-            target_root = steiner.get_approximation().get_root(self.steiner)
+        target_root = None
+        if config.root_choice:
+            target_root = da.DualAscent.root
+            if target_root is None or not steiner.graph.has_node(target_root):
+                target_root = steiner.get_approximation().get_root(self.steiner)
+
         self.root_node = self.terminals.pop(self.terminals.index(target_root)) \
             if target_root is not None else self.terminals.pop()
         self.max_set = (1 << len(self.terminals)) - 1
@@ -26,12 +54,12 @@ class Solver2k:
         self.heuristics = heuristics
         self.labels = list([None] * (self.max_node + 1))
 
-        if steiner.get_approximation().cost <= 5000:
+        if config.use_buckets and steiner.get_approximation().cost <= 5000:
             self.queue = bs.create_queue(steiner.get_approximation().cost)
             self.pop = bs.dequeue
             self.push = bs.enqueue
         else:
-            self.queue = dh.create_queue(16)
+            self.queue = dh.create_queue(config.heap_width)
             self.pop = dh.dequeue
             self.push = dh.enqueue
 
@@ -46,7 +74,7 @@ class Solver2k:
         length = steiner.get_lengths
 
         for n in self.steiner.graph.nodes:
-            self.labels[n] = st.SetStorage(len(self.terminals))
+            self.labels[n] = st.SetStorage(len(self.terminals)) if config.use_store else SolverSetLabelStore()
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
