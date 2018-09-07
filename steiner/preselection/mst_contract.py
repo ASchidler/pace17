@@ -5,13 +5,14 @@ class MstContract:
     """Based on the idea that any edge between two terminals that is in a minimum spanning tree can be contracted.
     Found in the source code of Krzysztof Maziarz and Adam Polak"""
 
-    def __init__(self):
+    def __init__(self, enabled=True):
         self.deleted = []
         self.merged = []
         self._done = False
+        self.enabled = enabled
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
-        if len(steiner.terminals) <= 2:
+        if len(steiner.terminals) <= 2 or not self.enabled:
             return 0
 
         steiner.requires_dist(1)

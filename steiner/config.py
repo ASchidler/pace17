@@ -6,7 +6,7 @@ from solver.heuristics import *
 """Used as a configuration for the whole steiner solving suite"""
 
 
-def reducers(exclude_reduction=False):
+def reducers(exclude_new_reduction=False, heavy_edges=True):
     """Creates the set of reducing preprocessing tests"""
     red = [
         component.ComponentReduction(),
@@ -18,30 +18,23 @@ def reducers(exclude_reduction=False):
         long_edges.LongEdgeReduction(True),
         ntdk.NtdkReduction(True, max_degree=4),
         sdc.SdcReduction(),
-        deg3.Degree3Reduction(),
+        deg3.Degree3Reduction(enabled=not exclude_new_reduction),
         degree.DegreeReduction(contract_first=False),
         ntdk.NtdkReduction(False, max_degree=4),
         degree.DegreeReduction(contract_first=False),
         dual_ascent.DualAscent(),
         component.ComponentReduction(),
         degree.DegreeReduction(),
-        heavy_edge.HeavyEdge(),
+        heavy_edge.HeavyEdge(enabled=heavy_edges),
         # short_edges.ShortEdgeReduction(),
-        mst_contract.MstContract(),
+        mst_contract.MstContract(enabled=not exclude_new_reduction),
         preselection_pack.NvSlPack(),
         degree.DegreeReduction(),
         # bound_reductions.BoundNodeReduction(),
         # bound_reductions.BoundEdgeReduction(),
         # bound_reductions.BoundGraphReduction(),
         # bound_reductions.BoundNtdkReduction(),
-
     ]
-
-    # This is to allow for removing reductions taken from other PACE submissions
-    if exclude_reduction:
-        red.pop(9)     # Degree 3
-        red.pop(16)  # Heavy edge
-        red.pop(17)      # MST contract
 
     return red
 

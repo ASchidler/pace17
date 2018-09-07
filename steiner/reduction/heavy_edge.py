@@ -6,8 +6,8 @@ class HeavyEdge:
     Found in the source code of Krzysztof Maziarz and Adam Polak
     """
 
-    def __init__(self):
-        self._ran = False
+    def __init__(self, enabled=True):
+        self._ran = not enabled
         self._done = False
         self._adaptions = []
 

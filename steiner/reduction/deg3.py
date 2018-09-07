@@ -55,9 +55,9 @@ class Degree3Distances:
 class Degree3Reduction:
     """Reduction that automatically contracts edges with weight 0. Found in the wata_sigma source code"""
 
-    def __init__(self):
+    def __init__(self, enabled=True):
         self.merged = []
-        self.enabled = True
+        self.enabled = enabled
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         track = 0

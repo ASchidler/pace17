@@ -11,7 +11,7 @@ from structures.steiner_graph import SteinerGraph
 """Packages the whole solver so it can be called from different runners"""
 
 
-def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=False, pace_only=False, prnt=True):
+def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=False, pace_only=False, prnt=True, hvy=True):
     """Calls the necessary functions"""
 
     # Copy graph for verification
@@ -29,7 +29,7 @@ def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=F
                                                                                 len(steiner.terminals))
         start_time = time.time()
 
-    solution = _start_solve(steiner, debug, solve, reductions, split, pace_only)
+    solution = _start_solve(steiner, debug, solve, reductions, split, pace_only, hvy)
 
     # Output solution
     if not verify or _verify(steiner_cp, solution):
@@ -45,9 +45,9 @@ def run(steiner, debug=False, solve=True, reductions=True, verify=False, split=F
     return solution
 
 
-def _start_solve(steiner, debug, solve, apply_reductions, split, pace_only):
+def _start_solve(steiner, debug, solve, apply_reductions, split, pace_only, heavy):
     """Reduces the whole graph and splits the solving if necessary"""
-    reducer = red.DebugReducer(cfg.reducers(pace_only)) if debug else red.Reducer(cfg.reducers(pace_only))
+    reducer = red.DebugReducer(cfg.reducers(pace_only, heavy)) if debug else red.Reducer(cfg.reducers(pace_only, heavy))
 
     if apply_reductions:
         reducer.reduce(steiner)
@@ -55,7 +55,7 @@ def _start_solve(steiner, debug, solve, apply_reductions, split, pace_only):
     if solve:
         if split:
             solution = cf.decompose(steiner, lambda x: _solve_instance(x, debug, split),
-                                    lambda x: _start_solve(x, debug, solve, apply_reductions, split, pace_only),
+                                    lambda x: _start_solve(x, debug, solve, apply_reductions, split, pace_only, heavy),
                                     debug)
         else:
             solution = _solve_instance(steiner, debug, split)
