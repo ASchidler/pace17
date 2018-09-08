@@ -46,6 +46,8 @@ class OverallStatistic:
         self.memory_div = 0
         self.memory_out = 0
         self.runtime_out = 0
+        self.common_runtime = 0
+
 
 def parse_watcher(path, instance):
     """Parses the condor watcher file"""
@@ -171,6 +173,7 @@ def calc_statistic(run_data):
     all_stats = dict()
     aggr_results = dict()
     inst_results = defaultdict(list)
+    common_instances = defaultdict(lambda: 0)
 
     for solver, instances in run_data.items():
         stats = OverallStatistic()
@@ -188,6 +191,7 @@ def calc_statistic(run_data):
             stats.memory += instance.memory
 
             if instance.solved:
+                common_instances[instance.name] += 1
                 stats.solved += 1
             else:
                 stats.not_solved += 1
@@ -197,6 +201,13 @@ def calc_statistic(run_data):
                     stats.runtime_out += 1
 
         all_stats[solver] = stats
+
+    total = len(all_stats)
+
+    for solver, instances in aggr_results.items():
+        for inst in instances:
+            if common_instances[inst.name] == total:
+                all_stats[solver].common_runtime += inst.runtime
 
     return all_stats, aggr_results, inst_results
 
@@ -255,7 +266,8 @@ def parse_results(base_path, targets):
         frames += [pd.DataFrame(vals)]
         names.append(solver)
         stats = all_stats[solver]
-        print "{}: Completed {}, Not {}, Runtime: {}, Divergence {}".format(solver, stats.solved, stats.not_solved, stats.runtime, stats.runtime_div)
+        print "{}: Completed {}, Not {}, Runtime: {}, Divergence {}, Common {}"\
+            .format(solver, stats.solved, stats.not_solved, stats.runtime, stats.runtime_div, stats.common_runtime)
 
     frame = pd.concat(frames, ignore_index=True, axis = 1)
     frame.cumsum()
