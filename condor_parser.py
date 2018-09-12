@@ -49,6 +49,7 @@ class OverallStatistic:
         self.common_runtime = 0
 
 
+
 def parse_watcher(path, instance):
     """Parses the condor watcher file"""
     f = open(path, "r")
@@ -269,9 +270,9 @@ def parse_results(base_path, targets):
         print "{}: Completed {}, Not {}, Runtime: {}, Divergence {}, Common {}"\
             .format(solver, stats.solved, stats.not_solved, stats.runtime, stats.runtime_div, stats.common_runtime)
 
-    frame = pd.concat(frames, ignore_index=True, axis = 1)
+    frame = pd.concat(frames, ignore_index=True, axis=1)
     frame.cumsum()
-    ax = frame.plot(style=['bs-', 'ro-', 'y^-', 'g*-'])
+    ax = frame.plot(style=['bs-', 'ro-', 'y^-', 'g*-'], figsize=(10,5))
     ax.legend(names)
 
     axes = plt.axes()
