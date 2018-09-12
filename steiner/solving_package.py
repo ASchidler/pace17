@@ -14,7 +14,7 @@ from structures.steiner_graph import SteinerGraph
 
 class SolvingConfig:
     def __init__(self, debug=False, solve=True, apply_reductions=True, verify=False, split=False, pace_only=False,
-                 print_output=False, heavy_edges=False, heap_width=16, use_buckets=True, use_da=True, use_store=True,
+                 print_output=False, heavy_edges=False, heap_width=16, bucket_limit=5000, use_da=True, use_store=True,
                  use_root=True):
         self.debug = debug
         self.solve = solve
@@ -25,11 +25,10 @@ class SolvingConfig:
         self.print_output = print_output
         self.heavy_edges = heavy_edges
         self.heap_width = heap_width
-        self.use_buckets = use_buckets
         self.use_da = use_da
         self.use_store = use_store
         self.use_root = use_root
-
+        self.bucket_limit = bucket_limit
 
 def run(steiner, config):
     """Calls the necessary functions"""
@@ -98,7 +97,7 @@ def _solve_instance(steiner, config):
     steiner._lengths = {}
 
     # Solve
-    solver = cfg.solver(steiner, Solver2kConfig(config.heap_width, config.use_buckets, config.use_root,
+    solver = cfg.solver(steiner, Solver2kConfig(config.heap_width, config.bucket_limit, config.use_root,
                                                 config.use_store, config.use_da))
     solution = solver.solve()
 

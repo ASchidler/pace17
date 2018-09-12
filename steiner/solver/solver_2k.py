@@ -7,9 +7,9 @@ import reduction.dual_ascent as da
 
 class Solver2kConfig:
     """This class contains the parameters for the solver"""
-    def __init__(self, heap_width=16, use_buckets=True, root_choice=True, use_store=True, use_da=True):
+    def __init__(self, heap_width=16, bucket_limit=5000, root_choice=True, use_store=True, use_da=True):
         self.heap_width = heap_width
-        self.use_buckets = use_buckets
+        self.bucket_limit = bucket_limit
         self.root_choice = root_choice
         self.use_store = use_store
         self.use_da = use_da
@@ -54,7 +54,7 @@ class Solver2k:
         self.heuristics = heuristics
         self.labels = list([None] * (self.max_node + 1))
 
-        if config.use_buckets and steiner.get_approximation().cost <= 5000:
+        if steiner.get_approximation().cost <= config.bucket_limit:
             self.queue = bs.create_queue(steiner.get_approximation().cost)
             self.pop = bs.dequeue
             self.push = bs.enqueue
