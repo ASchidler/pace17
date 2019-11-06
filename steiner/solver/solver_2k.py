@@ -1,7 +1,7 @@
 from itertools import chain
 from sys import maxint
 from networkx import Graph
-from structures import bounded_structures as bs, d_heap as dh, set_storage as st
+from structures import bounded_structures as bs, d_heap as dh, set_storage as st, steiner_graph as sg
 import reduction.dual_ascent as da
 
 
@@ -35,6 +35,28 @@ class Solver2k:
     As proposed in Hougardy2014"""
 
     def __init__(self, steiner, terminals, heuristics, config):
+        # Map terminals
+        self.t_mapping = {}
+        t_terminals = set(terminals)
+
+        for t in xrange(1, len(terminals) + 1):
+            if t not in t_terminals:
+                t2 = next(x for x in t_terminals if x > len(terminals))
+                self.t_mapping[t2] = t
+                self.t_mapping[t] = t2
+                t_terminals.remove(t2)
+
+        newSteiner = sg.SteinerGraph()
+        for u, v in steiner.graph.edges:
+            w = steiner.graph[u][v]['weight']
+            if u in self.t_mapping:
+                u = self.t_mapping[u]
+
+            if v in self.t_mapping:
+                v = self.t_mapping[v]
+
+            newSteiner.add_edge(u, v, w)
+
         self.steiner = steiner
         self.max_node = max(steiner.graph.nodes)
         self.terminals = list(terminals)
@@ -217,17 +239,28 @@ class Solver2k:
         else:
             dist = (maxint, None)
             for t in t_in:
+                for t2, d in self.steiner.get_closest(t):
+                    if t2 in t_out:
+                        if d < dist[0]:
+                            dist = (d, t2)
+                        break
+
                 # Minimum dist from t to cut
-                t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if t2 in t_out)
-                if d < dist[0]:
-                    dist = (d, t2)
+                # t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if t2 in t_out)
+                # if d < dist[0]:
+                #     dist = (d, t2)
 
             self.prune_dist[set_id] = dist
 
         # Find the minimum distance between n and R \ set
-        n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if x in t_out)
-        if n_d < dist[0]:
-            dist = (n_d, n_t)
+        # n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if x in t_out)
+        # if n_d < dist[0]:
+        #     dist = (n_d, n_t)
+        for n_t, n_d in self.steiner.get_closest(n):
+            if n_t in t_out:
+                if n_d < dist[0]:
+                    dist = (n_d, n_t)
+                break
 
         # Check if we can lower the bound
         w = c + dist[0]
