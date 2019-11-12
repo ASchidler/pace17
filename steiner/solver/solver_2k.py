@@ -199,37 +199,28 @@ class Solver2k:
     def prune_check_bound(self, set_id, n, bound, c):
         """Calculates the minimum distance between the cut of terminals in the set and not in the set"""
 
-        t_in = []
-        t_out = []
-
-        for (s, t) in self.terminal_ids.items():
-            if (s & set_id) > 0:
-                t_in.append(t)
-            else:
-                t_out.append(t)
-
-        t_out.append(self.root_node)
-
         # Find minimum distance between the terminals in the cut and outside the cut
         if set_id in self.prune_dist:
             dist = self.prune_dist[set_id]
         else:
             dist = (maxint, None)
-            for t in t_in:
-                # Minimum dist from t to cut
-                t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if t2 in t_out)
-                if d < dist[0]:
-                    dist = (d, t2)
+            for cId, t in self.terminal_ids.items():
+                if (cId & set_id) > 0:
+                    # Minimum dist from t to cut
+                    t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if (self.terminal_set_ids[t2] & set_id) == 0)
+                    if d < dist[0]:
+                        dist = (d, t2)
 
             self.prune_dist[set_id] = dist
 
         # Find the minimum distance between n and R \ set
-        n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if x in t_out)
+        n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if (self.terminal_set_ids[x] & set_id) == 0)
         if n_d < dist[0]:
             dist = (n_d, n_t)
 
         # Check if we can lower the bound
         w = c + dist[0]
+
         if w < bound:
             self.prune_bounds[set_id] = (w, [dist[1]])
 
