@@ -67,8 +67,11 @@ class Solver2k:
 
         # Pre calculate the IDs of the sets with just the terminal
         self.terminal_ids = {}
+        self.terminal_set_ids = {}
         for i in range(0, len(self.terminals)):
             self.terminal_ids[1 << i] = self.terminals[i]
+            self.terminal_set_ids[self.terminals[i]] = 1 << i
+        self.terminal_set_ids[self.root_node] = 0
 
         # Use the approximation + 1 (otherwise solving will fail if the approximation is correct) as an upper cost bound
         self.costs = list([None] * (self.max_node + 1))
