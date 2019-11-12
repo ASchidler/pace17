@@ -164,7 +164,7 @@ class Solver2k:
                 # this is a bound before executing the heuristic the next time round, the bound is preferable
                 h = heuristic(n, combined)
                 cst[combined] = (total, other_set, True)
-
+ 
                 if total + h <= approx and not prune(n, n_set, total, other_set):
                     push(q, total + h, (combined, n))
 

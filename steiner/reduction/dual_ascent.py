@@ -7,7 +7,7 @@ from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex
 from reducer import Reducer
 from collections import deque, defaultdict
-import steiner.solver.heuristics.da_graph as dag
+import solver.heuristics.da_graph as dag
 
 class DualAscent:
     """A reduction a that uses dual ascent on the LP relaxation to estimate a lower bound"""
@@ -720,9 +720,8 @@ class DualAscent:
             while bfs_queue and not t_found:
                 c_n = bfs_queue.pop()
 
-                for n2, dta in nb[c_n].items():
+                for n2, c in nb[c_n].items():
                     if n2 not in cut:
-                        c = dta
                         if c == 0:
                             # Hit an active vertex? Stop processing node
                             if n2 in active:

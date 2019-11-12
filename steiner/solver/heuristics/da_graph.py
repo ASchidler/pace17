@@ -19,6 +19,7 @@ class DaGraph:
         q = []
 
         heappush(q, (0, self.r))
+        dist[self.r] = 0
 
         while q:
             d, v = heappop(q)
