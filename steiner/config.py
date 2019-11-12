@@ -39,15 +39,15 @@ def reducers(exclude_new_reduction=False, heavy_edges=True):
     return red
 
 
-def solver(steiner, solver_config):
+def solver(steiner, solver_config, node_limit, node_ratio):
     """Creates a solver"""
-    da_h = da_heuristic.DaHeuristic(steiner)
 
-    if solver_config.use_da and len(steiner.graph.nodes) < 2000 and len(steiner.graph.edges) / len(steiner.graph.nodes) < 3:
-        heuristics = [da_h]
+    if solver_config.use_da and len(steiner.graph.nodes) < node_limit and len(steiner.graph.edges) / len(steiner.graph.nodes) < node_ratio:
+        heuristics = da_heuristic.DaHeuristic(steiner)
+        slv = sv.Solver2k(steiner, steiner.terminals, [heuristics], solver_config)
+        heuristics.solver = slv
     else:
-        heuristics = [mst_heuristic.MstHeuristic(steiner)]
+        heuristics = mst_heuristic.MstHeuristic(steiner)
+        slv = sv.Solver2k(steiner, steiner.terminals, [heuristics], solver_config)
 
-    slv = sv.Solver2k(steiner, steiner.terminals, heuristics, solver_config)
-    da_h.solver = slv
     return slv

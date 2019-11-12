@@ -15,10 +15,10 @@ from structures.steiner_graph import SteinerGraph
 class SolvingConfig:
     def __init__(self, debug=False, solve=True, apply_reductions=True, verify=False, split=False, pace_only=False,
                  print_output=False, heavy_edges=False, heap_width=16, bucket_limit=5000, use_da=True, use_store=True,
-                 use_root=True):
+                 use_root=True, node_limit=2000, node_ratio_limit=3):
         self.debug = debug
         self.solve = solve
-        self.apply_reductions = apply_reductions,
+        self.apply_reductions = apply_reductions
         self.verify = verify
         self.split = split
         self.pace_only = pace_only
@@ -29,6 +29,9 @@ class SolvingConfig:
         self.use_store = use_store
         self.use_root = use_root
         self.bucket_limit = bucket_limit
+        self.node_limit = node_limit
+        self.node_ratio_limit = node_ratio_limit
+
 
 def run(steiner, config):
     """Calls the necessary functions"""
@@ -72,6 +75,22 @@ def _start_solve(steiner, config):
     if config.apply_reductions:
         reducer.reduce(steiner)
 
+    # Write reduced graph for debug reasons
+    # f = open("output.stp", "w+")
+    # f.write("SECTION Graph\n")
+    # f.write("Nodes {}\n".format(len(steiner.graph.nodes)))
+    # f.write("Edges {}\n".format(len(steiner.graph.edges)))
+    # for u, v in steiner.graph.edges:
+    #     f.write("E {} {} {}\n".format(u, v, steiner.graph[u][v]['weight']))
+    #
+    # f.write("END\n\nSECTION Terminals\n")
+    # f.write("Terminals {}\n".format(len(steiner.terminals)))
+    # for t in steiner.terminals:
+    #     f.write("T {}\n".format(t))
+    # f.write("END\n\nEOF\n")
+    # f.close()
+    # end write reduced graph
+
     if config.solve:
         if config.split:
             solution = cf.decompose(steiner, lambda x: _solve_instance(x, config),
@@ -98,7 +117,8 @@ def _solve_instance(steiner, config):
 
     # Solve
     solver = cfg.solver(steiner, Solver2kConfig(config.heap_width, config.bucket_limit, config.use_root,
-                                                config.use_store, config.use_da))
+                                                config.use_store, config.use_da),
+                        config.node_limit, config.node_ratio_limit)
     solution = solver.solve()
 
     # Quick validity checks

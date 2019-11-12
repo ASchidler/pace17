@@ -26,6 +26,10 @@ parser.add_argument('-t', action='store_false', help="Do not use custom label st
 
 parser.add_argument('-r', action='store_false', help="Do not use best root from dual ascent")
 
+parser.add_argument('-l', type=int, default=2000, help="The limit for the number of nodes where dual ascent is used")
+
+parser.add_argument('-q', type=int, default=3, help="The limit for the ratio where dual ascent is used")
+
 parser.add_argument('--stats', type=int)
 
 args = parser.parse_args()
@@ -33,6 +37,6 @@ f = open(args.filename, "r")
 steiner = pp.parse_pace_file(f)
 
 conf = sp.SolvingConfig(debug=True, split=args.s, pace_only=args.p, print_output=True, heavy_edges=args.e,
-                        heap_width=args.d, bucket_limit=args.b, use_da=args.a, use_store=args.t, use_root=args.r)
+                        heap_width=args.d, bucket_limit=args.b, use_da=args.a, use_store=args.t, use_root=args.r, apply_reductions=True)
 
 sp.run(steiner, conf)

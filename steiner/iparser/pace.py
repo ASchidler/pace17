@@ -4,13 +4,13 @@ from structures import steiner_graph as st
 
 
 def parse_graph(line, steiner):
-    lst = line.split(' ')
+    lst = line.split()
     if line.startswith("e "):
         steiner.graph.add_edge(int(lst[1]), int(lst[2]), weight=int(lst[3]))
 
 
 def parse_terminal(line, steiner):
-    lst = line.split(' ')
+    lst = line.split()
     if line.startswith('t '):
         steiner.graph.node[int(lst[1])]['terminal'] = True
         steiner.terminals.add(int(lst[1]))
