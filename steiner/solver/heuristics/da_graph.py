@@ -1,8 +1,10 @@
 from heapq import heappush, heappop
 
+
 class DaGraph:
     def __init__(self, g, r):
         self.g = g
+        # Weights is implicitly the list of predecessors
         self.weights = {}
         self.r = r
         nb = g._adj
@@ -25,8 +27,9 @@ class DaGraph:
                 continue
             fixed.add(v)
 
-            for u, w in self.weights[v].items():
-                cst = w + d
+            for u, _ in self.weights[v].items():
+                # weights is the predecessor list...
+                cst = self.weights[u][v] + d
 
                 if u not in dist or cst < dist[u]:
                     dist[u] = cst

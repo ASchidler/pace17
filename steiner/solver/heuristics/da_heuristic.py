@@ -48,6 +48,7 @@ class DaHeuristic:
             result1 = da.DualAscent.calc5(self.steiner.graph, r, self.steiner.terminals)
             result2 = da.DualAscent.calc4(self.steiner.graph, r, self.steiner.terminals)
             self._method = da.DualAscent.calc4 if result2[0] >= result1[0] else da.DualAscent.calc5
+            #self._method = da.DualAscent.calc2
 
         ts = self.solver.to_set(set_id)
         ts.add(self.solver.root_node)
