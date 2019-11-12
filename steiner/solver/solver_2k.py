@@ -35,10 +35,12 @@ class Solver2k:
     As proposed in Hougardy2014"""
 
     def __init__(self, steiner, terminals, heuristics, config):
+        self._last_set_id = None
         self.steiner = steiner
         self.max_node = max(steiner.graph.nodes)
         self.terminals = list(terminals)
         self.terminals.sort()
+        self.the_list_cache = {}
         # Use best root from approximations as base for the algorithm
         target_root = None
         if config.root_choice:
@@ -51,7 +53,7 @@ class Solver2k:
         self.max_set = (1 << len(self.terminals)) - 1
         self.prune_dist = {}
         self.prune_bounds = {}
-        self.heuristics = heuristics
+        self.heuristic_function = heuristics
         self.labels = list([None] * (self.max_node + 1))
 
         if steiner.get_approximation().cost <= config.bucket_limit:
@@ -164,19 +166,13 @@ class Solver2k:
                     push(q, total + h, (combined, n))
 
     def heuristic(self, n, set_id):
-        if len(self.heuristics) == 0:
+        if self.heuristic_function is None:
             return 0
 
         # Invert set
         set_id = self.max_set ^ set_id
-        ts = self.to_list(set_id)
-        ts.add(self.root_node)
 
-        max_val = 0
-        for h in self.heuristics:
-            max_val = max(max_val, h.calculate(n, set_id, ts))
-
-        return max_val
+        return self.heuristic_function.calculate(n, set_id)
 
     def prune(self, n, set_id, c, set_id2=0):
         target_set = set_id | set_id2
@@ -241,8 +237,8 @@ class Solver2k:
         if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
             return maxint, []
 
-        set1 = self.to_list(set_id1)
-        set2 = self.to_list(set_id2)
+        set1 = self.to_set(set_id1)
+        set2 = self.to_set(set_id2)
         set1_entry = self.prune_bounds[set_id1]
         set2_entry = self.prune_bounds[set_id2]
 
@@ -278,10 +274,20 @@ class Solver2k:
             tmp = tmp + self.backtrack(n, s ^ entry[1], ret)
             return tmp
 
-    def to_list(self, set_id):
+    def to_set(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
 
         return set(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
+
+    def to_list(self, set_id):
+        """Converts a set identifier to the actual set of nodes"""
+
+        # try:
+        #     return self.the_list_cache[set_id]
+        # except KeyError:
+        #     self.the_list_cache[set_id] = list(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
+        #     return self.the_list_cache[set_id]
+        return list(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
 
 
 class SolverCosts(dict):

@@ -9,15 +9,17 @@ class MstHeuristic:
         self.solver = None
         self.desc = None
 
-    def calculate(self, n, set_id, ts):
+    def calculate(self, n, set_id):
         length = self.steiner.get_lengths
 
         # Only one terminal
-        if len(ts) == 1:
-            for t in ts:
-                return length(t, n)
+        if set_id == 0:
+            return length(self.solver.root_node, n)
 
         # Calculate MST costs
+        ts = self.solver.to_list(set_id)
+        ts.append(self.solver.root_node)
+
         try:
             cost = self.mst[set_id]
         except KeyError:
@@ -39,7 +41,6 @@ class MstHeuristic:
     def calc_mst(self, ts):
         """Calculate the costs of a MST using Prim's algorithm"""
 
-        ts = list(ts)
         # use prim since we have a full graph
         length = self.steiner.get_lengths
         min_edge = [maxint for _ in ts]

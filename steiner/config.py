@@ -43,11 +43,12 @@ def solver(steiner, solver_config, node_limit, node_ratio):
     """Creates a solver"""
 
     if solver_config.use_da and len(steiner.graph.nodes) < node_limit and len(steiner.graph.edges) / len(steiner.graph.nodes) < node_ratio:
-        heuristics = da_heuristic.DaHeuristic(steiner)
-        slv = sv.Solver2k(steiner, steiner.terminals, [heuristics], solver_config)
-        heuristics.solver = slv
+        heuristic = da_heuristic.DaHeuristic(steiner)
+        slv = sv.Solver2k(steiner, steiner.terminals, heuristic, solver_config)
     else:
-        heuristics = mst_heuristic.MstHeuristic(steiner)
-        slv = sv.Solver2k(steiner, steiner.terminals, [heuristics], solver_config)
+        heuristic = mst_heuristic.MstHeuristic(steiner)
+        slv = sv.Solver2k(steiner, steiner.terminals, heuristic, solver_config)
+
+    heuristic.solver = slv
 
     return slv

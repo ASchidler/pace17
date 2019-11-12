@@ -7,7 +7,7 @@ from reduction import degree, long_edges, ntdk, sdc
 from preselection import short_links, nearest_vertex
 from reducer import Reducer
 from collections import deque, defaultdict
-
+import steiner.solver.heuristics.da_graph as dag
 
 class DualAscent:
     """A reduction a that uses dual ascent on the LP relaxation to estimate a lower bound"""
@@ -628,6 +628,153 @@ class DualAscent:
 
         return limit, dg, root
 
+    @staticmethod
+    def calc4(g, root, ts):
+        dg = dag.DaGraph(g, root)
+
+        queue = [(0, t) for t in ts if t != root]
+        nb = dg.weights
+        pop = heappop
+        push = heappush
+        limit = 0
+        active = set(ts)
+
+        while queue:
+            _, t = pop(queue)
+
+            # BFS search of cut
+            bfs_queue = [t]
+            edges = []
+            cut = {t}
+
+            t_found = False
+            while bfs_queue and not t_found:
+                c_n = bfs_queue.pop()
+
+                for n2, dta in nb[c_n].items():
+                    if n2 not in cut:
+                        c = dta
+                        if c == 0:
+                            # Hit an active vertex? Stop processing node
+                            if n2 in active:
+                                t_found = True
+                                break
+
+                            bfs_queue.append(n2)
+                            cut.add(n2)
+                        else:
+                            edges.append((c_n, n2, c))
+
+            # Cut is no longer active
+            if t_found:
+                active.remove(t)
+                continue
+
+            # Find minimum cost and remove edges that are inside the cut
+            edges = [(u, v, c) for (u, v, c) in edges if v not in cut]
+
+            # Check if really the smallest element with a 25% tolerance
+            if queue and (len(edges) > (1.25 * queue[0][0])):
+                push(queue, (len(edges), t))
+                continue
+
+            min_cost = min(c for (u, v, c) in edges)
+            limit += min_cost
+
+            # Update weights
+            new_in = 0
+            for (u, v, c) in edges:
+                nb[u][v] -= min_cost
+                if c == min_cost:
+                    if not t_found and v in active:
+                        active.remove(t)
+                        t_found = True
+                    # -1 because the connecting edge is now inside the cut
+                    new_in += len(nb[v]) - 1
+
+            # Add to queue. Priority is depending on incoming edges
+            if not t_found:
+                push(queue, (new_in + len(edges), t))
+
+        return limit, dg, root
+
+    @staticmethod
+    def calc5(g, root, ts):
+        dg = dag.DaGraph(g, root)
+        queue = [(0, t) for t in ts if t != root]
+        nb = dg.weights
+        pop = heappop
+        push = heappush
+        limit = 0
+        active = set(ts)
+
+        while queue:
+            _, t = pop(queue)
+
+            # BFS search of cut
+            bfs_queue = [t]
+            edges = []
+            cut = {t}
+
+            t_found = False
+            while bfs_queue and not t_found:
+                c_n = bfs_queue.pop()
+
+                for n2, dta in nb[c_n].items():
+                    if n2 not in cut:
+                        c = dta
+                        if c == 0:
+                            # Hit an active vertex? Stop processing node
+                            if n2 in active:
+                                t_found = True
+                                break
+
+                            bfs_queue.append(n2)
+                            cut.add(n2)
+                        else:
+                            edges.append((c_n, n2, c))
+
+            # Cut is no longer active
+            if t_found:
+                active.remove(t)
+                continue
+
+            # Find minimum cost and remove edges that are inside the cut
+            edges = {(u, v, c) for (u, v, c) in edges if v not in cut}
+
+            # Check if really the smallest element
+            if queue and (len(edges) > queue[0][0]):
+                push(queue, (len(edges), t))
+                continue
+
+            min_cost = min(c for (u, v, c) in edges)
+            limit += min_cost
+
+            # Update weights
+            new_in = 0
+            in_edges = set()
+            for (u, v, c) in edges:
+                nb[u][v] -= min_cost
+
+                if c == min_cost and v not in cut:
+                    if not t_found and v in active:
+                        active.remove(t)
+                        t_found = True
+
+                    cut.add(v)
+                    # -1 because the connecting edge is now inside the cut
+                    new_in += len(nb[v])
+                    in_edges.update(((v, x) for (x, d) in nb[v].items() if d != 0 and x not in cut))
+                else:
+                    if v not in cut:
+                        in_edges.add((u, v))
+                    new_in += 1
+
+            # Add to queue. Priority is depending on incoming edges
+            if not t_found:
+                push(queue, (len([(u, v) for (u, v) in in_edges if v not in cut]), t))
+
+        return limit, dg, root
 
 DualAscent.root = None
 DualAscent.graph = None

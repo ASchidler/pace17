@@ -37,6 +37,7 @@ f = open(args.filename, "r")
 steiner = pp.parse_pace_file(f)
 
 conf = sp.SolvingConfig(debug=True, split=args.s, pace_only=args.p, print_output=True, heavy_edges=args.e,
-                        heap_width=args.d, bucket_limit=args.b, use_da=args.a, use_store=args.t, use_root=args.r, apply_reductions=True)
+                        heap_width=args.d, bucket_limit=args.b, use_da=args.a, use_store=args.t, use_root=args.r, apply_reductions=False,
+                        node_limit=args.l, node_ratio_limit=args.q)
 
 sp.run(steiner, conf)
