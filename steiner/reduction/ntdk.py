@@ -8,7 +8,7 @@ import time
 class NtdkReduction:
     """ Removes all edges that are longer than the distance to the closest terminal """
 
-    def __init__(self, restricted, threshold=0.01, search_limit=40, only_last=False, max_degree=4):
+    def __init__(self, restricted, threshold=0.01, search_limit=40, only_last=False, max_degree=4, terminal_limit=500):
         self._removed = {}
         self._restricted = restricted
         self._enabled = True
@@ -18,9 +18,12 @@ class NtdkReduction:
         self._max_degree = max_degree
         self._threshold = threshold
         self._counter = maxint / 2
+        self._terminal_limit = terminal_limit
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
-        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 5:
+        # get_steiner_length is k^2 runtime. If there are too many terminals, it becomes very slow, avoid this here
+        if len(steiner.graph.edges) / len(steiner.graph.nodes) > 10 or \
+                (self._restricted and self._terminal_limit < len(steiner.terminals)):
             return 0
 
         self._counter += prev_cnt

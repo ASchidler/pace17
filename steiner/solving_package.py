@@ -51,6 +51,10 @@ def run(steiner, config):
                                                                                 len(steiner.terminals))
         start_time = time.time()
 
+    #from networkx.algorithms.planarity import check_planarity
+    #plan = check_planarity(steiner.graph)
+    #if plan:
+    #    print "Graph is planar"
     solution = _start_solve(steiner, config)
 
     # Output solution
@@ -92,12 +96,9 @@ def _start_solve(steiner, config):
     # end write reduced graph
 
     if config.solve:
-        if config.split:
-            solution = cf.decompose(steiner, lambda x: _solve_instance(x, config),
-                                    lambda x: _start_solve(x, config),
-                                    config.debug)
-        else:
-            solution = _solve_instance(steiner, config)
+        solution = cf.decompose(steiner, lambda x: _solve_instance(x, config),
+                                lambda x: _start_solve(x, config),
+                                config.debug, config.split)
 
         # This step is necessary as some removed edges and nodes have to be reintroduced in the solution
         if config.apply_reductions:

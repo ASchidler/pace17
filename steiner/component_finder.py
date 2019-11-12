@@ -238,7 +238,7 @@ def _compute_partial_solutions(steiner, min_ap, rec):
     return best_sol
 
 
-def decompose(steiner, sol, rec, debug=False):
+def decompose(steiner, sol, rec, debug=False, use_splitting=False):
     """Tries to decompose the graph into subgraphs and calculates the solution. sol is a function that
     calculates the solution for the current graph, rec is a function that calculates the solutions for a new
     graph"""
@@ -249,14 +249,15 @@ def decompose(steiner, sol, rec, debug=False):
     term_limit = [1, 5, 8]
 
     # Limit to articulation sets of size 3.
-    for s in range(1, 4):
+    max_size = 4 if use_splitting else 2
+    for s in range(1, max_size):
         if c_min[0] > 0 or len(steiner.graph.nodes) < 4 or len(steiner.graph.edges) > edge_limit[s-1]:
             break
 
         c_min = _find_articulation_sets(steiner, s)
 
     # Enforce cut size. This is necessary to avoid infeasibly small cuts
-    if c_min[0] == 0 or c_min[0] < term_limit[len(c_min[2]) - 1]:
+    if c_min[0] == 0 or c_min[0] < term_limit[len(c_min[2]) - 1] or (not use_splitting and c_min[0] > 1):
         return sol(steiner)
 
     if debug:

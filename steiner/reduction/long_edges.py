@@ -7,13 +7,14 @@ import heapq as hq
 class LongEdgeReduction:
     """Removes all edges that are longer than the distance to the closest terminal. Also known as PTm test."""
 
-    def __init__(self, delete_equal, threshold=0.01, equal_search_limit=40):
+    def __init__(self, delete_equal, threshold=0.01, equal_search_limit=40, terminal_threshold=500):
         self.runs = 0
         self._delete_equal = delete_equal
         self._done = False
         self._equal_search_limit = equal_search_limit
         self._threshold = threshold
         self._counter = maxint / 2
+        self._terminal_threshold = terminal_threshold
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         steiner.requires_steiner_dist(1)
@@ -23,7 +24,7 @@ class LongEdgeReduction:
         equal_edges = []
 
         self._counter += prev_cnt
-        if self._counter < self._threshold * len(steiner.graph.edges):
+        if self._counter < self._threshold * len(steiner.graph.edges) or len(steiner.terminals) > self._terminal_threshold:
             return 0
         else:
             self._counter = 0
