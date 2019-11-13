@@ -8,11 +8,16 @@ class ZeroEdgeReduction:
 
     def reduce(self, steiner, prev_cnt, curr_cnt):
         track = 0
-        for (u, v, d) in steiner.graph.edges(data='weight'):
-            if d == 0:
-                for e in steiner.contract_edge(u, v):
-                    self.merged.append(e)
-                track += 1
+        changed = True
+        while changed:
+            changed = False
+            for (u, v, d) in steiner.graph.edges(data='weight'):
+                if d == 0:
+                    for e in steiner.contract_edge(u, v):
+                        self.merged.append(e)
+                    track += 1
+                    changed = True
+                    break
 
         if track == 0:
             self.enabled = False
