@@ -13,7 +13,7 @@ class MstHeuristic:
         length = self.steiner.get_lengths
 
         # Only one terminal
-        if set_id == 0:
+        if set_id == self.solver.root_set:
             return length(self.solver.root_node, n)
 
         # Calculate MST costs
@@ -26,9 +26,8 @@ class MstHeuristic:
         # Find minimum pairwise distance
         min_val = []
 
-        for (t, l) in self.steiner.get_closest(n):
-            ids = self.solver.terminal_set_ids[t]
-            if ids == 0 or (ids & set_id) > 0:
+        for (t, l) in self.solver.closest_terminals[n]:
+            if (t & set_id) > 0:
                 min_val.append(l)
 
             if len(min_val) == 2:
@@ -38,8 +37,9 @@ class MstHeuristic:
 
     def calc_mst(self, set_id):
         """Calculate the costs of a MST using Prim's algorithm"""
+
         ts = self.solver.to_list(set_id)
-        ts.append(self.solver.root_node)
+
         # use prim since we have a full graph
         length = self.steiner.get_lengths
         min_edge = [maxint for _ in ts]

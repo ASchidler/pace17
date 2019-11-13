@@ -1,7 +1,7 @@
 from itertools import chain
 from sys import maxint
 from networkx import Graph
-from structures import bounded_structures as bs, d_heap as dh, set_storage as st
+from structures import bounded_structures as bs, d_heap as dh, set_storage as st, steiner_graph as sg
 import reduction.dual_ascent as da
 
 
@@ -30,34 +30,91 @@ class SolverSetLabelStore:
                 yield n
 
 
+class SolverInstanceSorter:
+    """Sorts the instance so that terminals are first and no gaps are present"""
+
+    def __init__(self):
+        self.map_to_original = {}
+        self.map_from_original = {}
+
+    def convert(self, steiner, root):
+        self.map_to_original[len(steiner.terminals)-1] = root
+        self.map_from_original[root] = len(steiner.terminals)-1
+
+        c_term = 0
+        c_node = len(steiner.terminals)
+
+        for n in steiner.graph.nodes:
+            if n != root:
+                if n in steiner.terminals:
+                    target = c_term
+                    c_term += 1
+                else:
+                    target = c_node
+                    c_node += 1
+
+                self.map_from_original[n] = target
+                self.map_to_original[target] = n
+
+        new_steiner = sg.SteinerGraph()
+        new_steiner.terminals = set(xrange(0, len(steiner.terminals)))
+
+        nb = steiner.graph._adj
+
+        for u, dta in nb.items():
+            u_n = self.map_from_original[u]
+            for v, d in dta.items():
+                v_n = self.map_from_original[v]
+                new_steiner.add_edge(u_n, v_n, d['weight'])
+
+        return new_steiner, len(steiner.terminals) - 1
+
+    def convert_back(self, g):
+        new_g = Graph()
+        nb = g._adj
+
+        for u, dta in nb.items():
+            u_n = self.map_to_original[u]
+            for v, d in dta.items():
+                v_n = self.map_to_original[v]
+                new_g.add_edge(u_n, v_n, weight=d['weight'])
+
+        return new_g
+
+
 class Solver2k:
     """Solver that uses a mixture of Dijkstra's algorithm and the Dreyfus-Wagner algorithm to solve the SPG.
     As proposed in Hougardy2014"""
 
     def __init__(self, steiner, terminals, heuristics, config):
         self._last_set_id = None
-        self.steiner = steiner
-        self.max_node = max(steiner.graph.nodes)
-        self.terminals = list(terminals)
-        self.terminals.sort()
-        self.the_list_cache = {}
+        self.converter = SolverInstanceSorter()
+
         # Use best root from approximations as base for the algorithm
         target_root = None
         if config.root_choice:
             target_root = da.DualAscent.root
             if target_root is None or not steiner.graph.has_node(target_root):
-                target_root = steiner.get_approximation().get_root(self.steiner)
+                target_root = steiner.get_approximation().get_root(steiner)
 
-        self.root_node = self.terminals.pop(self.terminals.index(target_root)) \
-            if target_root is not None else self.terminals.pop()
+        if target_root is None:
+            target_root = next(steiner.terminals)
+
+        self.steiner, self.root_node = self.converter.convert(steiner, target_root)
+        self.terminals = list(range(0, len(terminals) - 1))
+
+        self.max_node = max(self.steiner.graph.nodes)
+        self.the_list_cache = {}
+
         self.max_set = (1 << len(self.terminals)) - 1
+        self.root_set = self.max_set + 1
         self.prune_dist = {}
         self.prune_bounds = {}
-        self.heuristic_function = heuristics
+        self.heuristic_function = heuristics(self.steiner)
         self.labels = list([None] * (self.max_node + 1))
 
-        if steiner.get_approximation().cost <= config.bucket_limit:
-            self.queue = bs.create_queue(steiner.get_approximation().cost)
+        if self.steiner.get_approximation().cost <= config.bucket_limit:
+            self.queue = bs.create_queue(self.steiner.get_approximation().cost)
             self.pop = bs.dequeue
             self.push = bs.enqueue
         else:
@@ -67,27 +124,24 @@ class Solver2k:
 
         # Pre calculate the IDs of the sets with just the terminal
         self.terminal_ids = {}
-        self.terminal_set_ids = {}
-        for i in range(0, len(self.terminals)):
+        for i in range(0, len(self.terminals) + 1):
             self.terminal_ids[1 << i] = self.terminals[i]
-            self.terminal_set_ids[self.terminals[i]] = 1 << i
-        self.terminal_set_ids[self.root_node] = 0
 
         # Use the approximation + 1 (otherwise solving will fail if the approximation is correct) as an upper cost bound
         self.costs = list([None] * (self.max_node + 1))
-        steiner.closest_terminals = list([None] * (self.max_node + 1))
-        length = steiner.get_lengths
+        self.closest_terminals = list([None] * (self.max_node + 1))
+        length = self.steiner.get_lengths
 
         for n in self.steiner.graph.nodes:
             self.labels[n] = st.SetStorage(len(self.terminals)) if config.use_store else SolverSetLabelStore()
             s_id = 0
             if n in self.terminals:
                 s_id = 1 << (self.terminals.index(n))
-            self.costs[n] = SolverCosts(s_id, steiner.get_approximation().cost + 1)
+            self.costs[n] = SolverCosts(s_id, self.steiner.get_approximation().cost + 1)
 
             # Calc closest terminals per node
-            steiner.closest_terminals[n] = [(t, length(t, n)) for t in steiner.terminals]
-            steiner.closest_terminals[n].sort(key=lambda x: x[1])
+            self.closest_terminals[n] = [(1 << t, length(t, n)) for t in self.steiner.terminals]
+            self.closest_terminals[n].sort(key=lambda x: x[1])
 
     def solve(self):
         """Solves the instance of the steiner tree problem"""
@@ -123,7 +177,7 @@ class Solver2k:
         ret = Graph()
         total = self.backtrack(self.root_node, self.max_set, ret)
 
-        return ret, total
+        return self.converter.convert_back(ret), total
 
     def process_neighbors(self, n, n_set, n_cost):
         nb = self.steiner.graph._adj
@@ -172,8 +226,8 @@ class Solver2k:
         if self.heuristic_function is None:
             return 0
 
-        # Invert set
-        set_id = self.max_set ^ set_id
+        # Invert set and add root
+        set_id = (self.max_set ^ set_id) | self.root_set
 
         return self.heuristic_function.calculate(n, set_id)
 
@@ -207,14 +261,14 @@ class Solver2k:
             for cId, t in self.terminal_ids.items():
                 if (cId & set_id) > 0:
                     # Minimum dist from t to cut
-                    t2, d = next((t2, d) for (t2, d) in self.steiner.get_closest(t) if (self.terminal_set_ids[t2] & set_id) == 0)
+                    t2, d = next((t2, d) for (t2, d) in self.closest_terminals[t] if (t2 & set_id) == 0)
                     if d < dist[0]:
                         dist = (d, t2)
 
             self.prune_dist[set_id] = dist
 
         # Find the minimum distance between n and R \ set
-        n_t, n_d = next((x, y) for (x, y) in self.steiner.get_closest(n) if (self.terminal_set_ids[x] & set_id) == 0)
+        n_t, n_d = next((x, y) for (x, y) in self.closest_terminals[n] if (x & set_id) == 0)
         if n_d < dist[0]:
             dist = (n_d, n_t)
 
@@ -222,7 +276,7 @@ class Solver2k:
         w = c + dist[0]
 
         if w < bound:
-            self.prune_bounds[set_id] = (w, [dist[1]])
+            self.prune_bounds[set_id] = (w, dist[1])
 
     def prune2_combine(self, set_id1, set_id2):
         """Calculates a new upper bound using upper bounds from two subsets, if applicable"""
@@ -231,19 +285,17 @@ class Solver2k:
         if not (set_id1 in self.prune_bounds and set_id2 in self.prune_bounds):
             return maxint, []
 
-        set1 = self.to_set(set_id1)
-        set2 = self.to_set(set_id2)
         set1_entry = self.prune_bounds[set_id1]
         set2_entry = self.prune_bounds[set_id2]
 
         # To allow combination of the partial solutions at least one set must be disjoint from the other solutions
         # used nodes
-        if any(e in set2 for e in set1_entry[1]) and any(e in set1 for e in set2_entry[1]):
+        if (set_id2 & set1_entry[1] > 0) and (set_id1 & set2_entry[1] > 0):
             return maxint, []
 
         # Combine subset solutions
         val = set1_entry[0] + set2_entry[0]
-        s = [x for x in chain(set1_entry[1], set2_entry[1]) if x not in set1 and x not in set2]
+        s = (set1_entry[1] | set2_entry[1]) & ~(set_id1 | set_id2)
 
         self.prune_bounds[set_id1 | set_id2] = (val, s)
         return val, s
@@ -271,17 +323,28 @@ class Solver2k:
     def to_set(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
 
-        return set(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
+        ret = set()
+        c_term = 0
+        while set_id > 0:
+            if (set_id & 1) == 1:
+                ret.add(c_term)
+            set_id >>= 1
+            c_term += 1
+
+        return ret
 
     def to_list(self, set_id):
         """Converts a set identifier to the actual set of nodes"""
 
-        # try:
-        #     return self.the_list_cache[set_id]
-        # except KeyError:
-        #     self.the_list_cache[set_id] = list(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
-        #     return self.the_list_cache[set_id]
-        return list(t for (s, t) in self.terminal_ids.items() if (s & set_id) > 0)
+        ret = []
+        c_term = 0
+        while set_id > 0:
+            if (set_id & 1) == 1:
+                ret.append(c_term)
+            set_id >>= 1
+            c_term += 1
+
+        return ret
 
 
 class SolverCosts(dict):

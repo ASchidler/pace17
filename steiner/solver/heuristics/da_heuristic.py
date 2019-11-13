@@ -16,7 +16,7 @@ class DaHeuristic:
     """Heuristic that uses the MST of the terminals in the distance graph (halved) as a lower bound"""
     def calculate(self, n, set_id):
         # Simplest "tree", just an edge
-        if set_id == 0:
+        if set_id == self.solver.root_set:
             return self.steiner.get_lengths(self.solver.root_node, n)
 
         self._qry_cnt += 1
@@ -51,7 +51,6 @@ class DaHeuristic:
             self._method = da.DualAscent.calc5
 
         ts = self.solver.to_set(set_id)
-        ts.add(self.solver.root_node)
 
         result = self._method(self.steiner.graph, r, ts)
 
