@@ -30,6 +30,8 @@ parser.add_argument('-l', type=int, default=2000, help="The limit for the number
 
 parser.add_argument('-q', type=int, default=3, help="The limit for the ratio where dual ascent is used")
 
+parser.add_argument('-c', type=int, default=0, help="The limit in seconds for reductions")
+
 parser.add_argument('--stats', type=int)
 
 args = parser.parse_args()
@@ -38,6 +40,6 @@ steiner = pp.parse_pace_file(f)
 
 conf = sp.SolvingConfig(debug=True, split=args.s, pace_only=args.p, print_output=True, heavy_edges=args.e,
                         heap_width=args.d, bucket_limit=args.b, use_da=args.a, use_store=args.t, use_root=args.r, apply_reductions=True,
-                        node_limit=args.l, node_ratio_limit=args.q)
+                        node_limit=args.l, node_ratio_limit=args.q, reduction_limit=args.c)
 
 sp.run(steiner, conf)

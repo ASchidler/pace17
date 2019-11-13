@@ -22,13 +22,15 @@ class DebugReduction:
 class Reducer:
     """Employs reductions until no more reductions can be performed. Can also reverse them for solutions"""
 
-    def __init__(self, reducers, run_limit=0):
+    def __init__(self, reducers, run_limit=0, reduction_limit=0):
         self._reducers = reducers
         self._run_limit = run_limit
+        self._reduction_limit = reduction_limit
 
     def reduce(self, g):
         run_num = 1
         prev_changes = len(g.graph.edges)
+        start_time = time()
 
         while True:
             cnt_changes = 0
@@ -38,6 +40,9 @@ class Reducer:
                     reduced = r.reduce(g, prev_changes, cnt_changes)
                     cnt_changes = cnt_changes + reduced
                 else:
+                    return
+
+                if self._reduction_limit > 0 and time() - start_time > self._reduction_limit:
                     return
 
             g.reset_all()
@@ -68,9 +73,9 @@ class Reducer:
 
 
 class DebugReducer(Reducer):
-    def __init__(self, reducers, run_limit=0):
+    def __init__(self, reducers, run_limit=0, reduction_limit=0):
         new_reducers = [DebugReduction(r) for r in reducers]
-        Reducer.__init__(self, new_reducers, run_limit)
+        Reducer.__init__(self, new_reducers, run_limit, reduction_limit)
 
     def reduce(self, g):
         tm = time()

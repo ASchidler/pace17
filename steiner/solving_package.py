@@ -15,7 +15,7 @@ from structures.steiner_graph import SteinerGraph
 class SolvingConfig:
     def __init__(self, debug=False, solve=True, apply_reductions=True, verify=False, split=False, pace_only=False,
                  print_output=False, heavy_edges=False, heap_width=16, bucket_limit=5000, use_da=True, use_store=True,
-                 use_root=True, node_limit=2000, node_ratio_limit=3):
+                 use_root=True, node_limit=2000, node_ratio_limit=3, reduction_limit=0):
         self.debug = debug
         self.solve = solve
         self.apply_reductions = apply_reductions
@@ -31,6 +31,7 @@ class SolvingConfig:
         self.bucket_limit = bucket_limit
         self.node_limit = node_limit
         self.node_ratio_limit = node_ratio_limit
+        self.reduction_limit = reduction_limit
 
 
 def run(steiner, config):
@@ -73,8 +74,8 @@ def run(steiner, config):
 
 def _start_solve(steiner, config):
     """Reduces the whole graph and splits the solving if necessary"""
-    reducer = red.DebugReducer(cfg.reducers(config.pace_only, config.heavy_edges))\
-        if config.debug else red.Reducer(cfg.reducers(config.pace_only, config.heavy_edges))
+    reducer = red.DebugReducer(cfg.reducers(config.pace_only, config.heavy_edges), reduction_limit=config.reduction_limit)\
+        if config.debug else red.Reducer(cfg.reducers(config.pace_only, config.heavy_edges), reduction_limit=config.reduction_limit)
 
     if config.apply_reductions:
         reducer.reduce(steiner)

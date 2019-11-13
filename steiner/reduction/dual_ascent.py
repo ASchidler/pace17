@@ -60,7 +60,7 @@ class DualAscent:
             prune_limit = 3
             prune_rec_limit = 3
         # Dense graph
-        elif len(steiner.graph.edges) / len(steiner.graph.nodes) > 3:
+        elif len(steiner.graph.edges) / len(steiner.graph.nodes) > 3 or len(steiner.terminals) > 1000:
             solution_limit = 2
             solution_rec_limit = 1
             prune_limit = 1

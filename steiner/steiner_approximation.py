@@ -1,4 +1,4 @@
-from sys import maxint
+from sys import maxint, getrecursionlimit 
 from heapq import heappush, heappop, merge
 from collections import defaultdict, deque
 from itertools import chain
@@ -358,6 +358,10 @@ class SteinerApproximation:
         if len(self.tree.nodes) < 5:
             return
 
+        # TODO: This should be done according to the expected recursion depth
+        if len(steiner.terminals) > 1500:
+            return
+
         bridges = {}
 
         # Find voronoi regions
@@ -511,6 +515,9 @@ class SteinerApproximation:
         if len(self.tree.nodes) < 3:
             return
 
+        # TODO: This should be done according to the expected recursion depth
+        if len(steiner.terminals) > 1500:
+            return
         bridges = {}
         horizontal = {}
 
