@@ -19,6 +19,8 @@ def parse_terminal(line, steiner):
 def parse_file(f):
     # 0 is start, 1 is graph, 2 are terminals, 3 are decompositions
     parse_mode = 0
+    terminals_done = False
+    graph_done = False
 
     steiner = st.SteinerGraph()
 
@@ -26,10 +28,12 @@ def parse_file(f):
         line = line.strip().lower()
         if line.startswith("end"):
             parse_mode = 0
-        elif line.startswith("section graph"):
+        elif line.startswith("section graph") and not graph_done:
             parse_mode = 1
-        elif line.startswith("section terminals"):
+            graph_done = True
+        elif line.startswith("section terminals") and not terminals_done:
             parse_mode = 2
+            terminals_done = True
         elif line.startswith("section tree decomposition"):
             parse_mode = 3
         elif parse_mode == 1:
