@@ -712,27 +712,31 @@ class DualAscent:
             _, t = pop(queue)
 
             # BFS search of cut
-            bfs_queue = [t]
-            edges = []
             cut = {t}
+            edges = []
 
-            t_found = False
-            while bfs_queue and not t_found:
-                c_n = bfs_queue.pop()
+            def find_cut():
+                t_found = False
+                bfs_queue = [t]
 
-                for n2, c in nb[c_n].items():
-                    if n2 not in cut:
-                        if c == 0:
-                            # Hit an active vertex? Stop processing node
-                            if n2 in active:
-                                t_found = True
-                                break
+                while bfs_queue and not t_found:
+                    c_n = bfs_queue.pop()
 
-                            bfs_queue.append(n2)
-                            cut.add(n2)
-                        else:
-                            edges.append((c_n, n2, c))
+                    for n2, c in nb[c_n].items():
+                        if n2 not in cut:
+                            if c == 0:
+                                # Hit an active vertex? Stop processing node
+                                if n2 in active:
+                                    t_found = True
+                                    break
 
+                                bfs_queue.append(n2)
+                                cut.add(n2)
+                            else:
+                                edges.append((c_n, n2, c))
+                return t_found
+
+            t_found = find_cut()
             # Cut is no longer active
             if t_found:
                 active.remove(t)
@@ -750,28 +754,140 @@ class DualAscent:
             limit += min_cost
 
             # Update weights
-            new_in = 0
             in_edges = set()
-            for (u, v, c) in edges:
-                nb[u][v] -= min_cost
 
-                if c == min_cost and v not in cut:
-                    if not t_found and v in active:
-                        active.remove(t)
-                        t_found = True
+            def udpate_edges(t_found2):
+                new_in = 0
+                for (u, v, c) in edges:
+                    nb[u][v] -= min_cost
 
-                    cut.add(v)
-                    # -1 because the connecting edge is now inside the cut
-                    new_in += len(nb[v])
-                    in_edges.update(((v, x) for (x, d) in nb[v].items() if d != 0 and x not in cut))
-                else:
-                    if v not in cut:
-                        in_edges.add((u, v))
-                    new_in += 1
+                    if c == min_cost and v not in cut:
+                        if not t_found2 and v in active:
+                            active.remove(t)
+                            t_found2 = True
+
+                        cut.add(v)
+                        # -1 because the connecting edge is now inside the cut
+                        new_in += len(nb[v])
+                        in_edges.update(((v, x) for (x, d) in nb[v].items() if d != 0 and x not in cut))
+                    else:
+                        if v not in cut:
+                            in_edges.add((u, v))
+                        new_in += 1
+                return t_found2
+
+            t_found = udpate_edges(t_found)
 
             # Add to queue. Priority is depending on incoming edges
             if not t_found:
                 push(queue, (len([(u, v) for (u, v) in in_edges if v not in cut]), t))
+
+        return limit, dg, root
+
+    @staticmethod
+    def calc6(g, root, ts):
+        dg = dag.DaGraph(g, root)
+        nb = dg.weights
+
+        cuts = {t: {t} for t in ts}
+        edgesl = {t: set((t, v) for v, _ in nb[t].items()) for t in ts}
+
+        queue = [(len(e), t) for t, e in edgesl.items() if t != root]
+
+        pop = heappop
+        push = heappush
+        limit = 0
+        active = set(ts)
+
+        while queue:
+            cc, t = pop(queue)
+
+            # Do not requeue
+            if t not in active:
+                continue
+
+            # BFS search of cut
+            edges = edgesl[t]
+            cut = cuts[t]
+
+            # Min edge cost
+            min_cost = maxint
+            cnt = 0
+            for u, v in edges:
+                if v not in cut:
+                    min_cost = min(min_cost, nb[u][v])
+                    cnt += 1
+
+            # Verify that edge count is still correct
+            if cnt != cc:
+                push(queue, (cnt, t))
+                continue
+
+            def search_edges(start_t, list_t, active_l):
+                bfs_queue = list([start_t])
+
+                while bfs_queue:
+                    c_n = bfs_queue.pop()
+
+                    for n2, c in nb[c_n].items():
+                        if n2 not in cut:
+                            if c == 0:
+                                # Hit an active vertex? Stop processing node
+                                if n2 in active_l:
+                                    active_l -= list_t
+                                    if n2 in list_t:
+                                        active_l.add(n2)
+                                    return
+
+                                bfs_queue.append(n2)
+
+                                for c_t in list_t:
+                                    cuts[c_t].add(n2)
+                            else:
+                                for c_t in list_t:
+                                    edgesl[c_t].add((c_n, n2))
+
+            limit += min_cost
+
+            # New list of incoming edges
+            new_edges = set()
+            edgesl[t] = new_edges
+
+            # List of new vertices introduced in the cut
+            new_vs = {}
+
+            def update_edges(activel):
+                for nu, nv in edges:
+                    if nv not in cut:
+                        nc = nb[nu][nv]
+                        nb[nu][nv] = nc - min_cost
+
+                        if nc == min_cost:
+                            l_t = {t2 for t2 in activel if nu in cuts[t2]}
+
+                            if nv in new_vs:
+                                new_vs[nv].update(l_t)
+                            else:
+                                new_vs[nv] = l_t
+
+                            for cst in l_t:
+                                cuts[cst].add(nv)
+
+                        else:
+                            new_edges.add((nu, nv))
+
+            update_edges(active)
+
+            for c_v, l_t in new_vs.items():
+                l_t.discard(c_v)
+                if c_v in active:
+                    active -= l_t
+                else:
+                    # TODO: Intersection really possible
+                    search_edges(c_v, l_t, active)
+
+            if t in active:
+                push(queue, (len(new_edges), t))
 
         return limit, dg, root
 
