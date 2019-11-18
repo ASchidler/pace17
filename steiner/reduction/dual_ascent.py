@@ -825,27 +825,28 @@ class DualAscent:
 
             def search_edges(start_t, list_t, active_l):
                 bfs_queue = list([start_t])
+                new_cut = {start_t}
 
+                # Search until no neighbors left
                 while bfs_queue:
                     c_n = bfs_queue.pop()
 
                     for n2, c in nb[c_n].items():
-                        if n2 not in cut:
+                        if n2 not in cut and n2 not in new_cut:
                             if c == 0:
-                                # Hit an active vertex? Stop processing node
+                                # Hit an active vertex? Stop
                                 if n2 in active_l:
+                                    list_t.discard(n2)
                                     active_l -= list_t
-                                    if n2 in list_t:
-                                        active_l.add(n2)
-                                    return
+                                    return set()
 
                                 bfs_queue.append(n2)
-
-                                for c_t in list_t:
-                                    cuts[c_t].add(n2)
+                                new_cut.add(n2)
                             else:
                                 for c_t in list_t:
                                     edgesl[c_t].add((c_n, n2))
+
+                return new_cut
 
             limit += min_cost
 
@@ -870,21 +871,23 @@ class DualAscent:
                             else:
                                 new_vs[nv] = l_t
 
-                            for cst in l_t:
-                                cuts[cst].add(nv)
-
                         else:
                             new_edges.add((nu, nv))
 
             update_edges(active)
 
+            new_cuts = []
             for c_v, l_t in new_vs.items():
                 l_t.discard(c_v)
+
                 if c_v in active:
                     active -= l_t
                 else:
-                    # TODO: Intersection really possible
-                    search_edges(c_v, l_t, active)
+                    new_cuts.append((l_t, search_edges(c_v, l_t, active)))
+
+            for l_t, c_c in new_cuts:
+                for c_v in l_t & active:
+                    cuts[c_v].update(c_c)
 
             if t in active:
                 push(queue, (len(new_edges), t))
