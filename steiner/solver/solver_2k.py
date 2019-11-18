@@ -38,6 +38,9 @@ class SolverInstanceSorter:
         self.map_from_original = {}
 
     def convert(self, steiner, root):
+        if len(steiner.graph.nodes) < 2:
+            return steiner, root
+
         self.map_to_original[len(steiner.terminals)-1] = root
         self.map_from_original[root] = len(steiner.terminals)-1
 

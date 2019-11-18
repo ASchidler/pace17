@@ -756,7 +756,7 @@ class DualAscent:
             # Update weights
             in_edges = set()
 
-            def udpate_edges(t_found2):
+            def update_edges(t_found2):
                 new_in = 0
                 for (u, v, c) in edges:
                     nb[u][v] -= min_cost
@@ -776,7 +776,7 @@ class DualAscent:
                         new_in += 1
                 return t_found2
 
-            t_found = udpate_edges(t_found)
+            t_found = update_edges(t_found)
 
             # Add to queue. Priority is depending on incoming edges
             if not t_found:
@@ -793,6 +793,9 @@ class DualAscent:
         edgesl = {t: set((t, v) for v, _ in nb[t].items()) for t in ts}
 
         queue = [(len(e), t) for t, e in edgesl.items() if t != root]
+        rcuts = {n: set() for n in nb.keys()}
+        for t in ts:
+            rcuts[t].add(t)
 
         pop = heappop
         push = heappush
@@ -806,7 +809,7 @@ class DualAscent:
             if t not in active:
                 continue
 
-            # BFS search of cut
+            # Shorthandles
             edges = edgesl[t]
             cut = cuts[t]
 
@@ -826,6 +829,7 @@ class DualAscent:
             def search_edges(start_t, list_t, active_l):
                 bfs_queue = list([start_t])
                 new_cut = {start_t}
+                new_edges2 = []
 
                 # Search until no neighbors left
                 while bfs_queue:
@@ -836,17 +840,18 @@ class DualAscent:
                             if c == 0:
                                 # Hit an active vertex? Stop
                                 if n2 in active_l:
-                                    list_t.discard(n2)
                                     active_l -= list_t
-                                    return set()
+                                    if n2 in list_t:
+                                        active_l.add(n2)
+
+                                    return None, None
 
                                 bfs_queue.append(n2)
                                 new_cut.add(n2)
                             else:
-                                for c_t in list_t:
-                                    edgesl[c_t].add((c_n, n2))
+                                new_edges2.append((c_n, n2))
 
-                return new_cut
+                return new_cut, new_edges2
 
             limit += min_cost
 
@@ -855,22 +860,26 @@ class DualAscent:
             edgesl[t] = new_edges
 
             # List of new vertices introduced in the cut
-            new_vs = {}
+            new_vs = defaultdict(set)
 
             def update_edges(activel):
                 for nu, nv in edges:
                     if nv not in cut:
+                        # Deduct cost from edge
                         nc = nb[nu][nv]
                         nb[nu][nv] = nc - min_cost
 
+                        # If vertex is newly introduced
                         if nc == min_cost:
-                            l_t = {t2 for t2 in activel if nu in cuts[t2]}
+                            # Find all components, that contain vertex
+                            l_t = rcuts[nu]
 
-                            if nv in new_vs:
-                                new_vs[nv].update(l_t)
+                            if nv in active:
+                                activel -= l_t
+                                if nv in l_t:
+                                    activel.add(nv)
                             else:
-                                new_vs[nv] = l_t
-
+                                new_vs[nv].update(l_t)
                         else:
                             new_edges.add((nu, nv))
 
@@ -878,21 +887,26 @@ class DualAscent:
 
             new_cuts = []
             for c_v, l_t in new_vs.items():
-                l_t.discard(c_v)
+                l_t &= active
+                if l_t:
+                    c_cut, c_edges = search_edges(c_v, l_t, active)
+                    if c_cut is not None:
+                        new_cuts.append((l_t, c_cut, c_edges))
 
-                if c_v in active:
-                    active -= l_t
-                else:
-                    new_cuts.append((l_t, search_edges(c_v, l_t, active)))
-
-            for l_t, c_c in new_cuts:
-                for c_v in l_t & active:
-                    cuts[c_v].update(c_c)
+            for l_t, c_c, c_e in new_cuts:
+                l_t &= active
+                if l_t:
+                    for c_v in l_t:
+                        cuts[c_v].update(c_c)
+                        edgesl[c_v].update(c_e)
+                    for c_v in c_c:
+                        rcuts[c_v].update(l_t)
 
             if t in active:
                 push(queue, (len(new_edges), t))
 
         return limit, dg, root
+
 
 DualAscent.root = None
 DualAscent.graph = None
