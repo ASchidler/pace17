@@ -193,13 +193,9 @@ class Solver2k:
                 # Store costs. The second part of the tuple is backtracking info.
                 self.costs[other_node][n_set] = (total, n, False)
 
-                # h = self.heuristic(other_node, n_set)
-                # if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
-                #     self.push(self.queue, total + h, (n_set, other_node))
-                if total <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
-                    h = self.heuristic(other_node, n_set)
-                    if total + h <= self.steiner.get_approximation().cost:
-                        self.push(self.queue, total + h, (n_set, other_node))
+                h = self.heuristic(other_node, n_set)
+                if total + h <= self.steiner.get_approximation().cost and not self.prune(other_node, n_set, total):
+                    self.push(self.queue, total + h, (n_set, other_node))
 
     def process_labels(self, n, n_set, n_cost):
         # First localize for better performance
@@ -225,13 +221,9 @@ class Solver2k:
                 # this is a bound before executing the heuristic the next time round, the bound is preferable
                 cst[combined] = (total, other_set, True)
 
-                # h = heuristic(n, combined)
-                # if total + h <= approx and not prune(n, n_set, total, other_set):
-                #     push(q, total + h, (combined, n))
-                if total <= approx and not prune(n, n_set, total, other_set):
-                    h = heuristic(n, combined)
-                    if total + h <= approx:
-                        push(q, total + h, (combined, n))
+                h = heuristic(n, combined)
+                if total + h <= approx and not prune(n, n_set, total, other_set):
+                    push(q, total + h, (combined, n))
 
     def heuristic(self, n, set_id):
         if self.heuristic_function is None:

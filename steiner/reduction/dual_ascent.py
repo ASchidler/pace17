@@ -826,33 +826,6 @@ class DualAscent:
                 push(queue, (cnt, t))
                 continue
 
-            def search_edges(start_t, list_t, active_l):
-                bfs_queue = list([start_t])
-                new_cut = {start_t}
-                new_edges2 = []
-
-                # Search until no neighbors left
-                while bfs_queue:
-                    c_n = bfs_queue.pop()
-
-                    for n2, c in nb[c_n].items():
-                        if n2 not in cut and n2 not in new_cut:
-                            if c == 0:
-                                # Hit an active vertex? Stop
-                                if n2 in active_l:
-                                    active_l -= list_t
-                                    if n2 in list_t:
-                                        active_l.add(n2)
-
-                                    return None, None
-
-                                bfs_queue.append(n2)
-                                new_cut.add(n2)
-                            else:
-                                new_edges2.append((c_n, n2))
-
-                return new_cut, new_edges2
-
             limit += min_cost
 
             # New list of incoming edges
@@ -862,37 +835,64 @@ class DualAscent:
             # List of new vertices introduced in the cut
             new_vs = defaultdict(set)
 
-            def update_edges(activel):
-                for nu, nv in edges:
-                    if nv not in cut:
-                        # Deduct cost from edge
-                        nc = nb[nu][nv]
-                        nb[nu][nv] = nc - min_cost
+            # Filter known edges and find vertices newly introduced to the cut
+            for nu, nv in edges:
+                if nv not in cut:
+                    # Deduct cost from edge
+                    nc = nb[nu][nv]
+                    nb[nu][nv] = nc - min_cost
 
-                        # If vertex is newly introduced
-                        if nc == min_cost:
-                            # Find all components, that contain vertex
-                            l_t = rcuts[nu]
+                    # If vertex is newly introduced
+                    if nc == min_cost:
+                        # Find all components, that contain vertex
+                        l_t = rcuts[nu]
 
-                            if nv in active:
-                                activel -= l_t
-                                if nv in l_t:
-                                    activel.add(nv)
-                            else:
-                                new_vs[nv].update(l_t)
+                        if nv in active:
+                            active -= l_t
+                            if nv in l_t:
+                                active.add(nv)
                         else:
-                            new_edges.add((nu, nv))
-
-            update_edges(active)
+                            new_vs[nv].update(l_t)
+                    else:
+                        new_edges.add((nu, nv))
 
             new_cuts = []
+            # Search new edges
             for c_v, l_t in new_vs.items():
                 l_t &= active
                 if l_t:
-                    c_cut, c_edges = search_edges(c_v, l_t, active)
-                    if c_cut is not None:
-                        new_cuts.append((l_t, c_cut, c_edges))
+                    bfs_queue = [c_v]
+                    new_cut = {c_v}
+                    new_edges2 = []
+                    invalid = False
 
+                    # Search until no neighbors left
+                    while bfs_queue:
+                        c_n = bfs_queue.pop()
+
+                        for n2, c in nb[c_n].items():
+                            if n2 not in cut and n2 not in new_cut:
+                                if c == 0:
+                                    # Hit an active vertex? Stop
+                                    if n2 in active:
+                                        active -= l_t
+                                        if n2 in l_t:
+                                            active.add(n2)
+
+                                        # Break
+                                        invalid = True
+                                        bfs_queue = []
+                                        break
+
+                                    bfs_queue.append(n2)
+                                    new_cut.add(n2)
+                                else:
+                                    new_edges2.append((c_n, n2))
+
+                    if not invalid:
+                        new_cuts.append((l_t, new_cut, new_edges2))
+
+            # Adjust cuts and edgelists of all relevant terminals
             for l_t, c_c, c_e in new_cuts:
                 l_t &= active
                 if l_t:
