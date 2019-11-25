@@ -172,6 +172,10 @@ class Solver2k:
                 break
 
             n_cost = self.costs[n][s][0]
+            # Check if the pruning bound changes, 0 indicate initial entries, where to pruning bound exists yet
+            if n_cost > 0 and n_cost > self.prune_bounds[s]:
+                continue
+
             self.labels[n].append(s)
             self.process_neighbors(n, s, n_cost)
             self.process_labels(n, s, n_cost)
